@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, Bot, Hand, Phone, Send, Globe, MessageCircle } from "lucide-react";
 import { useState } from "react";
 
-import { PageContainer } from "@/components/layout/AppShell";
+import { PageContainer } from "@/components/layout/StaffShell";
 import { EmptyState, MdButton, MdCard, MdChip, MdFilterChip } from "@/components/m3";
 import { CHANNEL, CONVERSATION_STATE, fmtTime } from "@/lib/labels";
 import { cn } from "@/lib/utils";

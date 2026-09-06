@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Bot, Cpu, User } from "lucide-react";
 import { useState } from "react";
 
-import { PageContainer } from "@/components/layout/AppShell";
+import { PageContainer } from "@/components/layout/StaffShell";
 import { EmptyState, MdCard, MdChip, MdFilterChip, SectionHeader } from "@/components/m3";
 import { fmtDateTime } from "@/lib/labels";
 import { useApp } from "@/state/app-store";

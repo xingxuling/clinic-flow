@@ -1,7 +1,7 @@
 import { Outlet, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 
-import { AppShell } from "@/components/layout/AppShell";
+import { StaffShell } from "@/components/layout/StaffShell";
 import { useApp } from "@/state/app-store";
 
 export const Route = createFileRoute("/staff/_app")({
@@ -31,8 +31,8 @@ function AppLayout() {
   }
 
   return (
-    <AppShell>
+    <StaffShell>
       <Outlet />
-    </AppShell>
+    </StaffShell>
   );
 }

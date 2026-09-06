@@ -8,7 +8,7 @@ import {
   MessageSquareWarning,
 } from "lucide-react";
 
-import { PageContainer } from "@/components/layout/AppShell";
+import { PageContainer } from "@/components/layout/StaffShell";
 import { EmptyState, MdButton, MdCard, MdChip, SectionHeader } from "@/components/m3";
 import { APPOINTMENT_STATUS, fmtTime, isSameDay } from "@/lib/labels";
 import { useApp } from "@/state/app-store";

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Bot, Database, PencilRuler, ShieldAlert, Target } from "lucide-react";
 import { useState } from "react";
 
-import { PageContainer } from "@/components/layout/AppShell";
+import { PageContainer } from "@/components/layout/StaffShell";
 import { EmptyState, MdButton, MdCard, MdChip, MdFilterChip, SectionHeader } from "@/components/m3";
 import { AGENT_STATUS, RISK, fmtDateTime } from "@/lib/labels";
 import { useApp } from "@/state/app-store";

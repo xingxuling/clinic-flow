@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { BellRing } from "lucide-react";
 import { useState } from "react";
 
-import { PageContainer } from "@/components/layout/AppShell";
+import { PageContainer } from "@/components/layout/StaffShell";
 import { EmptyState, MdButton, MdCard, MdChip, MdFilterChip, SectionHeader } from "@/components/m3";
 import { CHANNEL, REMINDER_KIND, REMINDER_STATUS, fmtDateTime } from "@/lib/labels";
 import { useApp } from "@/state/app-store";

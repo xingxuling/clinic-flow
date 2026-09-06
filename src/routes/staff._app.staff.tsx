@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Check, Minus, UserPlus } from "lucide-react";
 import { useState } from "react";
 
-import { PageContainer } from "@/components/layout/AppShell";
+import { PageContainer } from "@/components/layout/StaffShell";
 import {
   MdButton,
   MdCard,

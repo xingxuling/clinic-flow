@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { CalendarPlus, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { PageContainer } from "@/components/layout/AppShell";
+import { PageContainer } from "@/components/layout/StaffShell";
 import {
   EmptyState,
   MdButton,
