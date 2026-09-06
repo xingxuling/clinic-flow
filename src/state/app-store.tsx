@@ -541,7 +541,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     },
 
     patientPortalLink: (patientId) => {
+      addIssuedLink(patientId);
       audit({
+
         action: "產生病人專屬連結",
         target: `病人 ${patientId}`,
         result: "success",
