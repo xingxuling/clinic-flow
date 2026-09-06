@@ -1,5 +1,5 @@
 import { env } from "node:process";
-import { createServerFn, createServerOnlyFn } from "@tanstack/react-start";
+import { createServerFn } from "@tanstack/react-start";
 import { useSession } from "@tanstack/react-start/server";
 import { z } from "zod";
 
@@ -22,8 +22,8 @@ export interface ClinicSessionData {
 const PATIENT_SESSION_SECONDS = 30 * 60;
 const STAFF_SESSION_SECONDS = 8 * 60 * 60;
 
-const useClinicSession = createServerOnlyFn(() =>
-  useSession<ClinicSessionData>({
+function useClinicSession() {
+  return useSession<ClinicSessionData>({
     name: "clinic-flow-session",
     password: getSessionSecret(),
     cookie: {
@@ -32,8 +32,8 @@ const useClinicSession = createServerOnlyFn(() =>
       httpOnly: true,
       maxAge: STAFF_SESSION_SECONDS,
     },
-  }),
-);
+  });
+}
 
 function sessionExpiry(ttlSeconds: number): number {
   return Math.floor(Date.now() / 1000) + ttlSeconds;
@@ -60,12 +60,13 @@ export const exchangePatientPortalTokenServer = createServerFn({ method: "POST" 
 
     const session = await useClinicSession();
     const now = Math.floor(Date.now() / 1000);
+    const expiresAt = sessionExpiry(PATIENT_SESSION_SECONDS);
     await session.update({
       kind: "patient",
       clinicId: verified.claim.clinicId,
       subjectId: verified.claim.subjectId,
       authenticatedAt: now,
-      expiresAt: sessionExpiry(PATIENT_SESSION_SECONDS),
+      expiresAt,
       deviceBound: false,
     });
 
@@ -75,7 +76,7 @@ export const exchangePatientPortalTokenServer = createServerFn({ method: "POST" 
         kind: "patient" as const,
         clinicId: verified.claim.clinicId,
         subjectId: verified.claim.subjectId,
-        expiresAt: sessionExpiry(PATIENT_SESSION_SECONDS),
+        expiresAt,
       },
     };
   });
@@ -84,28 +85,26 @@ export const exchangePatientPortalTokenServer = createServerFn({ method: "POST" 
  * 员工身份必须先由邀请 / Passkey 流程在服务器确认，之后才能调用此内部函数。
  * 它不是浏览器可直接调用的 RPC。
  */
-export const establishStaffSessionServer = createServerOnlyFn(
-  async (input: {
-    clinicId: ID;
-    staffId: ID;
-    role: StaffRole;
-    deviceBound: boolean;
-  }) => {
-    const session = await useClinicSession();
-    const now = Math.floor(Date.now() / 1000);
-    const expiresAt = sessionExpiry(STAFF_SESSION_SECONDS);
-    await session.update({
-      kind: "staff",
-      clinicId: input.clinicId,
-      subjectId: input.staffId,
-      role: input.role,
-      authenticatedAt: now,
-      expiresAt,
-      deviceBound: input.deviceBound,
-    });
-    return { ok: true as const, expiresAt };
-  },
-);
+export async function establishStaffSessionServer(input: {
+  clinicId: ID;
+  staffId: ID;
+  role: StaffRole;
+  deviceBound: boolean;
+}) {
+  const session = await useClinicSession();
+  const now = Math.floor(Date.now() / 1000);
+  const expiresAt = sessionExpiry(STAFF_SESSION_SECONDS);
+  await session.update({
+    kind: "staff",
+    clinicId: input.clinicId,
+    subjectId: input.staffId,
+    role: input.role,
+    authenticatedAt: now,
+    expiresAt,
+    deviceBound: input.deviceBound,
+  });
+  return { ok: true as const, expiresAt };
+}
 
 /** 返回最小身份，不返回病人资料、电话、病历或文件。 */
 export const getCurrentClinicSessionServer = createServerFn({ method: "GET" }).handler(async () => {
@@ -119,13 +118,27 @@ export const getCurrentClinicSessionServer = createServerFn({ method: "GET" }).h
     return null;
   }
 
+  if (data.kind === "staff") {
+    if (!data.role) {
+      await session.clear();
+      return null;
+    }
+    return {
+      kind: "staff" as const,
+      clinicId: data.clinicId,
+      subjectId: data.subjectId,
+      role: data.role,
+      expiresAt: data.expiresAt,
+      deviceBound: Boolean(data.deviceBound),
+    };
+  }
+
   return {
-    kind: data.kind,
+    kind: "patient" as const,
     clinicId: data.clinicId,
     subjectId: data.subjectId,
-    role: data.role,
     expiresAt: data.expiresAt,
-    deviceBound: Boolean(data.deviceBound),
+    deviceBound: false,
   };
 });
 
