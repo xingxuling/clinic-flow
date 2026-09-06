@@ -102,3 +102,20 @@ bunx vitest run    # 狀態轉換與權限測試
 | 保險／收據文件 | 模擬檔案 | 診所實際使用的保險表格與會計系統 |
 | 審計日誌 | 記憶體陣列 | Append-only 表，不可修改、可匯出 |
 | 緊急關鍵詞 | 診所設定內的字串 | 可版本化的規則集，並保留每次命中的證據 |
+
+## 雙端結構（病人前台 / 行政後台）
+
+本系統是兩套互相獨立的產品面，共用同一個 domain / repository：
+
+| | 病人前台 | 行政後台 |
+|---|---|---|
+| 路由 | `/patient/*` | `/staff/*` |
+| 入口 | `/patient/login`：診所專屬連結、病人二維碼、手機一次性驗證碼 | `/staff/login`：邀請密令、員工二維碼、Passkey（佔位） |
+| Session | `PatientSession`（`kind: "patient"`，localStorage key `cinghe.patient-session.v1`） | `StaffSession`（`kind: "staff"`，key `cinghe.staff-session.v1`） |
+| 導航 | 手機 Bottom Navigation／桌面輕量 Rail，只有 5 項 | Navigation Rail／Drawer，10 項工作區 |
+| 可見資料 | 只有自己的預約、訊息、行政文件、提醒與聯絡資料 | 全診所行政資料、Agent 任務、審計日誌、員工權限 |
+
+- 兩種 session 在 hydration 時以 `kind` 嚴格校驗，員工 session 無法冒充病人身分，反之亦然。
+- 病人端資料一律經 `src/data/patient-view.ts` 以 `clinicId + patientId` 收窄；改期只回傳 `availableSlots()` 產生的 `{ startAt, practitionerId }`，不暴露診所排程與其他病人。
+- 病人端不顯示 Agent 任務、審計日誌、病人目錄、員工權限等任何後台功能。
+- 根路徑 `/` 只是極簡入口選擇；舊有 `/app/*` 連結會重定向至 `/staff/*`。

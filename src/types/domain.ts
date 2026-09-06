@@ -251,6 +251,7 @@ export interface DocumentCase {
 
 export type ActorRef =
   | { type: "staff"; id: ID; name: string }
+  | { type: "patient"; id: ID; name: string }
   | { type: "agent"; id: ID; name: string }
   | { type: "system"; id: ID; name: string };
 
@@ -267,10 +268,26 @@ export interface AuditEvent {
 
 /* -------------------------------- 会话上下文 ------------------------------ */
 
-export interface Session {
+/**
+ * 身分嚴格分離：員工端與病人端使用不同的 session 類型、不同儲存鍵、不同路由空間。
+ * 員工 session 不可當作病人 session 使用，反之亦然。
+ */
+export interface StaffSession {
+  kind: "staff";
   clinicId: ID;
   staffId: ID;
   deviceBound: boolean;
   method: "code" | "qr" | "passkey";
   at: ISODateTime;
 }
+
+export interface PatientSession {
+  kind: "patient";
+  clinicId: ID;
+  patientId: ID;
+  /** link＝診所發出的專屬連結；qr＝病人二維碼；otp＝手機一次性驗證碼 */
+  method: "link" | "qr" | "otp";
+  at: ISODateTime;
+}
+
+export type AnySession = StaffSession | PatientSession;

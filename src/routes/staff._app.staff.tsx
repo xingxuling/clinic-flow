@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Check, Minus, UserPlus } from "lucide-react";
 import { useState } from "react";
 
-import { PageContainer } from "@/components/layout/AppShell";
+import { PageContainer } from "@/components/layout/StaffShell";
 import {
   MdButton,
   MdCard,
@@ -17,7 +17,7 @@ import { fmtDateTime } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
 import type { StaffRole } from "@/types/domain";
 
-export const Route = createFileRoute("/app/staff")({
+export const Route = createFileRoute("/staff/_app/staff")({
   head: () => ({
     meta: [
       { title: "員工與權限｜診所行政 Agent" },

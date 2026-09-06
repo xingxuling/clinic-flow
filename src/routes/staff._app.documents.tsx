@@ -2,13 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AlertOctagon, FileText } from "lucide-react";
 import { useState } from "react";
 
-import { PageContainer } from "@/components/layout/AppShell";
+import { PageContainer } from "@/components/layout/StaffShell";
 import { EmptyState, MdButton, MdCard, MdChip, MdFilterChip, SectionHeader } from "@/components/m3";
 import { DOCUMENT_KIND, DOCUMENT_STATUS, fmtDateTime } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
 import type { DocumentKind } from "@/types/domain";
 
-export const Route = createFileRoute("/app/documents")({
+export const Route = createFileRoute("/staff/_app/documents")({
   head: () => ({
     meta: [
       { title: "行政文件｜診所行政 Agent" },

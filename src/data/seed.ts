@@ -236,14 +236,14 @@ export const seedPatients: Patient[] = [
     id: "pt_07",
     clinicId: CLINIC_ID,
     fileNo: "CH-1214",
-    name: "何芷晴",
+    name: "陳曉晴",
     phone: "+852 9123 4407",
     preferredChannel: "whatsapp",
     language: "zh-HK",
-    tags: ["兒童", "家長代覆"],
+    tags: ["定期洗牙", "保險索償"],
     lastVisitAt: at(-90, "16:00"),
     nextRecallAt: at(1, "16:00"),
-    notesAdmin: "母親為主要聯絡人",
+    notesAdmin: "偏好下午時段",
   },
   {
     id: "pt_08",
@@ -357,9 +357,9 @@ export const seedAppointments: Appointment[] = [
     serviceId: "svc_check",
     startAt: at(1, "16:00"),
     endAt: at(1, "16:30"),
-    status: "confirmed",
+    status: "pending",
     room: "2 號診室",
-    note: "兒童檢查",
+    note: "口腔檢查",
     createdBy: { type: "staff", id: "staff_reception", name: "李樂怡" },
   },
   {
@@ -425,6 +425,35 @@ export const seedAppointments: Appointment[] = [
     status: "confirmed",
     room: "1 號診室",
     note: "",
+    createdBy: { type: "staff", id: "staff_reception", name: "李樂怡" },
+  },
+];
+
+export const seedPatientHistory: Appointment[] = [
+  {
+    id: "ap_h1",
+    clinicId: CLINIC_ID,
+    patientId: "pt_07",
+    practitionerId: "staff_dr_ho",
+    serviceId: "svc_scaling",
+    startAt: at(-90, "16:00"),
+    endAt: at(-90, "16:45"),
+    status: "arrived",
+    room: "2 號診室",
+    note: "半年定期潔治",
+    createdBy: { type: "staff", id: "staff_reception", name: "李樂怡" },
+  },
+  {
+    id: "ap_h2",
+    clinicId: CLINIC_ID,
+    patientId: "pt_07",
+    practitionerId: "staff_dr_ho",
+    serviceId: "svc_filling",
+    startAt: at(-210, "11:00"),
+    endAt: at(-210, "12:00"),
+    status: "arrived",
+    room: "2 號診室",
+    note: "右下補牙",
     createdBy: { type: "staff", id: "staff_reception", name: "李樂怡" },
   },
 ];
@@ -598,6 +627,37 @@ export const seedConversations: Conversation[] = [
         authorName: "召回 Agent",
         text: "徐女士你好，距離上次洗牙已超過 12 個月，想同你安排時間覆檢。",
         at: at(-2, "11:10"),
+      },
+    ],
+  },
+];
+
+export const seedPatientConversations: Conversation[] = [
+  {
+    id: "cv_pt07",
+    clinicId: CLINIC_ID,
+    patientId: "pt_07",
+    channel: "web",
+    subject: "洗牙前的查詢",
+    state: "human",
+    unread: false,
+    lastAt: at(-1, "15:20"),
+    messages: [
+      {
+        id: "mp1",
+        conversationId: "cv_pt07",
+        from: "patient",
+        authorName: "陳曉晴",
+        text: "你好，我下次檢查可唔可以順便安排洗牙？",
+        at: at(-1, "15:02"),
+      },
+      {
+        id: "mp2",
+        conversationId: "cv_pt07",
+        from: "staff",
+        authorName: "李樂怡",
+        text: "陳小姐你好，可以的，我哋會為你預留多 30 分鐘，到診當日再確認。",
+        at: at(-1, "15:20"),
       },
     ],
   },
@@ -835,6 +895,33 @@ export const seedDocuments: DocumentCase[] = [
     anomalies: ["就診日期早於表格簽發日期"],
     amountHKD: 500,
     updatedAt: at(-2, "15:00"),
+  },
+];
+
+export const seedPatientDocuments: DocumentCase[] = [
+  {
+    id: "doc_pt07a",
+    clinicId: CLINIC_ID,
+    patientId: "pt_07",
+    kind: "insurance_form",
+    title: "保誠門診索償表",
+    status: "needs_fields",
+    missingFields: ["保單號碼", "受保人簽署"],
+    anomalies: [],
+    amountHKD: 980,
+    updatedAt: at(-2, "10:10"),
+  },
+  {
+    id: "doc_pt07b",
+    clinicId: CLINIC_ID,
+    patientId: "pt_07",
+    kind: "receipt",
+    title: "潔治收據 R-20488",
+    status: "ready",
+    missingFields: [],
+    anomalies: [],
+    amountHKD: 780,
+    updatedAt: at(-90, "17:00"),
   },
 ];
 

@@ -2,14 +2,14 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AlertTriangle, Bot, Hand, Phone, Send, Globe, MessageCircle } from "lucide-react";
 import { useState } from "react";
 
-import { PageContainer } from "@/components/layout/AppShell";
+import { PageContainer } from "@/components/layout/StaffShell";
 import { EmptyState, MdButton, MdCard, MdChip, MdFilterChip } from "@/components/m3";
 import { CHANNEL, CONVERSATION_STATE, fmtTime } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/state/app-store";
 import type { ChannelKind } from "@/types/domain";
 
-export const Route = createFileRoute("/app/inbox")({
+export const Route = createFileRoute("/staff/_app/inbox")({
   validateSearch: (search: Record<string, unknown>) => ({
     c: typeof search["c"] === "string" ? (search["c"] as string) : undefined,
   }),
@@ -39,7 +39,7 @@ function InboxPage() {
     escalateUrgentFlag,
   } = useApp();
   const { c } = Route.useSearch();
-  const navigate = useNavigate({ from: "/app/inbox" });
+  const navigate = useNavigate({ from: "/staff/inbox" });
   const [filter, setFilter] = useState<"all" | "unread" | "urgent" | "agent">("all");
   const [draft, setDraft] = useState("");
 

@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Bot, Cpu, User } from "lucide-react";
+import { Bot, Cpu, User, UserCircle } from "lucide-react";
 import { useState } from "react";
 
-import { PageContainer } from "@/components/layout/AppShell";
+import { PageContainer } from "@/components/layout/StaffShell";
 import { EmptyState, MdCard, MdChip, MdFilterChip, SectionHeader } from "@/components/m3";
 import { fmtDateTime } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
 
-export const Route = createFileRoute("/app/audit")({
+export const Route = createFileRoute("/staff/_app/audit")({
   head: () => ({
     meta: [
       { title: "審計日誌｜診所行政 Agent" },
@@ -22,7 +22,7 @@ function AuditPage() {
   const [who, setWho] = useState<"all" | "staff" | "agent">("all");
   const list = auditEvents.filter((e) => who === "all" || e.actor.type === who);
 
-  const icon = { staff: User, agent: Bot, system: Cpu };
+  const icon = { staff: User, agent: Bot, system: Cpu, patient: UserCircle };
 
   return (
     <PageContainer title="審計日誌" subtitle="所有行政動作與 Agent 決策皆留痕，包含被拒絕的操作。">

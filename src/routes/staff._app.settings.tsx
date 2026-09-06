@@ -2,12 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Plug, X } from "lucide-react";
 import { useState } from "react";
 
-import { PageContainer } from "@/components/layout/AppShell";
+import { PageContainer } from "@/components/layout/StaffShell";
 import { MdButton, MdCard, MdChip, MdSwitch, MdTextField, SectionHeader } from "@/components/m3";
 import { CHANNEL } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
 
-export const Route = createFileRoute("/app/settings")({
+export const Route = createFileRoute("/staff/_app/settings")({
   head: () => ({
     meta: [
       { title: "診所設定｜診所行政 Agent" },

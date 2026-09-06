@@ -3,7 +3,7 @@ import { LogOut, Menu, Moon, Stethoscope, Sun, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { MdBadge, MdIconButton } from "@/components/m3";
-import { NAV_ITEMS } from "@/components/layout/nav-items";
+import { STAFF_NAV_ITEMS } from "@/components/layout/nav-items";
 import { ROLE_LABEL } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/state/app-store";
@@ -31,14 +31,14 @@ function useDarkMode() {
   return [dark, setDark] as const;
 }
 
-export function AppShell({ children }: { children: ReactNode }) {
-  const { clinic, currentStaff, signOut } = useApp();
+export function StaffShell({ children }: { children: ReactNode }) {
+  const { clinic, currentStaff, signOutStaff } = useApp();
   const badges = useBadges();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [dark, setDark] = useDarkMode();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  const bottomItems = NAV_ITEMS.filter((i) => i.inBottomBar);
+  const bottomItems = STAFF_NAV_ITEMS.filter((i) => i.inBottomBar);
 
   return (
     <div className="flex min-h-screen bg-surface text-on-surface">
@@ -47,7 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-primary-container text-on-primary-container">
           <Stethoscope className="size-6" />
         </div>
-        {NAV_ITEMS.map((item) => {
+        {STAFF_NAV_ITEMS.map((item) => {
           const active = pathname.startsWith(item.to);
           const badge = item.badgeKey ? badges[item.badgeKey] : 0;
           return (
@@ -87,7 +87,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Menu className="size-5" />
           </MdIconButton>
           <div className="min-w-0 flex-1">
-            <p className="md-title-m truncate text-on-surface">{clinic.name}</p>
+            <p className="md-title-m truncate text-on-surface">
+              {clinic.name}
+              <span className="ml-2 rounded-full bg-secondary-container px-2 py-0.5 md-label-m text-on-secondary-container">
+                行政後台
+              </span>
+            </p>
             <p className="md-body-s truncate text-on-surface-variant">
               {clinic.district}・{currentStaff.name}（{ROLE_LABEL[currentStaff.role]}）
             </p>
@@ -95,7 +100,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <MdIconButton onClick={() => setDark(!dark)} aria-label="切換深色模式">
             {dark ? <Sun className="size-5" /> : <Moon className="size-5" />}
           </MdIconButton>
-          <MdIconButton onClick={signOut} aria-label="登出">
+          <MdIconButton onClick={signOutStaff} aria-label="登出">
             <LogOut className="size-5" />
           </MdIconButton>
         </header>
@@ -144,7 +149,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <X className="size-5" />
               </MdIconButton>
             </div>
-            {NAV_ITEMS.map((item) => {
+            {STAFF_NAV_ITEMS.map((item) => {
               const active = pathname.startsWith(item.to);
               const badge = item.badgeKey ? badges[item.badgeKey] : 0;
               return (

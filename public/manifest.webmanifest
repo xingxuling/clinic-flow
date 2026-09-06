@@ -3,7 +3,7 @@
   "short_name": "診所行政",
   "description": "香港小型診所的邀請制行政後台。",
   "lang": "zh-Hant-HK",
-  "start_url": "/app/today",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",

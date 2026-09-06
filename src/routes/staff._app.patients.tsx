@@ -2,12 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Search, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 
-import { PageContainer } from "@/components/layout/AppShell";
+import { PageContainer } from "@/components/layout/StaffShell";
 import { EmptyState, MdCard, MdChip, MdTextField, SectionHeader } from "@/components/m3";
 import { CHANNEL, fmtDate } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
 
-export const Route = createFileRoute("/app/patients")({
+export const Route = createFileRoute("/staff/_app/patients")({
   head: () => ({
     meta: [
       { title: "病人目錄｜診所行政 Agent" },
