@@ -19,8 +19,10 @@ import { Route as StaffIndexRouteImport } from './routes/staff.index'
 import { Route as StaffAppRouteImport } from './routes/staff._app'
 import { Route as StaffLoginRouteImport } from './routes/staff.login'
 import { Route as PatientAppAppointmentsRouteImport } from './routes/patient._app.appointments'
+import { Route as PatientAppFormsRouteImport } from './routes/patient._app.forms'
 import { Route as PatientAppHomeRouteImport } from './routes/patient._app.home'
 import { Route as PatientAppMessagesRouteImport } from './routes/patient._app.messages'
+import { Route as PatientAppProfileRouteImport } from './routes/patient._app.profile'
 import { Route as StaffAppAgentRouteImport } from './routes/staff._app.agent'
 import { Route as StaffAppAppointmentsRouteImport } from './routes/staff._app.appointments'
 import { Route as StaffAppAuditRouteImport } from './routes/staff._app.audit'
@@ -82,6 +84,11 @@ const PatientAppAppointmentsRoute = PatientAppAppointmentsRouteImport.update({
   path: '/appointments',
   getParentRoute: () => PatientAppRoute,
 } as any)
+const PatientAppFormsRoute = PatientAppFormsRouteImport.update({
+  id: '/forms',
+  path: '/forms',
+  getParentRoute: () => PatientAppRoute,
+} as any)
 const PatientAppHomeRoute = PatientAppHomeRouteImport.update({
   id: '/home',
   path: '/home',
@@ -90,6 +97,11 @@ const PatientAppHomeRoute = PatientAppHomeRouteImport.update({
 const PatientAppMessagesRoute = PatientAppMessagesRouteImport.update({
   id: '/messages',
   path: '/messages',
+  getParentRoute: () => PatientAppRoute,
+} as any)
+const PatientAppProfileRoute = PatientAppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => PatientAppRoute,
 } as any)
 const StaffAppAgentRoute = StaffAppAgentRouteImport.update({
@@ -154,8 +166,10 @@ export interface FileRoutesByFullPath {
   '/patient/': typeof PatientIndexRoute
   '/staff/': typeof StaffIndexRoute
   '/patient/appointments': typeof PatientAppAppointmentsRoute
+  '/patient/forms': typeof PatientAppFormsRoute
   '/patient/home': typeof PatientAppHomeRoute
   '/patient/messages': typeof PatientAppMessagesRoute
+  '/patient/profile': typeof PatientAppProfileRoute
   '/staff/agent': typeof StaffAppAgentRoute
   '/staff/appointments': typeof StaffAppAppointmentsRoute
   '/staff/audit': typeof StaffAppAuditRoute
@@ -176,8 +190,10 @@ export interface FileRoutesByTo {
   '/staff/login': typeof StaffLoginRoute
   '/app': typeof AppIndexRoute
   '/patient/appointments': typeof PatientAppAppointmentsRoute
+  '/patient/forms': typeof PatientAppFormsRoute
   '/patient/home': typeof PatientAppHomeRoute
   '/patient/messages': typeof PatientAppMessagesRoute
+  '/patient/profile': typeof PatientAppProfileRoute
   '/staff/agent': typeof StaffAppAgentRoute
   '/staff/appointments': typeof StaffAppAppointmentsRoute
   '/staff/audit': typeof StaffAppAuditRoute
@@ -201,8 +217,10 @@ export interface FileRoutesById {
   '/patient/': typeof PatientIndexRoute
   '/staff/': typeof StaffIndexRoute
   '/patient/_app/appointments': typeof PatientAppAppointmentsRoute
+  '/patient/_app/forms': typeof PatientAppFormsRoute
   '/patient/_app/home': typeof PatientAppHomeRoute
   '/patient/_app/messages': typeof PatientAppMessagesRoute
+  '/patient/_app/profile': typeof PatientAppProfileRoute
   '/staff/_app/agent': typeof StaffAppAgentRoute
   '/staff/_app/appointments': typeof StaffAppAppointmentsRoute
   '/staff/_app/audit': typeof StaffAppAuditRoute
@@ -227,8 +245,10 @@ export interface FileRouteTypes {
     | '/patient/'
     | '/staff/'
     | '/patient/appointments'
+    | '/patient/forms'
     | '/patient/home'
     | '/patient/messages'
+    | '/patient/profile'
     | '/staff/agent'
     | '/staff/appointments'
     | '/staff/audit'
@@ -249,8 +269,10 @@ export interface FileRouteTypes {
     | '/staff/login'
     | '/app'
     | '/patient/appointments'
+    | '/patient/forms'
     | '/patient/home'
     | '/patient/messages'
+    | '/patient/profile'
     | '/staff/agent'
     | '/staff/appointments'
     | '/staff/audit'
@@ -273,8 +295,10 @@ export interface FileRouteTypes {
     | '/patient/'
     | '/staff/'
     | '/patient/_app/appointments'
+    | '/patient/_app/forms'
     | '/patient/_app/home'
     | '/patient/_app/messages'
+    | '/patient/_app/profile'
     | '/staff/_app/agent'
     | '/staff/_app/appointments'
     | '/staff/_app/audit'
@@ -371,6 +395,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PatientAppAppointmentsRouteImport
       parentRoute: typeof PatientAppRoute
     }
+    '/patient/_app/forms': {
+      id: '/patient/_app/forms'
+      path: '/forms'
+      fullPath: '/patient/forms'
+      preLoaderRoute: typeof PatientAppFormsRouteImport
+      parentRoute: typeof PatientAppRoute
+    }
     '/patient/_app/home': {
       id: '/patient/_app/home'
       path: '/home'
@@ -383,6 +414,13 @@ declare module '@tanstack/react-router' {
       path: '/messages'
       fullPath: '/patient/messages'
       preLoaderRoute: typeof PatientAppMessagesRouteImport
+      parentRoute: typeof PatientAppRoute
+    }
+    '/patient/_app/profile': {
+      id: '/patient/_app/profile'
+      path: '/profile'
+      fullPath: '/patient/profile'
+      preLoaderRoute: typeof PatientAppProfileRouteImport
       parentRoute: typeof PatientAppRoute
     }
     '/staff/_app/agent': {
@@ -460,14 +498,18 @@ declare module '@tanstack/react-router' {
 
 interface PatientAppRouteChildren {
   PatientAppAppointmentsRoute: typeof PatientAppAppointmentsRoute
+  PatientAppFormsRoute: typeof PatientAppFormsRoute
   PatientAppHomeRoute: typeof PatientAppHomeRoute
   PatientAppMessagesRoute: typeof PatientAppMessagesRoute
+  PatientAppProfileRoute: typeof PatientAppProfileRoute
 }
 
 const PatientAppRouteChildren: PatientAppRouteChildren = {
   PatientAppAppointmentsRoute: PatientAppAppointmentsRoute,
+  PatientAppFormsRoute: PatientAppFormsRoute,
   PatientAppHomeRoute: PatientAppHomeRoute,
   PatientAppMessagesRoute: PatientAppMessagesRoute,
+  PatientAppProfileRoute: PatientAppProfileRoute,
 }
 
 const PatientAppRouteWithChildren = PatientAppRoute._addFileChildren(
