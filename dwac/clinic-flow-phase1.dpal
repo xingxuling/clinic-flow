@@ -1,0 +1,63 @@
+artifact clinic_flow_phase1 kind=taowind.software/web-application {
+  goal "把 Clinic Flow 收敛为牙科现有 CMS 前置 AI 客户端：WhatsApp FAQ、预约确认/改期/取消、紧急关键词通知、简单日历同步、前台摘要"
+  success "所有第一阶段客户沟通流程均通过统一适配器，不绑定单一 CMS"
+  success "医疗诊断与治疗建议始终不在 Agent 权限内"
+  constraint "不替代诊所原有 CMS"
+  constraint "默认繁体中文，接口与代码可扩展到 DCMS、DentoEase、ClinicSolution"
+  invariant "病人资料按 clinicId + patientId 隔离"
+  invariant "任何紧急医疗信号只升级人工，不产生诊断"
+  owner "clinic-flow"
+
+  unit faq_engine output=taowind/source_code {
+    title "FAQ 规则与可信回答"
+    goal "仅基于诊所授权 FAQ 回答，未知问题转人工"
+    accept "bounded_answer,unknown_escalates"
+  }
+
+  unit appointment_adapter output=taowind/api_contract {
+    title "统一预约适配器"
+    goal "统一查询空档、确认、改期、取消接口"
+    accept "provider_neutral,tenant_scoped"
+  }
+
+  unit calendar_adapter output=taowind/service {
+    title "简单日历同步"
+    goal "先支持 Demo、手工桥接和日历类适配器，不耦合 CMS"
+    depends "appointment_adapter"
+    accept "idempotent_sync"
+  }
+
+  unit whatsapp_adapter output=taowind/service {
+    title "WhatsApp 通讯适配器"
+    goal "统一入站消息、出站消息、交互按钮语义"
+    accept "channel_neutral,auditable"
+  }
+
+  unit frontdesk_agent output=taowind/workflow {
+    title "AI 前台编排"
+    goal "编排 FAQ、预约、紧急标记、人工升级"
+    depends "faq_engine,appointment_adapter,whatsapp_adapter"
+    accept "fail_closed,human_escalation"
+  }
+
+  unit summary_engine output=taowind/source_code {
+    title "前台对话摘要"
+    goal "输出行政摘要，不生成临床结论"
+    depends "frontdesk_agent"
+    accept "administrative_only"
+  }
+
+  unit staff_ui output=taowind/ui {
+    title "前台工作台"
+    goal "显示新对话、待确认、改期、紧急、Agent 待人工、今日自动完成"
+    depends "frontdesk_agent,summary_engine,calendar_adapter"
+    accept "material_design_3,mobile_desktop"
+  }
+
+  unit tests output=taowind/test {
+    title "第一阶段定向测试"
+    goal "只覆盖 FAQ、适配器、紧急升级、改期/取消边界"
+    depends "faq_engine,appointment_adapter,whatsapp_adapter,frontdesk_agent,summary_engine"
+    accept "targeted_only"
+  }
+}
