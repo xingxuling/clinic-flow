@@ -7,6 +7,7 @@ import {
   type AppointmentActionPolicy,
 } from "@/frontdesk/appointment-actions";
 import type { AppointmentAdapterContext, AppointmentSystemAdapter } from "@/integrations/appointment-adapter";
+import type { CalendarAdapter } from "@/integrations/calendar-adapter";
 import type { InteractiveReplyOption } from "@/integrations/messaging-adapter";
 
 export interface AppointmentInteractionServiceReceipt {
@@ -14,6 +15,7 @@ export interface AppointmentInteractionServiceReceipt {
   status: "completed" | "choose_slot" | "needs_human" | "failed";
   text: string;
   replyOptions: InteractiveReplyOption[];
+  calendarSynced: boolean | null;
 }
 
 function slotLabel(startAt: string): string {
@@ -34,9 +36,13 @@ function slotLabel(startAt: string): string {
  * 改期分两步：
  * 1. reschedule_request -> 查询可用时段；
  * 2. reschedule_select -> 执行具体时段改期。
+ *
+ * 预约动作成功后，可选地同步到日历适配器。日历同步失败不会伪装成预约失败，
+ * 但会把结果提升为需要前台检查。
  */
 export async function handleAppointmentInteraction(input: {
   adapter: AppointmentSystemAdapter;
+  calendarAdapter?: CalendarAdapter;
   ctx: AppointmentAdapterContext;
   payload: string;
   policy: AppointmentActionPolicy;
@@ -49,6 +55,7 @@ export async function handleAppointmentInteraction(input: {
       status: "failed",
       text: "這個操作連結無效，請重新打開最新的預約訊息。",
       replyOptions: [],
+      calendarSynced: null,
     };
   }
 
@@ -62,6 +69,7 @@ export async function handleAppointmentInteraction(input: {
         status: "failed",
         text: "找不到相關預約，已轉交診所職員確認。",
         replyOptions: [],
+        calendarSynced: null,
       };
     }
 
@@ -73,6 +81,7 @@ export async function handleAppointmentInteraction(input: {
         status: "needs_human",
         text: `距離應診不足 ${input.policy.humanApprovalLeadHours} 小時，今次改期需要診所職員確認。`,
         replyOptions: [],
+        calendarSynced: null,
       };
     }
 
@@ -91,6 +100,7 @@ export async function handleAppointmentInteraction(input: {
         status: "needs_human",
         text: "暫時找不到合適空檔，已轉交診所職員幫你安排。",
         replyOptions: [],
+        calendarSynced: null,
       };
     }
 
@@ -107,6 +117,7 @@ export async function handleAppointmentInteraction(input: {
           startAt: slot.startAt,
         }),
       })),
+      calendarSynced: null,
     };
   }
 
@@ -129,15 +140,54 @@ export async function handleAppointmentInteraction(input: {
     now,
   });
 
-  return {
-    ok: receipt.ok,
-    status:
-      receipt.status === "executed"
-        ? "completed"
-        : receipt.status === "needs_human"
+  if (!receipt.ok || !receipt.appointment) {
+    return {
+      ok: receipt.ok,
+      status:
+        receipt.status === "needs_human"
           ? "needs_human"
-          : "failed",
+          : receipt.status === "executed"
+            ? "completed"
+            : "failed",
+      text: receipt.message,
+      replyOptions: [],
+      calendarSynced: null,
+    };
+  }
+
+  if (!input.calendarAdapter) {
+    return {
+      ok: true,
+      status: "completed",
+      text: receipt.message,
+      replyOptions: [],
+      calendarSynced: null,
+    };
+  }
+
+  const calendarReceipt = await input.calendarAdapter.upsertAppointment(
+    {
+      clinicId: input.ctx.clinicId,
+      providerId: input.calendarAdapter.providerId,
+    },
+    receipt.appointment,
+  );
+
+  if (!calendarReceipt.ok) {
+    return {
+      ok: true,
+      status: "needs_human",
+      text: `${receipt.message} 但日曆同步失敗，請前台檢查。`,
+      replyOptions: [],
+      calendarSynced: false,
+    };
+  }
+
+  return {
+    ok: true,
+    status: "completed",
     text: receipt.message,
     replyOptions: [],
+    calendarSynced: true,
   };
 }
