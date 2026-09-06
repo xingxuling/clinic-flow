@@ -1,0 +1,364 @@
+{
+  "schema": "dwac.artifact-graph.v1",
+  "graph": {
+    "artifact_id": "clinic-flow-private-administrative-agent",
+    "artifact_type": {
+      "namespace": "taowind",
+      "family": "software",
+      "kind": "clinic-administrative-agent",
+      "version": "v0.1",
+      "identifier": "taowind.software/clinic-administrative-agent"
+    },
+    "intent": {
+      "action": "build",
+      "subject": "private multi-tenant clinic administrative agent with separate patient portal and staff console",
+      "desired_capabilities": [
+        "private-access",
+        "tenant-isolation",
+        "patient-self-service",
+        "staff-administration",
+        "bounded-agent-execution",
+        "auditable-workflows"
+      ],
+      "artifact_families": [
+        "software",
+        "database",
+        "policy",
+        "test",
+        "evidence"
+      ],
+      "target_environments": [
+        "responsive-web",
+        "pwa",
+        "postgresql"
+      ],
+      "interfaces": [
+        "patient-portal",
+        "staff-console",
+        "server-rpc",
+        "channel-adapters"
+      ],
+      "state_model": {
+        "sessions": "server-http-only",
+        "agent_tasks": "explicit-state-machine",
+        "appointments": "explicit-state-machine"
+      },
+      "persistence": {
+        "primary": "postgresql",
+        "demo": "in-memory-repository"
+      },
+      "network_model": {
+        "public_surface": "invitation-or-signed-link-only",
+        "channel_integrations": "adapter-bound"
+      },
+      "concurrency_model": {
+        "agent_execution": "validate-all-before-mutate",
+        "production_target": "database-transaction"
+      },
+      "data_model": {
+        "tenant_key": "clinic_id",
+        "patient_minimization": true,
+        "audit_required": true
+      },
+      "interaction_model": {
+        "patient": "low-density-self-service",
+        "staff": "high-density-material-design-3-console"
+      },
+      "intelligence_model": {
+        "scope": "administrative-only",
+        "closed_operation_set": true,
+        "clinical_diagnosis": false,
+        "treatment_advice": false,
+        "clinical_triage": false
+      },
+      "media_model": {},
+      "physical_interfaces": [],
+      "security_requirements": {
+        "row_level_security": true,
+        "http_only_session": true,
+        "signed_short_lived_entry_tokens": true,
+        "token_replay_ledger": true,
+        "fail_closed": true
+      },
+      "deployment_requirements": {
+        "visibility": "private",
+        "https_required_in_production": true
+      },
+      "lifecycle_requirements": {
+        "source_of_truth": "github-main",
+        "lovable_role": "ui-prototyping-only"
+      },
+      "quality_requirements": {
+        "strict_typescript": true,
+        "patient_staff_surface_separation": true,
+        "tenant_boundary_tests": true
+      },
+      "evidence_requirements": {
+        "no_unverified_success_claim": true,
+        "execution_receipts": true,
+        "audit_events": true
+      },
+      "artifact_type_refs": [
+        {
+          "namespace": "taowind",
+          "family": "software",
+          "kind": "clinic-administrative-agent",
+          "version": "v0.1"
+        }
+      ],
+      "metadata": {
+        "language": "zh-HK"
+      }
+    },
+    "nodes": [
+      {
+        "node_id": "authority-policy",
+        "node_type": {
+          "name": "prompt_or_policy",
+          "namespace": "taowind",
+          "version": "v0.1",
+          "identifier": "taowind/prompt_or_policy",
+          "builtin": true
+        },
+        "role": "RCL semantic authority boundary",
+        "dependencies": [],
+        "required_capabilities": ["clinic-flow.review"],
+        "canonical_owners": ["RCL"],
+        "acceptance_refs": ["clinic-flow.policy.no-clinical-authority.v1"],
+        "payload": {
+          "path": "rcl/clinic-admin-agent.rcl"
+        },
+        "metadata": {
+          "status": "CANDIDATE_ONLY"
+        }
+      },
+      {
+        "node_id": "signed-entry-token",
+        "node_type": {
+          "name": "source_code",
+          "namespace": "taowind",
+          "version": "v0.1",
+          "identifier": "taowind/source_code",
+          "builtin": true
+        },
+        "role": "short-lived signed patient and staff entry token",
+        "dependencies": ["authority-policy"],
+        "required_capabilities": ["clinic-flow.review"],
+        "canonical_owners": ["clinic-flow"],
+        "acceptance_refs": ["clinic-flow.security.signed-entry-token.v1"],
+        "payload": {
+          "paths": [
+            "src/security/signed-token.ts",
+            "src/security/access-token.server.ts",
+            "src/security/secrets.server.ts"
+          ]
+        },
+        "metadata": {
+          "secret_client_exposure_allowed": false
+        }
+      },
+      {
+        "node_id": "server-session",
+        "node_type": {
+          "name": "service",
+          "namespace": "taowind",
+          "version": "v0.1",
+          "identifier": "taowind/service",
+          "builtin": true
+        },
+        "role": "HttpOnly server session boundary",
+        "dependencies": ["signed-entry-token"],
+        "required_capabilities": ["clinic-flow.review"],
+        "canonical_owners": ["clinic-flow"],
+        "acceptance_refs": ["clinic-flow.security.http-only-session.v1"],
+        "payload": {
+          "path": "src/security/session.server.ts"
+        },
+        "metadata": {
+          "patient_session_minutes": 30,
+          "staff_session_hours": 8
+        }
+      },
+      {
+        "node_id": "database-core",
+        "node_type": {
+          "name": "database_schema",
+          "namespace": "taowind",
+          "version": "v0.1",
+          "identifier": "taowind/database_schema",
+          "builtin": true
+        },
+        "role": "multi-tenant PostgreSQL core with RLS",
+        "dependencies": ["authority-policy"],
+        "required_capabilities": ["clinic-flow.review"],
+        "canonical_owners": ["clinic-flow"],
+        "acceptance_refs": ["clinic-flow.database.tenant-rls.v1"],
+        "payload": {
+          "path": "db/migrations/0001_clinic_flow_core.sql"
+        },
+        "metadata": {
+          "direct_patient_base_table_write": false
+        }
+      },
+      {
+        "node_id": "database-hardening",
+        "node_type": {
+          "name": "migration",
+          "namespace": "taowind",
+          "version": "v0.1",
+          "identifier": "taowind/migration",
+          "builtin": true
+        },
+        "role": "foreign-key and patient-write hardening",
+        "dependencies": ["database-core"],
+        "required_capabilities": ["clinic-flow.review"],
+        "canonical_owners": ["clinic-flow"],
+        "acceptance_refs": ["clinic-flow.database.fail-closed-fk.v1"],
+        "payload": {
+          "path": "db/migrations/0002_harden_fk_and_patient_writes.sql"
+        },
+        "metadata": {}
+      },
+      {
+        "node_id": "agent-execution-core",
+        "node_type": {
+          "name": "workflow",
+          "namespace": "taowind",
+          "version": "v0.1",
+          "identifier": "taowind/workflow",
+          "builtin": true
+        },
+        "role": "bounded administrative Agent plan execution",
+        "dependencies": ["authority-policy"],
+        "required_capabilities": ["clinic-flow.review"],
+        "canonical_owners": ["clinic-flow"],
+        "acceptance_refs": ["clinic-flow.agent.closed-operation-set.v1"],
+        "payload": {
+          "paths": [
+            "src/lib/agent-executor.ts",
+            "src/data/agent-plans.ts",
+            "src/lib/app-store-agent-adapter.ts"
+          ]
+        },
+        "metadata": {
+          "prevalidate_all_operations": true,
+          "medium_and_high_require_human": true
+        }
+      },
+      {
+        "node_id": "patient-frontend",
+        "node_type": {
+          "name": "frontend",
+          "namespace": "taowind",
+          "version": "v0.1",
+          "identifier": "taowind/frontend",
+          "builtin": true
+        },
+        "role": "patient self-service portal",
+        "dependencies": ["server-session"],
+        "required_capabilities": ["clinic-flow.review"],
+        "canonical_owners": ["clinic-flow"],
+        "acceptance_refs": ["clinic-flow.ui.patient-surface-isolation.v1"],
+        "payload": {
+          "routes": "/patient/*",
+          "shell": "src/components/layout/PatientShell.tsx"
+        },
+        "metadata": {
+          "material_design_3": true
+        }
+      },
+      {
+        "node_id": "staff-frontend",
+        "node_type": {
+          "name": "frontend",
+          "namespace": "taowind",
+          "version": "v0.1",
+          "identifier": "taowind/frontend",
+          "builtin": true
+        },
+        "role": "clinic staff administrative console",
+        "dependencies": ["agent-execution-core", "server-session"],
+        "required_capabilities": ["clinic-flow.review"],
+        "canonical_owners": ["clinic-flow"],
+        "acceptance_refs": ["clinic-flow.ui.staff-surface-isolation.v1"],
+        "payload": {
+          "routes": "/staff/*",
+          "shell": "src/components/layout/StaffShell.tsx",
+          "agent_page": "src/routes/staff._app.agent.tsx"
+        },
+        "metadata": {
+          "material_design_3": true
+        }
+      },
+      {
+        "node_id": "verification-tests",
+        "node_type": {
+          "name": "test",
+          "namespace": "taowind",
+          "version": "v0.1",
+          "identifier": "taowind/test",
+          "builtin": true
+        },
+        "role": "security and state-transition verification",
+        "dependencies": [
+          "agent-execution-core",
+          "signed-entry-token",
+          "patient-frontend",
+          "staff-frontend"
+        ],
+        "required_capabilities": ["clinic-flow.review"],
+        "canonical_owners": ["clinic-flow"],
+        "acceptance_refs": ["clinic-flow.tests.no-false-pass.v1"],
+        "payload": {
+          "paths": [
+            "src/lib/__tests__/state-transitions.test.ts",
+            "src/lib/__tests__/session-boundary.test.ts",
+            "src/lib/__tests__/agent-executor.test.ts",
+            "src/lib/__tests__/signed-token.test.ts"
+          ]
+        },
+        "metadata": {
+          "runtime_status": "NOT_RUN_IN_CURRENT_GITHUB_ENV",
+          "reason": "GitHub Actions runner did not start; no test success claim is made"
+        }
+      },
+      {
+        "node_id": "evidence-boundary",
+        "node_type": {
+          "name": "evidence",
+          "namespace": "taowind",
+          "version": "v0.1",
+          "identifier": "taowind/evidence",
+          "builtin": true
+        },
+        "role": "bounded implementation evidence and known gaps",
+        "dependencies": [
+          "database-hardening",
+          "verification-tests"
+        ],
+        "required_capabilities": ["clinic-flow.review"],
+        "canonical_owners": ["DWAC", "clinic-flow"],
+        "acceptance_refs": ["clinic-flow.evidence.bounded-status.v1"],
+        "payload": {
+          "known_gaps": [
+            "production database adapter not connected",
+            "server session not yet replacing demo localStorage session in UI",
+            "signed token issuer not yet connected to staff authorization flow",
+            "persistent one-time JTI consumption not yet wired",
+            "WhatsApp and phone adapters not yet connected"
+          ]
+        },
+        "metadata": {
+          "verdict": "CANDIDATE_ONLY"
+        }
+      }
+    ],
+    "required_capabilities": ["clinic-flow.review"],
+    "metadata": {
+      "schema_owner": "DWAC universal artifact IR",
+      "status": "CANDIDATE_ONLY",
+      "source_of_truth": "github:xingxuling/clinic-flow",
+      "execution_authority": "none-granted-by-this-document"
+    }
+  }
+}
