@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppSplatRouteImport } from './routes/app.$'
 import { Route as PatientIndexRouteImport } from './routes/patient.index'
 import { Route as PatientAppRouteImport } from './routes/patient._app'
@@ -17,6 +18,7 @@ import { Route as PatientLoginRouteImport } from './routes/patient.login'
 import { Route as StaffIndexRouteImport } from './routes/staff.index'
 import { Route as StaffAppRouteImport } from './routes/staff._app'
 import { Route as StaffLoginRouteImport } from './routes/staff.login'
+import { Route as PatientAppHomeRouteImport } from './routes/patient._app.home'
 import { Route as StaffAppAgentRouteImport } from './routes/staff._app.agent'
 import { Route as StaffAppAppointmentsRouteImport } from './routes/staff._app.appointments'
 import { Route as StaffAppAuditRouteImport } from './routes/staff._app.audit'
@@ -31,6 +33,11 @@ import { Route as StaffAppTodayRouteImport } from './routes/staff._app.today'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/app/',
+  path: '/app/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppSplatRoute = AppSplatRouteImport.update({
@@ -67,6 +74,11 @@ const StaffLoginRoute = StaffLoginRouteImport.update({
   id: '/staff/login',
   path: '/staff/login',
   getParentRoute: () => rootRouteImport,
+} as any)
+const PatientAppHomeRoute = PatientAppHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => PatientAppRoute,
 } as any)
 const StaffAppAgentRoute = StaffAppAgentRouteImport.update({
   id: '/agent',
@@ -122,12 +134,14 @@ const StaffAppTodayRoute = StaffAppTodayRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app/$': typeof AppSplatRoute
-  '/patient': typeof PatientAppRoute
+  '/patient': typeof PatientAppRouteWithChildren
   '/patient/login': typeof PatientLoginRoute
   '/staff': typeof StaffAppRouteWithChildren
   '/staff/login': typeof StaffLoginRoute
+  '/app/': typeof AppIndexRoute
   '/patient/': typeof PatientIndexRoute
   '/staff/': typeof StaffIndexRoute
+  '/patient/home': typeof PatientAppHomeRoute
   '/staff/agent': typeof StaffAppAgentRoute
   '/staff/appointments': typeof StaffAppAppointmentsRoute
   '/staff/audit': typeof StaffAppAuditRoute
@@ -146,6 +160,8 @@ export interface FileRoutesByTo {
   '/patient/login': typeof PatientLoginRoute
   '/staff': typeof StaffIndexRoute
   '/staff/login': typeof StaffLoginRoute
+  '/app': typeof AppIndexRoute
+  '/patient/home': typeof PatientAppHomeRoute
   '/staff/agent': typeof StaffAppAgentRoute
   '/staff/appointments': typeof StaffAppAppointmentsRoute
   '/staff/audit': typeof StaffAppAuditRoute
@@ -161,12 +177,14 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app/$': typeof AppSplatRoute
-  '/patient/_app': typeof PatientAppRoute
+  '/patient/_app': typeof PatientAppRouteWithChildren
   '/patient/login': typeof PatientLoginRoute
   '/staff/_app': typeof StaffAppRouteWithChildren
   '/staff/login': typeof StaffLoginRoute
+  '/app/': typeof AppIndexRoute
   '/patient/': typeof PatientIndexRoute
   '/staff/': typeof StaffIndexRoute
+  '/patient/_app/home': typeof PatientAppHomeRoute
   '/staff/_app/agent': typeof StaffAppAgentRoute
   '/staff/_app/appointments': typeof StaffAppAppointmentsRoute
   '/staff/_app/audit': typeof StaffAppAuditRoute
@@ -187,8 +205,10 @@ export interface FileRouteTypes {
     | '/patient/login'
     | '/staff'
     | '/staff/login'
+    | '/app/'
     | '/patient/'
     | '/staff/'
+    | '/patient/home'
     | '/staff/agent'
     | '/staff/appointments'
     | '/staff/audit'
@@ -207,6 +227,8 @@ export interface FileRouteTypes {
     | '/patient/login'
     | '/staff'
     | '/staff/login'
+    | '/app'
+    | '/patient/home'
     | '/staff/agent'
     | '/staff/appointments'
     | '/staff/audit'
@@ -225,8 +247,10 @@ export interface FileRouteTypes {
     | '/patient/login'
     | '/staff/_app'
     | '/staff/login'
+    | '/app/'
     | '/patient/'
     | '/staff/'
+    | '/patient/_app/home'
     | '/staff/_app/agent'
     | '/staff/_app/appointments'
     | '/staff/_app/audit'
@@ -242,10 +266,11 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppSplatRoute: typeof AppSplatRoute
-  PatientAppRoute: typeof PatientAppRoute
+  PatientAppRoute: typeof PatientAppRouteWithChildren
   PatientLoginRoute: typeof PatientLoginRoute
   StaffAppRoute: typeof StaffAppRouteWithChildren
   StaffLoginRoute: typeof StaffLoginRoute
+  AppIndexRoute: typeof AppIndexRoute
   PatientIndexRoute: typeof PatientIndexRoute
   StaffIndexRoute: typeof StaffIndexRoute
 }
@@ -257,6 +282,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app/': {
+      id: '/app/'
+      path: '/app'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/$': {
@@ -307,6 +339,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/staff/login'
       preLoaderRoute: typeof StaffLoginRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/patient/_app/home': {
+      id: '/patient/_app/home'
+      path: '/home'
+      fullPath: '/patient/home'
+      preLoaderRoute: typeof PatientAppHomeRouteImport
+      parentRoute: typeof PatientAppRoute
     }
     '/staff/_app/agent': {
       id: '/staff/_app/agent'
@@ -381,6 +420,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface PatientAppRouteChildren {
+  PatientAppHomeRoute: typeof PatientAppHomeRoute
+}
+
+const PatientAppRouteChildren: PatientAppRouteChildren = {
+  PatientAppHomeRoute: PatientAppHomeRoute,
+}
+
+const PatientAppRouteWithChildren = PatientAppRoute._addFileChildren(
+  PatientAppRouteChildren,
+)
+
 interface StaffAppRouteChildren {
   StaffAppAgentRoute: typeof StaffAppAgentRoute
   StaffAppAppointmentsRoute: typeof StaffAppAppointmentsRoute
@@ -414,10 +465,11 @@ const StaffAppRouteWithChildren = StaffAppRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppSplatRoute: AppSplatRoute,
-  PatientAppRoute: PatientAppRoute,
+  PatientAppRoute: PatientAppRouteWithChildren,
   PatientLoginRoute: PatientLoginRoute,
   StaffAppRoute: StaffAppRouteWithChildren,
   StaffLoginRoute: StaffLoginRoute,
+  AppIndexRoute: AppIndexRoute,
   PatientIndexRoute: PatientIndexRoute,
   StaffIndexRoute: StaffIndexRoute,
 }
