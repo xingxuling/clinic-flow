@@ -105,8 +105,10 @@ function PatientAppointments() {
         open={reschedule !== null}
         onClose={() => setReschedule(null)}
         title="選擇新時間"
-        description="以下為診所開放給你的空檔，選定後會重新等待診所確認。"
       >
+        <p className="mb-3 md-body-s text-on-surface-variant">
+          以下為診所開放給你的空檔，選定後會重新等待診所確認。
+        </p>
         <div className="max-h-80 overflow-y-auto pr-1">
           <div className="grid grid-cols-2 gap-2">
             {slots.map((s) => (
@@ -138,7 +140,6 @@ function PatientAppointments() {
         open={cancelling !== null}
         onClose={() => setCancelling(null)}
         title="確定取消預約？"
-        description="取消後如需重新安排，可在此頁再約或聯絡診所。"
         actions={
           <>
             <MdButton variant="text" onClick={() => setCancelling(null)}>
@@ -155,6 +156,9 @@ function PatientAppointments() {
           </>
         }
       >
+        <p className="mb-2 md-body-s text-on-surface-variant">
+          取消後如需重新安排，可在此頁再約或聯絡診所。
+        </p>
         {cancelling && (
           <p className="md-body-m text-on-surface-variant">
             {fmtDate(cancelling.startAt)} {fmtTime(cancelling.startAt)}・

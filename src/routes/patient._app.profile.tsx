@@ -48,21 +48,22 @@ function PatientProfile() {
           label="偏好聯絡方式"
           value={channel}
           onChange={(e) => setChannel(e.target.value as ChannelKind)}
-          options={(["whatsapp", "phone", "web", "email"] as ChannelKind[]).map((c) => ({
-            value: c,
-            label: CHANNEL[c].label,
-          }))}
-        />
+        >
+          {(["whatsapp", "phone", "web", "email"] as ChannelKind[]).map((c) => (
+            <option key={c} value={c}>
+              {CHANNEL[c].label}
+            </option>
+          ))}
+        </MdSelect>
         <MdSelect
           label="語言"
           value={lang}
           onChange={(e) => setLang(e.target.value as Patient["language"])}
-          options={[
-            { value: "zh-HK", label: "繁體中文（廣東話）" },
-            { value: "zh-CN", label: "简体中文" },
-            { value: "en", label: "English" },
-          ]}
-        />
+        >
+          <option value="zh-HK">繁體中文（廣東話）</option>
+          <option value="zh-CN">简体中文</option>
+          <option value="en">English</option>
+        </MdSelect>
         <div>
           <MdButton
             onClick={() => myUpdateProfile({ phone, preferredChannel: channel, language: lang })}

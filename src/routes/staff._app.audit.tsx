@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Bot, Cpu, User } from "lucide-react";
+import { Bot, Cpu, User, UserCircle } from "lucide-react";
 import { useState } from "react";
 
 import { PageContainer } from "@/components/layout/StaffShell";
