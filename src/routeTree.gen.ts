@@ -19,6 +19,7 @@ import { Route as AppDocumentsRouteImport } from './routes/app.documents'
 import { Route as AppInboxRouteImport } from './routes/app.inbox'
 import { Route as AppPatientsRouteImport } from './routes/app.patients'
 import { Route as AppRemindersRouteImport } from './routes/app.reminders'
+import { Route as AppSettingsRouteImport } from './routes/app.settings'
 import { Route as AppStaffRouteImport } from './routes/app.staff'
 import { Route as AppTodayRouteImport } from './routes/app.today'
 
@@ -72,6 +73,11 @@ const AppRemindersRoute = AppRemindersRouteImport.update({
   path: '/reminders',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppStaffRoute = AppStaffRouteImport.update({
   id: '/staff',
   path: '/staff',
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/app/inbox': typeof AppInboxRoute
   '/app/patients': typeof AppPatientsRoute
   '/app/reminders': typeof AppRemindersRoute
+  '/app/settings': typeof AppSettingsRoute
   '/app/staff': typeof AppStaffRoute
   '/app/today': typeof AppTodayRoute
   '/app/': typeof AppIndexRoute
@@ -106,6 +113,7 @@ export interface FileRoutesByTo {
   '/app/inbox': typeof AppInboxRoute
   '/app/patients': typeof AppPatientsRoute
   '/app/reminders': typeof AppRemindersRoute
+  '/app/settings': typeof AppSettingsRoute
   '/app/staff': typeof AppStaffRoute
   '/app/today': typeof AppTodayRoute
   '/app': typeof AppIndexRoute
@@ -121,6 +129,7 @@ export interface FileRoutesById {
   '/app/inbox': typeof AppInboxRoute
   '/app/patients': typeof AppPatientsRoute
   '/app/reminders': typeof AppRemindersRoute
+  '/app/settings': typeof AppSettingsRoute
   '/app/staff': typeof AppStaffRoute
   '/app/today': typeof AppTodayRoute
   '/app/': typeof AppIndexRoute
@@ -137,6 +146,7 @@ export interface FileRouteTypes {
     | '/app/inbox'
     | '/app/patients'
     | '/app/reminders'
+    | '/app/settings'
     | '/app/staff'
     | '/app/today'
     | '/app/'
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/app/inbox'
     | '/app/patients'
     | '/app/reminders'
+    | '/app/settings'
     | '/app/staff'
     | '/app/today'
     | '/app'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
     | '/app/inbox'
     | '/app/patients'
     | '/app/reminders'
+    | '/app/settings'
     | '/app/staff'
     | '/app/today'
     | '/app/'
@@ -246,6 +258,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRemindersRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/settings': {
+      id: '/app/settings'
+      path: '/settings'
+      fullPath: '/app/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/staff': {
       id: '/app/staff'
       path: '/staff'
@@ -271,6 +290,7 @@ interface AppRouteChildren {
   AppInboxRoute: typeof AppInboxRoute
   AppPatientsRoute: typeof AppPatientsRoute
   AppRemindersRoute: typeof AppRemindersRoute
+  AppSettingsRoute: typeof AppSettingsRoute
   AppStaffRoute: typeof AppStaffRoute
   AppTodayRoute: typeof AppTodayRoute
   AppIndexRoute: typeof AppIndexRoute
@@ -284,6 +304,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppInboxRoute: AppInboxRoute,
   AppPatientsRoute: AppPatientsRoute,
   AppRemindersRoute: AppRemindersRoute,
+  AppSettingsRoute: AppSettingsRoute,
   AppStaffRoute: AppStaffRoute,
   AppTodayRoute: AppTodayRoute,
   AppIndexRoute: AppIndexRoute,
