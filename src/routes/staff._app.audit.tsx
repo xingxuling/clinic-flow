@@ -22,7 +22,7 @@ function AuditPage() {
   const [who, setWho] = useState<"all" | "staff" | "agent">("all");
   const list = auditEvents.filter((e) => who === "all" || e.actor.type === who);
 
-  const icon = { staff: User, agent: Bot, system: Cpu };
+  const icon = { staff: User, agent: Bot, system: Cpu, patient: UserCircle };
 
   return (
     <PageContainer title="審計日誌" subtitle="所有行政動作與 Agent 決策皆留痕，包含被拒絕的操作。">

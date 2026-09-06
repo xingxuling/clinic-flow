@@ -49,9 +49,9 @@ function PatientProfile() {
           value={channel}
           onChange={(e) => setChannel(e.target.value as ChannelKind)}
         >
-          {(["whatsapp", "phone", "web", "email"] as ChannelKind[]).map((c) => (
+          {(["whatsapp", "phone", "web"] as ChannelKind[]).map((c) => (
             <option key={c} value={c}>
-              {CHANNEL[c].label}
+              {CHANNEL[c]}
             </option>
           ))}
         </MdSelect>
