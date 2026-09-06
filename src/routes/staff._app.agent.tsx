@@ -1,9 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Bot, Database, PencilRuler, ShieldAlert, Target } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { PageContainer } from "@/components/layout/StaffShell";
 import { EmptyState, MdButton, MdCard, MdChip, MdFilterChip, SectionHeader } from "@/components/m3";
+import { getAgentPlan } from "@/data/agent-plans";
+import { executeAgentPlan } from "@/lib/agent-executor";
+import {
+  createAgentStoreRepository,
+  requiredPermissionsForAgentPlan,
+} from "@/lib/app-store-agent-adapter";
 import { AGENT_STATUS, RISK, fmtDateTime } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
 import type { AgentTaskStatus } from "@/types/domain";
@@ -12,7 +19,10 @@ export const Route = createFileRoute("/staff/_app/agent")({
   head: () => ({
     meta: [
       { title: "Agent 任務台｜診所行政 Agent" },
-      { name: "description", content: "查看 Agent 準備做什麼、依據什麼、會修改什麼；高風險動作必須人工批准。" },
+      {
+        name: "description",
+        content: "查看 Agent 準備做什麼、依據什麼、會修改什麼；中高風險動作必須人工批准。",
+      },
     ],
   }),
   component: AgentPage,
@@ -27,15 +37,109 @@ const FILTERS: { value: AgentTaskStatus | "all"; label: string }[] = [
 ];
 
 function AgentPage() {
-  const { agentTasks, patientName, decideAgentTask, retryAgentTask, staffName } = useApp();
+  const app = useApp();
+  const {
+    agentTasks,
+    patientName,
+    decideAgentTask,
+    retryAgentTask,
+    staffName,
+    clinic,
+    currentStaff,
+    staff,
+    patients,
+    appointments,
+    conversations,
+    urgentFlags,
+    reminders,
+    documents,
+    invites,
+    auditEvents,
+    can,
+    setAppointmentStatus,
+    rescheduleAppointment,
+    createAppointment,
+    sendReply,
+    escalateUrgentFlag,
+    updateReminderStatus,
+  } = app;
   const [filter, setFilter] = useState<AgentTaskStatus | "all">("all");
 
   const list = agentTasks.filter((t) => filter === "all" || t.status === filter);
 
+  function approveAndExecute(taskId: string) {
+    const task = agentTasks.find((row) => row.id === taskId);
+    if (!task) return;
+
+    const plan = getAgentPlan(taskId);
+    if (!plan) {
+      toast.error("未执行", {
+        description: "此任务尚未配置机器可执行计划；系统不会把纯文字说明当成执行指令。",
+      });
+      return;
+    }
+
+    const missingPermissions = requiredPermissionsForAgentPlan(plan.operations).filter(
+      (permission) => !can(permission),
+    );
+    if (missingPermissions.length > 0) {
+      toast.error("权限不足，未执行", {
+        description: `缺少：${missingPermissions.join("、")}`,
+      });
+      return;
+    }
+
+    const repository = createAgentStoreRepository({
+      clinic,
+      currentStaff,
+      staff,
+      patients,
+      appointments,
+      conversations,
+      urgentFlags,
+      agentTasks,
+      reminders,
+      documents,
+      invites,
+      auditEvents,
+      can,
+      setAppointmentStatus,
+      rescheduleAppointment,
+      createAppointment,
+      sendReply,
+      escalateUrgentFlag,
+      updateReminderStatus,
+    });
+
+    const receipt = executeAgentPlan({
+      repo: repository,
+      clinicId: clinic.id,
+      task,
+      plan,
+      humanApproved: true,
+      approvedBy: currentStaff.id,
+      approvedByName: currentStaff.name,
+    });
+
+    if (!receipt.ok) {
+      toast.error("Agent 未执行", {
+        description: receipt.errors[0] ?? "执行前验证失败。",
+      });
+      return;
+    }
+
+    // 先完成真实副作用，再把现有任务状态机推进至 done。
+    // 真正接数据库后，这两步会合并到同一个服务器事务。
+    decideAgentTask(taskId, true);
+    toast.success("行政动作已执行", {
+      description: `完成 ${receipt.operationCount} 个受控动作。`,
+    });
+  }
+
   return (
     <PageContainer
       title="Agent 任務台"
-      subtitle="每項任務都會顯示準備做什麼、依據什麼、會修改什麼。高風險動作一律等待人工批准。"
+      subtitle="每項任務都會顯示準備做什麼、依據什麼、會修改什麼。中高風險動作一律等待人工批准。"
     >
       <div className="mb-4 flex flex-wrap gap-2">
         {FILTERS.map((f) => (
@@ -53,6 +157,7 @@ function AgentPage() {
           {list.map((t) => {
             const status = AGENT_STATUS[t.status];
             const risk = RISK[t.risk];
+            const plan = getAgentPlan(t.id);
             return (
               <MdCard key={t.id} className="p-5">
                 <div className="flex flex-wrap items-start gap-2">
@@ -108,6 +213,20 @@ function AgentPage() {
                   </div>
                 </dl>
 
+                <div className="mt-3 rounded-2xl bg-surface-container p-3 md-body-s text-on-surface-variant">
+                  {plan ? (
+                    <>
+                      <strong className="text-on-surface">可执行计划：</strong>
+                      {plan.operations.length} 个受控动作；批准前会先完整验证，任何一项不合法则整单不执行。
+                    </>
+                  ) : (
+                    <>
+                      <strong className="text-on-surface">仅文字任务：</strong>
+                      尚无机器可执行计划，批准动作会被安全阻止。
+                    </>
+                  )}
+                </div>
+
                 {t.failureReason && (
                   <p className="mt-3 flex items-start gap-2 rounded-lg bg-error-container p-3 md-body-s text-on-error-container">
                     <ShieldAlert className="mt-0.5 size-4 shrink-0" />
@@ -124,8 +243,8 @@ function AgentPage() {
                 <div className="mt-4 flex flex-wrap gap-2">
                   {t.status === "waiting_approval" && (
                     <>
-                      <MdButton size="sm" onClick={() => decideAgentTask(t.id, true)}>
-                        批准執行
+                      <MdButton size="sm" onClick={() => approveAndExecute(t.id)} disabled={!plan}>
+                        批准並執行
                       </MdButton>
                       <MdButton size="sm" variant="outlined" onClick={() => decideAgentTask(t.id, false)}>
                         否決
@@ -138,7 +257,7 @@ function AgentPage() {
                     </MdButton>
                   )}
                   {t.status === "auto_running" && (
-                    <MdChip tone="primary">低風險任務，按規則自動執行</MdChip>
+                    <MdChip tone="primary">僅低風險任務可按規則自動執行</MdChip>
                   )}
                 </div>
               </MdCard>
