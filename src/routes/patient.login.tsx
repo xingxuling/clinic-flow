@@ -39,7 +39,9 @@ function PatientLogin() {
 
   function enter(m: Method) {
     // 專屬連結的 ?p= 只有在診所曾發出該連結時才有效（示範白名單，取代真實簽名 token）。
-    const ok = signInPatient({ patientId: requestedPatientId, method: m });
+    const ok = signInPatient(
+      requestedPatientId ? { patientId: requestedPatientId, method: m } : { method: m },
+    );
     if (!ok) {
       setError("此連結無效或已失效，請向診所索取新的專屬連結。");
       return;
