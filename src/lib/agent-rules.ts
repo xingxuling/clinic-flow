@@ -2,7 +2,11 @@ import type { AgentTask, AgentTaskStatus, RiskLevel } from "@/types/domain";
 
 /**
  * Agent 任務狀態機。
- * 原則：高風險動作永不自動執行，必須由具 agent.approve 權限的人員批准。
+ *
+ * 安全基线：
+ * - low：可按诊所策略自动执行；
+ * - medium / high：默认必须人工批准；
+ * - 医学诊断、治疗建议、临床分诊不属于本系统可执行动作集合。
  */
 export const AGENT_TRANSITIONS: Record<AgentTaskStatus, AgentTaskStatus[]> = {
   auto_running: ["done", "failed", "waiting_approval"],
@@ -16,13 +20,16 @@ export function canTransitionAgentTask(from: AgentTaskStatus, to: AgentTaskStatu
   return AGENT_TRANSITIONS[from].includes(to);
 }
 
-/** 高風險任務不可自動執行 */
+/**
+ * 只有低风险行政动作可以自动执行。
+ * medium 也进入人工门，避免「改期／取消／文件写入」之类外部副作用被默认放行。
+ */
 export function mayAutoExecute(task: Pick<AgentTask, "risk">): boolean {
-  return task.risk !== "high";
+  return task.risk === "low";
 }
 
 export function initialStatusFor(risk: RiskLevel): AgentTaskStatus {
-  return risk === "high" ? "waiting_approval" : "auto_running";
+  return mayAutoExecute({ risk }) ? "auto_running" : "waiting_approval";
 }
 
 /**
