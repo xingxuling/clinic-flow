@@ -123,7 +123,7 @@ const AppStoreContext = createContext<AppStoreValue | null>(null);
 
 const DEMO_CLINIC_ID = "clinic_cinghe";
 const DEMO_STAFF_ID = "staff_reception";
-export const DEMO_PATIENT_ID = "pt_chan";
+export const DEMO_PATIENT_ID = "pt_07";
 export const DEMO_INVITE_CODES = ["CINGHE-2026", "CINGHE-NURSE-77"];
 export const DEMO_PATIENT_OTP = "246810";
 

@@ -27,6 +27,9 @@ import {
   seedClinics,
   seedConversations,
   seedDocuments,
+  seedPatientConversations,
+  seedPatientDocuments,
+  seedPatientHistory,
   seedInvites,
   seedPatients,
   seedReminders,
@@ -47,6 +50,7 @@ export interface ClinicRepository {
   listInvites(clinicId: ID): Invite[];
   listAuditEvents(clinicId: ID): AuditEvent[];
 
+  updatePatient(clinicId: ID, id: ID, patch: Partial<Patient>): void;
   updateAppointment(clinicId: ID, id: ID, patch: Partial<Appointment>): void;
   addAppointment(appointment: Appointment): void;
   updateConversation(clinicId: ID, id: ID, patch: Partial<Conversation>): void;
@@ -83,12 +87,12 @@ export function createInMemoryStore(): Store {
     clinics: seedClinics,
     staff: seedStaff,
     patients: seedPatients,
-    appointments: seedAppointments,
-    conversations: seedConversations,
+    appointments: [...seedAppointments, ...seedPatientHistory],
+    conversations: [...seedConversations, ...seedPatientConversations],
     urgentFlags: seedUrgentFlags,
     agentTasks: seedAgentTasks,
     reminders: seedReminders,
-    documents: seedDocuments,
+    documents: [...seedDocuments, ...seedPatientDocuments],
     invites: seedInvites,
     auditEvents: seedAuditEvents,
   });
@@ -153,6 +157,9 @@ export class InMemoryClinicRepository implements ClinicRepository {
     return this.scope(this.store.auditEvents, clinicId).sort((a, b) => b.at.localeCompare(a.at));
   }
 
+  updatePatient(clinicId: ID, id: ID, p: Partial<Patient>) {
+    this.patch(this.store.patients, clinicId, id, p);
+  }
   updateAppointment(clinicId: ID, id: ID, p: Partial<Appointment>) {
     this.patch(this.store.appointments, clinicId, id, p);
   }
