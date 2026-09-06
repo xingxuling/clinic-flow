@@ -20,19 +20,19 @@ export const Route = createFileRoute("/staff/login")({
 type Method = "code" | "qr" | "passkey";
 
 function SignInPage() {
-  const { signIn, session, hydrated } = useApp();
+  const { signInStaff, staffSession, hydrated } = useApp();
   const navigate = useNavigate();
   const [method, setMethod] = useState<Method>("code");
   const [code, setCode] = useState("");
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (hydrated && session) navigate({ to: "/staff/today" });
-  }, [hydrated, session, navigate]);
+    if (hydrated && staffSession) navigate({ to: "/staff/today" });
+  }, [hydrated, staffSession, navigate]);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    const ok = signIn({ code, method: "code" });
+    const ok = signInStaff({ code, method: "code" });
     if (ok) navigate({ to: "/staff/today" });
     else setError(true);
   }
@@ -111,7 +111,7 @@ function SignInPage() {
               <MdButton
                 variant="tonal"
                 onClick={() => {
-                  signIn({ code: "", method: "qr" });
+                  signInStaff({ code: "", method: "qr" });
                   navigate({ to: "/staff/today" });
                 }}
               >
@@ -131,7 +131,7 @@ function SignInPage() {
               <MdButton
                 variant="tonal"
                 onClick={() => {
-                  signIn({ code: "", method: "passkey" });
+                  signInStaff({ code: "", method: "passkey" });
                   navigate({ to: "/staff/today" });
                 }}
               >

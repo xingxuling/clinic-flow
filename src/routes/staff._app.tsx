@@ -15,14 +15,14 @@ export const Route = createFileRoute("/staff/_app")({
 });
 
 function AppLayout() {
-  const { hydrated, session } = useApp();
+  const { hydrated, staffSession } = useApp();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (hydrated && !session) navigate({ to: "/" });
-  }, [hydrated, session, navigate]);
+    if (hydrated && !staffSession) navigate({ to: "/staff/login" });
+  }, [hydrated, staffSession, navigate]);
 
-  if (!hydrated || !session) {
+  if (!hydrated || !staffSession) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface md-body-m text-on-surface-variant">
         正在確認邀請狀態…
