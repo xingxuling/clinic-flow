@@ -9,6 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as PatientLoginRouteImport } from './routes/patient.login'
 import { Route as StaffIndexRouteImport } from './routes/staff.index'
 import { Route as StaffAppRouteImport } from './routes/staff._app'
 import { Route as StaffLoginRouteImport } from './routes/staff.login'
@@ -23,6 +25,16 @@ import { Route as StaffAppSettingsRouteImport } from './routes/staff._app.settin
 import { Route as StaffAppStaffRouteImport } from './routes/staff._app.staff'
 import { Route as StaffAppTodayRouteImport } from './routes/staff._app.today'
 
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PatientLoginRoute = PatientLoginRouteImport.update({
+  id: '/patient/login',
+  path: '/patient/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StaffIndexRoute = StaffIndexRouteImport.update({
   id: '/staff/',
   path: '/staff/',
@@ -90,6 +102,8 @@ const StaffAppTodayRoute = StaffAppTodayRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
+  '/patient/login': typeof PatientLoginRoute
   '/staff': typeof StaffAppRouteWithChildren
   '/staff/login': typeof StaffLoginRoute
   '/staff/': typeof StaffIndexRoute
@@ -105,6 +119,8 @@ export interface FileRoutesByFullPath {
   '/staff/today': typeof StaffAppTodayRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
+  '/patient/login': typeof PatientLoginRoute
   '/staff': typeof StaffIndexRoute
   '/staff/login': typeof StaffLoginRoute
   '/staff/agent': typeof StaffAppAgentRoute
@@ -120,6 +136,8 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/patient/login': typeof PatientLoginRoute
   '/staff/_app': typeof StaffAppRouteWithChildren
   '/staff/login': typeof StaffLoginRoute
   '/staff/': typeof StaffIndexRoute
@@ -137,6 +155,8 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
+    | '/patient/login'
     | '/staff'
     | '/staff/login'
     | '/staff/'
@@ -152,6 +172,8 @@ export interface FileRouteTypes {
     | '/staff/today'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
+    | '/patient/login'
     | '/staff'
     | '/staff/login'
     | '/staff/agent'
@@ -166,6 +188,8 @@ export interface FileRouteTypes {
     | '/staff/today'
   id:
     | '__root__'
+    | '/'
+    | '/patient/login'
     | '/staff/_app'
     | '/staff/login'
     | '/staff/'
@@ -182,6 +206,8 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
+  PatientLoginRoute: typeof PatientLoginRoute
   StaffAppRoute: typeof StaffAppRouteWithChildren
   StaffLoginRoute: typeof StaffLoginRoute
   StaffIndexRoute: typeof StaffIndexRoute
@@ -189,6 +215,20 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/patient/login': {
+      id: '/patient/login'
+      path: '/patient/login'
+      fullPath: '/patient/login'
+      preLoaderRoute: typeof PatientLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/staff/': {
       id: '/staff/'
       path: '/staff'
@@ -314,6 +354,8 @@ const StaffAppRouteWithChildren = StaffAppRoute._addFileChildren(
 )
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
+  PatientLoginRoute: PatientLoginRoute,
   StaffAppRoute: StaffAppRouteWithChildren,
   StaffLoginRoute: StaffLoginRoute,
   StaffIndexRoute: StaffIndexRoute,
