@@ -7,15 +7,8 @@ import {
   verifyAccessToken,
   type AccessTokenKind,
 } from "@/security/signed-token";
+import { getAccessTokenSecret } from "@/security/secrets.server";
 import type { ID } from "@/types/domain";
-
-const getTokenSecret = createServerOnlyFn(() => {
-  const secret = process.env.CLINIC_FLOW_TOKEN_SECRET;
-  if (!secret || secret.length < 32) {
-    throw new Error("CLINIC_FLOW_TOKEN_SECRET_MISSING_OR_TOO_SHORT");
-  }
-  return secret;
-});
 
 /**
  * 仅服务器内部可调用：真正接数据库后，应只在已验证员工权限的服务端流程中签发。
@@ -29,7 +22,7 @@ export const issuePatientPortalTokenServer = createServerOnlyFn(
   }) =>
     issuePatientPortalToken({
       ...input,
-      secret: getTokenSecret(),
+      secret: getAccessTokenSecret(),
     }),
 );
 
@@ -43,7 +36,7 @@ export const issueStaffInviteTokenServer = createServerOnlyFn(
   }) =>
     issueStaffInviteToken({
       ...input,
-      secret: getTokenSecret(),
+      secret: getAccessTokenSecret(),
     }),
 );
 
@@ -61,21 +54,33 @@ export interface VerifiedAccessClaim {
   jti: string;
 }
 
-/**
- * 可由客户端调用，但所有密码学验证都在服务器执行。
- * 返回值只保留建立 session 所需的最小 claim，不回传任何姓名、电话或病历资料。
- */
-export const verifySignedAccessTokenServer = createServerFn({ method: "POST" })
-  .validator(verifySchema)
-  .handler(async ({ data }) => {
-    const result = await verifyAccessToken(data.token, getTokenSecret());
+export const verifyAccessTokenServerOnly = createServerOnlyFn(
+  async (input: {
+    token: string;
+    expectedKind: AccessTokenKind;
+    expectedClinicId: ID;
+  }): Promise<
+    | { ok: true; claim: VerifiedAccessClaim }
+    | {
+        ok: false;
+        reason:
+          | "TOKEN_FORMAT_INVALID"
+          | "TOKEN_SIGNATURE_INVALID"
+          | "TOKEN_PAYLOAD_INVALID"
+          | "TOKEN_EXPIRED"
+          | "SECRET_TOO_SHORT"
+          | "TOKEN_KIND_MISMATCH"
+          | "TOKEN_TENANT_MISMATCH";
+      }
+  > => {
+    const result = await verifyAccessToken(input.token, getAccessTokenSecret());
     if (!result.ok) return result;
 
-    if (result.payload.kind !== data.expectedKind) {
-      return { ok: false as const, reason: "TOKEN_KIND_MISMATCH" as const };
+    if (result.payload.kind !== input.expectedKind) {
+      return { ok: false, reason: "TOKEN_KIND_MISMATCH" };
     }
-    if (result.payload.clinicId !== data.expectedClinicId) {
-      return { ok: false as const, reason: "TOKEN_TENANT_MISMATCH" as const };
+    if (result.payload.clinicId !== input.expectedClinicId) {
+      return { ok: false, reason: "TOKEN_TENANT_MISMATCH" };
     }
 
     const subjectId =
@@ -83,13 +88,23 @@ export const verifySignedAccessTokenServer = createServerFn({ method: "POST" })
         ? result.payload.patientId
         : result.payload.inviteId;
 
-    const claim: VerifiedAccessClaim = {
-      kind: result.payload.kind,
-      clinicId: result.payload.clinicId,
-      subjectId,
-      exp: result.payload.exp,
-      jti: result.payload.jti,
+    return {
+      ok: true,
+      claim: {
+        kind: result.payload.kind,
+        clinicId: result.payload.clinicId,
+        subjectId,
+        exp: result.payload.exp,
+        jti: result.payload.jti,
+      },
     };
+  },
+);
 
-    return { ok: true as const, claim };
-  });
+/**
+ * 可由客户端调用，但所有密码学验证都在服务器执行。
+ * 返回值只保留建立 session 所需的最小 claim，不回传任何姓名、电话或病历资料。
+ */
+export const verifySignedAccessTokenServer = createServerFn({ method: "POST" })
+  .validator(verifySchema)
+  .handler(async ({ data }) => verifyAccessTokenServerOnly(data));
