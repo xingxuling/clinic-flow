@@ -350,7 +350,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
     retryAgentTask: (id) => {
       if (!guard("agent.approve", "重試 Agent 任務", `任務 ${id}`)) return;
-      repo.updateAgentTask(clinicId, id, { status: "waiting_approval", failureReason: undefined });
+      repo.updateAgentTask(clinicId, id, { status: "waiting_approval", failureReason: "" });
       audit({ action: "重試 Agent 任務", target: `任務 ${id}`, result: "success", detail: "轉為等待人工批准" });
       bump();
     },

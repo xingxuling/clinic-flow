@@ -214,7 +214,7 @@ function TodayPage() {
               title="等待人手回覆"
               count={waitingReply.length}
               action={
-                <Link to="/app/inbox" className="md-label-l text-primary">
+                <Link to="/app/inbox" search={{ c: undefined }} className="md-label-l text-primary">
                   全部
                 </Link>
               }
