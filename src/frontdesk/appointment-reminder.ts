@@ -1,3 +1,4 @@
+import { appointmentInteractionPayload } from "@/frontdesk/appointment-interaction";
 import type { MessagingAdapter, ChannelSendReceipt } from "@/integrations/messaging-adapter";
 import type { Appointment, Clinic, Patient, Staff } from "@/types/domain";
 
@@ -48,17 +49,26 @@ export function buildAppointmentReminder(input: {
       {
         id: `confirm_${input.appointment.id}`,
         label: "確認",
-        payload: `appointment:confirm:${input.appointment.id}`,
+        payload: appointmentInteractionPayload({
+          kind: "confirm",
+          appointmentId: input.appointment.id,
+        }),
       },
       {
         id: `reschedule_${input.appointment.id}`,
         label: "改期",
-        payload: `appointment:reschedule:${input.appointment.id}`,
+        payload: appointmentInteractionPayload({
+          kind: "reschedule_request",
+          appointmentId: input.appointment.id,
+        }),
       },
       {
         id: `cancel_${input.appointment.id}`,
         label: "取消",
-        payload: `appointment:cancel:${input.appointment.id}`,
+        payload: appointmentInteractionPayload({
+          kind: "cancel",
+          appointmentId: input.appointment.id,
+        }),
       },
     ],
   };
