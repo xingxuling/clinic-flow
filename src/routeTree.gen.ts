@@ -12,8 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppAgentRouteImport } from './routes/app.agent'
 import { Route as AppAppointmentsRouteImport } from './routes/app.appointments'
+import { Route as AppDocumentsRouteImport } from './routes/app.documents'
 import { Route as AppInboxRouteImport } from './routes/app.inbox'
+import { Route as AppRemindersRouteImport } from './routes/app.reminders'
 import { Route as AppTodayRouteImport } from './routes/app.today'
 
 const IndexRoute = IndexRouteImport.update({
@@ -31,14 +34,29 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAgentRoute = AppAgentRouteImport.update({
+  id: '/agent',
+  path: '/agent',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAppointmentsRoute = AppAppointmentsRouteImport.update({
   id: '/appointments',
   path: '/appointments',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDocumentsRoute = AppDocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppInboxRoute = AppInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRemindersRoute = AppRemindersRouteImport.update({
+  id: '/reminders',
+  path: '/reminders',
   getParentRoute: () => AppRoute,
 } as any)
 const AppTodayRoute = AppTodayRouteImport.update({
@@ -50,15 +68,21 @@ const AppTodayRoute = AppTodayRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/app/agent': typeof AppAgentRoute
   '/app/appointments': typeof AppAppointmentsRoute
+  '/app/documents': typeof AppDocumentsRoute
   '/app/inbox': typeof AppInboxRoute
+  '/app/reminders': typeof AppRemindersRoute
   '/app/today': typeof AppTodayRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/app/agent': typeof AppAgentRoute
   '/app/appointments': typeof AppAppointmentsRoute
+  '/app/documents': typeof AppDocumentsRoute
   '/app/inbox': typeof AppInboxRoute
+  '/app/reminders': typeof AppRemindersRoute
   '/app/today': typeof AppTodayRoute
   '/app': typeof AppIndexRoute
 }
@@ -66,23 +90,45 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/app/agent': typeof AppAgentRoute
   '/app/appointments': typeof AppAppointmentsRoute
+  '/app/documents': typeof AppDocumentsRoute
   '/app/inbox': typeof AppInboxRoute
+  '/app/reminders': typeof AppRemindersRoute
   '/app/today': typeof AppTodayRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/app' | '/app/appointments' | '/app/inbox' | '/app/today' | '/app/'
+    | '/'
+    | '/app'
+    | '/app/agent'
+    | '/app/appointments'
+    | '/app/documents'
+    | '/app/inbox'
+    | '/app/reminders'
+    | '/app/today'
+    | '/app/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/app/appointments' | '/app/inbox' | '/app/today' | '/app'
+  to:
+    | '/'
+    | '/app/agent'
+    | '/app/appointments'
+    | '/app/documents'
+    | '/app/inbox'
+    | '/app/reminders'
+    | '/app/today'
+    | '/app'
   id:
     | '__root__'
     | '/'
     | '/app'
+    | '/app/agent'
     | '/app/appointments'
+    | '/app/documents'
     | '/app/inbox'
+    | '/app/reminders'
     | '/app/today'
     | '/app/'
   fileRoutesById: FileRoutesById
@@ -115,6 +161,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/agent': {
+      id: '/app/agent'
+      path: '/agent'
+      fullPath: '/app/agent'
+      preLoaderRoute: typeof AppAgentRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/appointments': {
       id: '/app/appointments'
       path: '/appointments'
@@ -122,11 +175,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAppointmentsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/documents': {
+      id: '/app/documents'
+      path: '/documents'
+      fullPath: '/app/documents'
+      preLoaderRoute: typeof AppDocumentsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/inbox': {
       id: '/app/inbox'
       path: '/inbox'
       fullPath: '/app/inbox'
       preLoaderRoute: typeof AppInboxRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/reminders': {
+      id: '/app/reminders'
+      path: '/reminders'
+      fullPath: '/app/reminders'
+      preLoaderRoute: typeof AppRemindersRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/today': {
@@ -140,15 +207,21 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppAgentRoute: typeof AppAgentRoute
   AppAppointmentsRoute: typeof AppAppointmentsRoute
+  AppDocumentsRoute: typeof AppDocumentsRoute
   AppInboxRoute: typeof AppInboxRoute
+  AppRemindersRoute: typeof AppRemindersRoute
   AppTodayRoute: typeof AppTodayRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAgentRoute: AppAgentRoute,
   AppAppointmentsRoute: AppAppointmentsRoute,
+  AppDocumentsRoute: AppDocumentsRoute,
   AppInboxRoute: AppInboxRoute,
+  AppRemindersRoute: AppRemindersRoute,
   AppTodayRoute: AppTodayRoute,
   AppIndexRoute: AppIndexRoute,
 }
