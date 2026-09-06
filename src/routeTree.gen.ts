@@ -18,7 +18,9 @@ import { Route as PatientLoginRouteImport } from './routes/patient.login'
 import { Route as StaffIndexRouteImport } from './routes/staff.index'
 import { Route as StaffAppRouteImport } from './routes/staff._app'
 import { Route as StaffLoginRouteImport } from './routes/staff.login'
+import { Route as PatientAppAppointmentsRouteImport } from './routes/patient._app.appointments'
 import { Route as PatientAppHomeRouteImport } from './routes/patient._app.home'
+import { Route as PatientAppMessagesRouteImport } from './routes/patient._app.messages'
 import { Route as StaffAppAgentRouteImport } from './routes/staff._app.agent'
 import { Route as StaffAppAppointmentsRouteImport } from './routes/staff._app.appointments'
 import { Route as StaffAppAuditRouteImport } from './routes/staff._app.audit'
@@ -75,9 +77,19 @@ const StaffLoginRoute = StaffLoginRouteImport.update({
   path: '/staff/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PatientAppAppointmentsRoute = PatientAppAppointmentsRouteImport.update({
+  id: '/appointments',
+  path: '/appointments',
+  getParentRoute: () => PatientAppRoute,
+} as any)
 const PatientAppHomeRoute = PatientAppHomeRouteImport.update({
   id: '/home',
   path: '/home',
+  getParentRoute: () => PatientAppRoute,
+} as any)
+const PatientAppMessagesRoute = PatientAppMessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
   getParentRoute: () => PatientAppRoute,
 } as any)
 const StaffAppAgentRoute = StaffAppAgentRouteImport.update({
@@ -141,7 +153,9 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AppIndexRoute
   '/patient/': typeof PatientIndexRoute
   '/staff/': typeof StaffIndexRoute
+  '/patient/appointments': typeof PatientAppAppointmentsRoute
   '/patient/home': typeof PatientAppHomeRoute
+  '/patient/messages': typeof PatientAppMessagesRoute
   '/staff/agent': typeof StaffAppAgentRoute
   '/staff/appointments': typeof StaffAppAppointmentsRoute
   '/staff/audit': typeof StaffAppAuditRoute
@@ -161,7 +175,9 @@ export interface FileRoutesByTo {
   '/staff': typeof StaffIndexRoute
   '/staff/login': typeof StaffLoginRoute
   '/app': typeof AppIndexRoute
+  '/patient/appointments': typeof PatientAppAppointmentsRoute
   '/patient/home': typeof PatientAppHomeRoute
+  '/patient/messages': typeof PatientAppMessagesRoute
   '/staff/agent': typeof StaffAppAgentRoute
   '/staff/appointments': typeof StaffAppAppointmentsRoute
   '/staff/audit': typeof StaffAppAuditRoute
@@ -184,7 +200,9 @@ export interface FileRoutesById {
   '/app/': typeof AppIndexRoute
   '/patient/': typeof PatientIndexRoute
   '/staff/': typeof StaffIndexRoute
+  '/patient/_app/appointments': typeof PatientAppAppointmentsRoute
   '/patient/_app/home': typeof PatientAppHomeRoute
+  '/patient/_app/messages': typeof PatientAppMessagesRoute
   '/staff/_app/agent': typeof StaffAppAgentRoute
   '/staff/_app/appointments': typeof StaffAppAppointmentsRoute
   '/staff/_app/audit': typeof StaffAppAuditRoute
@@ -208,7 +226,9 @@ export interface FileRouteTypes {
     | '/app/'
     | '/patient/'
     | '/staff/'
+    | '/patient/appointments'
     | '/patient/home'
+    | '/patient/messages'
     | '/staff/agent'
     | '/staff/appointments'
     | '/staff/audit'
@@ -228,7 +248,9 @@ export interface FileRouteTypes {
     | '/staff'
     | '/staff/login'
     | '/app'
+    | '/patient/appointments'
     | '/patient/home'
+    | '/patient/messages'
     | '/staff/agent'
     | '/staff/appointments'
     | '/staff/audit'
@@ -250,7 +272,9 @@ export interface FileRouteTypes {
     | '/app/'
     | '/patient/'
     | '/staff/'
+    | '/patient/_app/appointments'
     | '/patient/_app/home'
+    | '/patient/_app/messages'
     | '/staff/_app/agent'
     | '/staff/_app/appointments'
     | '/staff/_app/audit'
@@ -340,11 +364,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StaffLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/patient/_app/appointments': {
+      id: '/patient/_app/appointments'
+      path: '/appointments'
+      fullPath: '/patient/appointments'
+      preLoaderRoute: typeof PatientAppAppointmentsRouteImport
+      parentRoute: typeof PatientAppRoute
+    }
     '/patient/_app/home': {
       id: '/patient/_app/home'
       path: '/home'
       fullPath: '/patient/home'
       preLoaderRoute: typeof PatientAppHomeRouteImport
+      parentRoute: typeof PatientAppRoute
+    }
+    '/patient/_app/messages': {
+      id: '/patient/_app/messages'
+      path: '/messages'
+      fullPath: '/patient/messages'
+      preLoaderRoute: typeof PatientAppMessagesRouteImport
       parentRoute: typeof PatientAppRoute
     }
     '/staff/_app/agent': {
@@ -421,11 +459,15 @@ declare module '@tanstack/react-router' {
 }
 
 interface PatientAppRouteChildren {
+  PatientAppAppointmentsRoute: typeof PatientAppAppointmentsRoute
   PatientAppHomeRoute: typeof PatientAppHomeRoute
+  PatientAppMessagesRoute: typeof PatientAppMessagesRoute
 }
 
 const PatientAppRouteChildren: PatientAppRouteChildren = {
+  PatientAppAppointmentsRoute: PatientAppAppointmentsRoute,
   PatientAppHomeRoute: PatientAppHomeRoute,
+  PatientAppMessagesRoute: PatientAppMessagesRoute,
 }
 
 const PatientAppRouteWithChildren = PatientAppRoute._addFileChildren(
