@@ -9,312 +9,314 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AppRouteImport } from './routes/app'
-import { Route as AppIndexRouteImport } from './routes/app.index'
-import { Route as AppAgentRouteImport } from './routes/app.agent'
-import { Route as AppAppointmentsRouteImport } from './routes/app.appointments'
-import { Route as AppAuditRouteImport } from './routes/app.audit'
-import { Route as AppDocumentsRouteImport } from './routes/app.documents'
-import { Route as AppInboxRouteImport } from './routes/app.inbox'
-import { Route as AppPatientsRouteImport } from './routes/app.patients'
-import { Route as AppRemindersRouteImport } from './routes/app.reminders'
-import { Route as AppSettingsRouteImport } from './routes/app.settings'
-import { Route as AppStaffRouteImport } from './routes/app.staff'
-import { Route as AppTodayRouteImport } from './routes/app.today'
+import { Route as StaffIndexRouteImport } from './routes/staff.index'
+import { Route as StaffAppRouteImport } from './routes/staff._app'
+import { Route as StaffLoginRouteImport } from './routes/staff.login'
+import { Route as StaffAppAgentRouteImport } from './routes/staff._app.agent'
+import { Route as StaffAppAppointmentsRouteImport } from './routes/staff._app.appointments'
+import { Route as StaffAppAuditRouteImport } from './routes/staff._app.audit'
+import { Route as StaffAppDocumentsRouteImport } from './routes/staff._app.documents'
+import { Route as StaffAppInboxRouteImport } from './routes/staff._app.inbox'
+import { Route as StaffAppPatientsRouteImport } from './routes/staff._app.patients'
+import { Route as StaffAppRemindersRouteImport } from './routes/staff._app.reminders'
+import { Route as StaffAppSettingsRouteImport } from './routes/staff._app.settings'
+import { Route as StaffAppStaffRouteImport } from './routes/staff._app.staff'
+import { Route as StaffAppTodayRouteImport } from './routes/staff._app.today'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const StaffIndexRoute = StaffIndexRouteImport.update({
+  id: '/staff/',
+  path: '/staff/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppRoute = AppRouteImport.update({
-  id: '/app',
-  path: '/app',
+const StaffAppRoute = StaffAppRouteImport.update({
+  id: '/staff/_app',
+  path: '/staff',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppIndexRoute = AppIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AppRoute,
+const StaffLoginRoute = StaffLoginRouteImport.update({
+  id: '/staff/login',
+  path: '/staff/login',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AppAgentRoute = AppAgentRouteImport.update({
+const StaffAppAgentRoute = StaffAppAgentRouteImport.update({
   id: '/agent',
   path: '/agent',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => StaffAppRoute,
 } as any)
-const AppAppointmentsRoute = AppAppointmentsRouteImport.update({
+const StaffAppAppointmentsRoute = StaffAppAppointmentsRouteImport.update({
   id: '/appointments',
   path: '/appointments',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => StaffAppRoute,
 } as any)
-const AppAuditRoute = AppAuditRouteImport.update({
+const StaffAppAuditRoute = StaffAppAuditRouteImport.update({
   id: '/audit',
   path: '/audit',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => StaffAppRoute,
 } as any)
-const AppDocumentsRoute = AppDocumentsRouteImport.update({
+const StaffAppDocumentsRoute = StaffAppDocumentsRouteImport.update({
   id: '/documents',
   path: '/documents',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => StaffAppRoute,
 } as any)
-const AppInboxRoute = AppInboxRouteImport.update({
+const StaffAppInboxRoute = StaffAppInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => StaffAppRoute,
 } as any)
-const AppPatientsRoute = AppPatientsRouteImport.update({
+const StaffAppPatientsRoute = StaffAppPatientsRouteImport.update({
   id: '/patients',
   path: '/patients',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => StaffAppRoute,
 } as any)
-const AppRemindersRoute = AppRemindersRouteImport.update({
+const StaffAppRemindersRoute = StaffAppRemindersRouteImport.update({
   id: '/reminders',
   path: '/reminders',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => StaffAppRoute,
 } as any)
-const AppSettingsRoute = AppSettingsRouteImport.update({
+const StaffAppSettingsRoute = StaffAppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => StaffAppRoute,
 } as any)
-const AppStaffRoute = AppStaffRouteImport.update({
+const StaffAppStaffRoute = StaffAppStaffRouteImport.update({
   id: '/staff',
   path: '/staff',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => StaffAppRoute,
 } as any)
-const AppTodayRoute = AppTodayRouteImport.update({
+const StaffAppTodayRoute = StaffAppTodayRouteImport.update({
   id: '/today',
   path: '/today',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => StaffAppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/app': typeof AppRouteWithChildren
-  '/app/agent': typeof AppAgentRoute
-  '/app/appointments': typeof AppAppointmentsRoute
-  '/app/audit': typeof AppAuditRoute
-  '/app/documents': typeof AppDocumentsRoute
-  '/app/inbox': typeof AppInboxRoute
-  '/app/patients': typeof AppPatientsRoute
-  '/app/reminders': typeof AppRemindersRoute
-  '/app/settings': typeof AppSettingsRoute
-  '/app/staff': typeof AppStaffRoute
-  '/app/today': typeof AppTodayRoute
-  '/app/': typeof AppIndexRoute
+  '/staff': typeof StaffAppRouteWithChildren
+  '/staff/login': typeof StaffLoginRoute
+  '/staff/': typeof StaffIndexRoute
+  '/staff/agent': typeof StaffAppAgentRoute
+  '/staff/appointments': typeof StaffAppAppointmentsRoute
+  '/staff/audit': typeof StaffAppAuditRoute
+  '/staff/documents': typeof StaffAppDocumentsRoute
+  '/staff/inbox': typeof StaffAppInboxRoute
+  '/staff/patients': typeof StaffAppPatientsRoute
+  '/staff/reminders': typeof StaffAppRemindersRoute
+  '/staff/settings': typeof StaffAppSettingsRoute
+  '/staff/staff': typeof StaffAppStaffRoute
+  '/staff/today': typeof StaffAppTodayRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/app/agent': typeof AppAgentRoute
-  '/app/appointments': typeof AppAppointmentsRoute
-  '/app/audit': typeof AppAuditRoute
-  '/app/documents': typeof AppDocumentsRoute
-  '/app/inbox': typeof AppInboxRoute
-  '/app/patients': typeof AppPatientsRoute
-  '/app/reminders': typeof AppRemindersRoute
-  '/app/settings': typeof AppSettingsRoute
-  '/app/staff': typeof AppStaffRoute
-  '/app/today': typeof AppTodayRoute
-  '/app': typeof AppIndexRoute
+  '/staff': typeof StaffIndexRoute
+  '/staff/login': typeof StaffLoginRoute
+  '/staff/agent': typeof StaffAppAgentRoute
+  '/staff/appointments': typeof StaffAppAppointmentsRoute
+  '/staff/audit': typeof StaffAppAuditRoute
+  '/staff/documents': typeof StaffAppDocumentsRoute
+  '/staff/inbox': typeof StaffAppInboxRoute
+  '/staff/patients': typeof StaffAppPatientsRoute
+  '/staff/reminders': typeof StaffAppRemindersRoute
+  '/staff/settings': typeof StaffAppSettingsRoute
+  '/staff/staff': typeof StaffAppStaffRoute
+  '/staff/today': typeof StaffAppTodayRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/app': typeof AppRouteWithChildren
-  '/app/agent': typeof AppAgentRoute
-  '/app/appointments': typeof AppAppointmentsRoute
-  '/app/audit': typeof AppAuditRoute
-  '/app/documents': typeof AppDocumentsRoute
-  '/app/inbox': typeof AppInboxRoute
-  '/app/patients': typeof AppPatientsRoute
-  '/app/reminders': typeof AppRemindersRoute
-  '/app/settings': typeof AppSettingsRoute
-  '/app/staff': typeof AppStaffRoute
-  '/app/today': typeof AppTodayRoute
-  '/app/': typeof AppIndexRoute
+  '/staff/_app': typeof StaffAppRouteWithChildren
+  '/staff/login': typeof StaffLoginRoute
+  '/staff/': typeof StaffIndexRoute
+  '/staff/_app/agent': typeof StaffAppAgentRoute
+  '/staff/_app/appointments': typeof StaffAppAppointmentsRoute
+  '/staff/_app/audit': typeof StaffAppAuditRoute
+  '/staff/_app/documents': typeof StaffAppDocumentsRoute
+  '/staff/_app/inbox': typeof StaffAppInboxRoute
+  '/staff/_app/patients': typeof StaffAppPatientsRoute
+  '/staff/_app/reminders': typeof StaffAppRemindersRoute
+  '/staff/_app/settings': typeof StaffAppSettingsRoute
+  '/staff/_app/staff': typeof StaffAppStaffRoute
+  '/staff/_app/today': typeof StaffAppTodayRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/app'
-    | '/app/agent'
-    | '/app/appointments'
-    | '/app/audit'
-    | '/app/documents'
-    | '/app/inbox'
-    | '/app/patients'
-    | '/app/reminders'
-    | '/app/settings'
-    | '/app/staff'
-    | '/app/today'
-    | '/app/'
+    | '/staff'
+    | '/staff/login'
+    | '/staff/'
+    | '/staff/agent'
+    | '/staff/appointments'
+    | '/staff/audit'
+    | '/staff/documents'
+    | '/staff/inbox'
+    | '/staff/patients'
+    | '/staff/reminders'
+    | '/staff/settings'
+    | '/staff/staff'
+    | '/staff/today'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
-    | '/app/agent'
-    | '/app/appointments'
-    | '/app/audit'
-    | '/app/documents'
-    | '/app/inbox'
-    | '/app/patients'
-    | '/app/reminders'
-    | '/app/settings'
-    | '/app/staff'
-    | '/app/today'
-    | '/app'
+    | '/staff'
+    | '/staff/login'
+    | '/staff/agent'
+    | '/staff/appointments'
+    | '/staff/audit'
+    | '/staff/documents'
+    | '/staff/inbox'
+    | '/staff/patients'
+    | '/staff/reminders'
+    | '/staff/settings'
+    | '/staff/staff'
+    | '/staff/today'
   id:
     | '__root__'
-    | '/'
-    | '/app'
-    | '/app/agent'
-    | '/app/appointments'
-    | '/app/audit'
-    | '/app/documents'
-    | '/app/inbox'
-    | '/app/patients'
-    | '/app/reminders'
-    | '/app/settings'
-    | '/app/staff'
-    | '/app/today'
-    | '/app/'
+    | '/staff/_app'
+    | '/staff/login'
+    | '/staff/'
+    | '/staff/_app/agent'
+    | '/staff/_app/appointments'
+    | '/staff/_app/audit'
+    | '/staff/_app/documents'
+    | '/staff/_app/inbox'
+    | '/staff/_app/patients'
+    | '/staff/_app/reminders'
+    | '/staff/_app/settings'
+    | '/staff/_app/staff'
+    | '/staff/_app/today'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  AppRoute: typeof AppRouteWithChildren
+  StaffAppRoute: typeof StaffAppRouteWithChildren
+  StaffLoginRoute: typeof StaffLoginRoute
+  StaffIndexRoute: typeof StaffIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app': {
-      id: '/app'
-      path: '/app'
-      fullPath: '/app'
-      preLoaderRoute: typeof AppRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/': {
-      id: '/app/'
-      path: '/'
-      fullPath: '/app/'
-      preLoaderRoute: typeof AppIndexRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/agent': {
-      id: '/app/agent'
-      path: '/agent'
-      fullPath: '/app/agent'
-      preLoaderRoute: typeof AppAgentRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/appointments': {
-      id: '/app/appointments'
-      path: '/appointments'
-      fullPath: '/app/appointments'
-      preLoaderRoute: typeof AppAppointmentsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/audit': {
-      id: '/app/audit'
-      path: '/audit'
-      fullPath: '/app/audit'
-      preLoaderRoute: typeof AppAuditRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/documents': {
-      id: '/app/documents'
-      path: '/documents'
-      fullPath: '/app/documents'
-      preLoaderRoute: typeof AppDocumentsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/inbox': {
-      id: '/app/inbox'
-      path: '/inbox'
-      fullPath: '/app/inbox'
-      preLoaderRoute: typeof AppInboxRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/patients': {
-      id: '/app/patients'
-      path: '/patients'
-      fullPath: '/app/patients'
-      preLoaderRoute: typeof AppPatientsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/reminders': {
-      id: '/app/reminders'
-      path: '/reminders'
-      fullPath: '/app/reminders'
-      preLoaderRoute: typeof AppRemindersRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/settings': {
-      id: '/app/settings'
-      path: '/settings'
-      fullPath: '/app/settings'
-      preLoaderRoute: typeof AppSettingsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/staff': {
-      id: '/app/staff'
+    '/staff/': {
+      id: '/staff/'
       path: '/staff'
-      fullPath: '/app/staff'
-      preLoaderRoute: typeof AppStaffRouteImport
-      parentRoute: typeof AppRoute
+      fullPath: '/staff/'
+      preLoaderRoute: typeof StaffIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/app/today': {
-      id: '/app/today'
+    '/staff/_app': {
+      id: '/staff/_app'
+      path: '/staff'
+      fullPath: '/staff'
+      preLoaderRoute: typeof StaffAppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/staff/login': {
+      id: '/staff/login'
+      path: '/staff/login'
+      fullPath: '/staff/login'
+      preLoaderRoute: typeof StaffLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/staff/_app/agent': {
+      id: '/staff/_app/agent'
+      path: '/agent'
+      fullPath: '/staff/agent'
+      preLoaderRoute: typeof StaffAppAgentRouteImport
+      parentRoute: typeof StaffAppRoute
+    }
+    '/staff/_app/appointments': {
+      id: '/staff/_app/appointments'
+      path: '/appointments'
+      fullPath: '/staff/appointments'
+      preLoaderRoute: typeof StaffAppAppointmentsRouteImport
+      parentRoute: typeof StaffAppRoute
+    }
+    '/staff/_app/audit': {
+      id: '/staff/_app/audit'
+      path: '/audit'
+      fullPath: '/staff/audit'
+      preLoaderRoute: typeof StaffAppAuditRouteImport
+      parentRoute: typeof StaffAppRoute
+    }
+    '/staff/_app/documents': {
+      id: '/staff/_app/documents'
+      path: '/documents'
+      fullPath: '/staff/documents'
+      preLoaderRoute: typeof StaffAppDocumentsRouteImport
+      parentRoute: typeof StaffAppRoute
+    }
+    '/staff/_app/inbox': {
+      id: '/staff/_app/inbox'
+      path: '/inbox'
+      fullPath: '/staff/inbox'
+      preLoaderRoute: typeof StaffAppInboxRouteImport
+      parentRoute: typeof StaffAppRoute
+    }
+    '/staff/_app/patients': {
+      id: '/staff/_app/patients'
+      path: '/patients'
+      fullPath: '/staff/patients'
+      preLoaderRoute: typeof StaffAppPatientsRouteImport
+      parentRoute: typeof StaffAppRoute
+    }
+    '/staff/_app/reminders': {
+      id: '/staff/_app/reminders'
+      path: '/reminders'
+      fullPath: '/staff/reminders'
+      preLoaderRoute: typeof StaffAppRemindersRouteImport
+      parentRoute: typeof StaffAppRoute
+    }
+    '/staff/_app/settings': {
+      id: '/staff/_app/settings'
+      path: '/settings'
+      fullPath: '/staff/settings'
+      preLoaderRoute: typeof StaffAppSettingsRouteImport
+      parentRoute: typeof StaffAppRoute
+    }
+    '/staff/_app/staff': {
+      id: '/staff/_app/staff'
+      path: '/staff'
+      fullPath: '/staff/staff'
+      preLoaderRoute: typeof StaffAppStaffRouteImport
+      parentRoute: typeof StaffAppRoute
+    }
+    '/staff/_app/today': {
+      id: '/staff/_app/today'
       path: '/today'
-      fullPath: '/app/today'
-      preLoaderRoute: typeof AppTodayRouteImport
-      parentRoute: typeof AppRoute
+      fullPath: '/staff/today'
+      preLoaderRoute: typeof StaffAppTodayRouteImport
+      parentRoute: typeof StaffAppRoute
     }
   }
 }
 
-interface AppRouteChildren {
-  AppAgentRoute: typeof AppAgentRoute
-  AppAppointmentsRoute: typeof AppAppointmentsRoute
-  AppAuditRoute: typeof AppAuditRoute
-  AppDocumentsRoute: typeof AppDocumentsRoute
-  AppInboxRoute: typeof AppInboxRoute
-  AppPatientsRoute: typeof AppPatientsRoute
-  AppRemindersRoute: typeof AppRemindersRoute
-  AppSettingsRoute: typeof AppSettingsRoute
-  AppStaffRoute: typeof AppStaffRoute
-  AppTodayRoute: typeof AppTodayRoute
-  AppIndexRoute: typeof AppIndexRoute
+interface StaffAppRouteChildren {
+  StaffAppAgentRoute: typeof StaffAppAgentRoute
+  StaffAppAppointmentsRoute: typeof StaffAppAppointmentsRoute
+  StaffAppAuditRoute: typeof StaffAppAuditRoute
+  StaffAppDocumentsRoute: typeof StaffAppDocumentsRoute
+  StaffAppInboxRoute: typeof StaffAppInboxRoute
+  StaffAppPatientsRoute: typeof StaffAppPatientsRoute
+  StaffAppRemindersRoute: typeof StaffAppRemindersRoute
+  StaffAppSettingsRoute: typeof StaffAppSettingsRoute
+  StaffAppStaffRoute: typeof StaffAppStaffRoute
+  StaffAppTodayRoute: typeof StaffAppTodayRoute
 }
 
-const AppRouteChildren: AppRouteChildren = {
-  AppAgentRoute: AppAgentRoute,
-  AppAppointmentsRoute: AppAppointmentsRoute,
-  AppAuditRoute: AppAuditRoute,
-  AppDocumentsRoute: AppDocumentsRoute,
-  AppInboxRoute: AppInboxRoute,
-  AppPatientsRoute: AppPatientsRoute,
-  AppRemindersRoute: AppRemindersRoute,
-  AppSettingsRoute: AppSettingsRoute,
-  AppStaffRoute: AppStaffRoute,
-  AppTodayRoute: AppTodayRoute,
-  AppIndexRoute: AppIndexRoute,
+const StaffAppRouteChildren: StaffAppRouteChildren = {
+  StaffAppAgentRoute: StaffAppAgentRoute,
+  StaffAppAppointmentsRoute: StaffAppAppointmentsRoute,
+  StaffAppAuditRoute: StaffAppAuditRoute,
+  StaffAppDocumentsRoute: StaffAppDocumentsRoute,
+  StaffAppInboxRoute: StaffAppInboxRoute,
+  StaffAppPatientsRoute: StaffAppPatientsRoute,
+  StaffAppRemindersRoute: StaffAppRemindersRoute,
+  StaffAppSettingsRoute: StaffAppSettingsRoute,
+  StaffAppStaffRoute: StaffAppStaffRoute,
+  StaffAppTodayRoute: StaffAppTodayRoute,
 }
 
-const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+const StaffAppRouteWithChildren = StaffAppRoute._addFileChildren(
+  StaffAppRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AppRoute: AppRouteWithChildren,
+  StaffAppRoute: StaffAppRouteWithChildren,
+  StaffLoginRoute: StaffLoginRoute,
+  StaffIndexRoute: StaffIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -8,7 +8,7 @@ import { CHANNEL, REMINDER_KIND, REMINDER_STATUS, fmtDateTime } from "@/lib/labe
 import { useApp } from "@/state/app-store";
 import type { ReminderKind } from "@/types/domain";
 
-export const Route = createFileRoute("/app/reminders")({
+export const Route = createFileRoute("/staff/_app/reminders")({
   head: () => ({
     meta: [
       { title: "提醒與召回｜診所行政 Agent" },

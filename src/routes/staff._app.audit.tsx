@@ -7,7 +7,7 @@ import { EmptyState, MdCard, MdChip, MdFilterChip, SectionHeader } from "@/compo
 import { fmtDateTime } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
 
-export const Route = createFileRoute("/app/audit")({
+export const Route = createFileRoute("/staff/_app/audit")({
   head: () => ({
     meta: [
       { title: "審計日誌｜診所行政 Agent" },

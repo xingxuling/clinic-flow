@@ -7,7 +7,7 @@ import { EmptyState, MdCard, MdChip, MdTextField, SectionHeader } from "@/compon
 import { CHANNEL, fmtDate } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
 
-export const Route = createFileRoute("/app/patients")({
+export const Route = createFileRoute("/staff/_app/patients")({
   head: () => ({
     meta: [
       { title: "病人目錄｜診所行政 Agent" },

@@ -13,7 +13,7 @@ import { EmptyState, MdButton, MdCard, MdChip, SectionHeader } from "@/component
 import { APPOINTMENT_STATUS, fmtTime, isSameDay } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
 
-export const Route = createFileRoute("/app/today")({
+export const Route = createFileRoute("/staff/_app/today")({
   head: () => ({
     meta: [
       { title: "今日工作台｜診所行政 Agent" },
@@ -92,35 +92,35 @@ function TodayPage() {
           icon={<CalendarClock className="size-4" />}
           label="今日預約"
           value={todayAppointments.length}
-          to="/app/appointments"
+          to="/staff/appointments"
           tone="primary"
         />
         <MetricCard
           icon={<CheckCircle2 className="size-4" />}
           label="待確認"
           value={pending.length}
-          to="/app/appointments"
+          to="/staff/appointments"
           tone="tertiary"
         />
         <MetricCard
           icon={<MessageSquareWarning className="size-4" />}
           label="待回覆"
           value={waitingReply.length}
-          to="/app/inbox"
+          to="/staff/inbox"
           tone="secondary"
         />
         <MetricCard
           icon={<Bot className="size-4" />}
           label="待人工批准"
           value={waitingApproval.length}
-          to="/app/agent"
+          to="/staff/agent"
           tone="tertiary"
         />
         <MetricCard
           icon={<FileWarning className="size-4" />}
           label="文件異常"
           value={docIssues.length}
-          to="/app/documents"
+          to="/staff/documents"
           tone="error"
         />
       </div>
@@ -155,7 +155,7 @@ function TodayPage() {
                       <MdButton size="sm" variant="danger" onClick={() => escalateUrgentFlag(f.id)}>
                         立即轉人工
                       </MdButton>
-                      <Link to="/app/inbox" search={{ c: f.conversationId }}>
+                      <Link to="/staff/inbox" search={{ c: f.conversationId }}>
                         <MdButton size="sm" variant="text">
                           查看對話
                         </MdButton>
@@ -214,7 +214,7 @@ function TodayPage() {
               title="等待人手回覆"
               count={waitingReply.length}
               action={
-                <Link to="/app/inbox" search={{ c: undefined }} className="md-label-l text-primary">
+                <Link to="/staff/inbox" search={{ c: undefined }} className="md-label-l text-primary">
                   全部
                 </Link>
               }
@@ -224,7 +224,7 @@ function TodayPage() {
             ) : (
               <div className="space-y-2">
                 {waitingReply.map((c) => (
-                  <Link key={c.id} to="/app/inbox" search={{ c: c.id }} className="block">
+                  <Link key={c.id} to="/staff/inbox" search={{ c: c.id }} className="block">
                     <MdCard className="state-layer p-4">
                       <div className="flex items-center justify-between gap-2">
                         <p className="md-title-m truncate text-on-surface">{patientName(c.patientId)}</p>
@@ -245,7 +245,7 @@ function TodayPage() {
               title="待人工批准的 Agent 任務"
               count={waitingApproval.length}
               action={
-                <Link to="/app/agent" className="md-label-l text-primary">
+                <Link to="/staff/agent" className="md-label-l text-primary">
                   全部
                 </Link>
               }
@@ -255,7 +255,7 @@ function TodayPage() {
             ) : (
               <div className="space-y-2">
                 {waitingApproval.map((t) => (
-                  <Link key={t.id} to="/app/agent" className="block">
+                  <Link key={t.id} to="/staff/agent" className="block">
                     <MdCard className="state-layer p-4">
                       <p className="md-title-m text-on-surface">{t.title}</p>
                       <p className="mt-1 md-body-s text-on-surface-variant">{t.intent}</p>

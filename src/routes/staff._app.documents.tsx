@@ -8,7 +8,7 @@ import { DOCUMENT_KIND, DOCUMENT_STATUS, fmtDateTime } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
 import type { DocumentKind } from "@/types/domain";
 
-export const Route = createFileRoute("/app/documents")({
+export const Route = createFileRoute("/staff/_app/documents")({
   head: () => ({
     meta: [
       { title: "行政文件｜診所行政 Agent" },

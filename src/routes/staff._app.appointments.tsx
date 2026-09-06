@@ -19,7 +19,7 @@ import { APPOINTMENT_STATUS, fmtDate, fmtTime, fmtWeekday, isSameDay } from "@/l
 import { useApp } from "@/state/app-store";
 import type { Appointment } from "@/types/domain";
 
-export const Route = createFileRoute("/app/appointments")({
+export const Route = createFileRoute("/staff/_app/appointments")({
   head: () => ({
     meta: [
       { title: "預約中心｜診所行政 Agent" },

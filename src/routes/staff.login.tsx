@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { MdButton, MdCard, MdChip, MdSegmented, MdTextField } from "@/components/m3";
 import { DEMO_INVITE_CODES, useApp } from "@/state/app-store";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/staff/login")({
   head: () => ({
     meta: [
       { title: "邀請登入｜診所行政 Agent" },
@@ -27,13 +27,13 @@ function SignInPage() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (hydrated && session) navigate({ to: "/app/today" });
+    if (hydrated && session) navigate({ to: "/staff/today" });
   }, [hydrated, session, navigate]);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const ok = signIn({ code, method: "code" });
-    if (ok) navigate({ to: "/app/today" });
+    if (ok) navigate({ to: "/staff/today" });
     else setError(true);
   }
 
@@ -112,7 +112,7 @@ function SignInPage() {
                 variant="tonal"
                 onClick={() => {
                   signIn({ code: "", method: "qr" });
-                  navigate({ to: "/app/today" });
+                  navigate({ to: "/staff/today" });
                 }}
               >
                 以示範帳號模擬掃描
@@ -132,7 +132,7 @@ function SignInPage() {
                 variant="tonal"
                 onClick={() => {
                   signIn({ code: "", method: "passkey" });
-                  navigate({ to: "/app/today" });
+                  navigate({ to: "/staff/today" });
                 }}
               >
                 以示範帳號模擬 Passkey

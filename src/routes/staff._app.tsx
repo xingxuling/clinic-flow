@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { useApp } from "@/state/app-store";
 
-export const Route = createFileRoute("/app")({
+export const Route = createFileRoute("/staff/_app")({
   head: () => ({
     meta: [
       { title: "工作台｜診所行政 Agent" },

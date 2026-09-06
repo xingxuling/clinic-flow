@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { useApp } from "@/state/app-store";
 import type { ChannelKind } from "@/types/domain";
 
-export const Route = createFileRoute("/app/inbox")({
+export const Route = createFileRoute("/staff/_app/inbox")({
   validateSearch: (search: Record<string, unknown>) => ({
     c: typeof search["c"] === "string" ? (search["c"] as string) : undefined,
   }),
@@ -39,7 +39,7 @@ function InboxPage() {
     escalateUrgentFlag,
   } = useApp();
   const { c } = Route.useSearch();
-  const navigate = useNavigate({ from: "/app/inbox" });
+  const navigate = useNavigate({ from: "/staff/inbox" });
   const [filter, setFilter] = useState<"all" | "unread" | "urgent" | "agent">("all");
   const [draft, setDraft] = useState("");
 
