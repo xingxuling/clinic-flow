@@ -11,6 +11,14 @@ import {
 import { toast } from "sonner";
 
 import { InMemoryClinicRepository, canTransitionAppointment } from "@/data/repository";
+import {
+  availableSlots,
+  ownAppointments,
+  ownConversations,
+  ownDocuments,
+  ownReminders,
+  type AvailableSlot,
+} from "@/data/patient-view";
 import { canTransitionAgentTask } from "@/lib/agent-rules";
 import { hasPermission } from "@/lib/permissions";
 import type {
@@ -19,14 +27,20 @@ import type {
   AppointmentStatus,
   AuditEvent,
   Clinic,
+  Conversation,
+  DocumentCase,
   ID,
   Invite,
+  Patient,
+  PatientSession,
   Permission,
-  Session,
+  Reminder,
   StaffRole,
+  StaffSession,
 } from "@/types/domain";
 
-const SESSION_KEY = "cinghe.session.v1";
+const STAFF_SESSION_KEY = "cinghe.staff-session.v1";
+const PATIENT_SESSION_KEY = "cinghe.patient-session.v1";
 const repo = new InMemoryClinicRepository();
 
 export interface NewAppointmentInput {
@@ -41,10 +55,16 @@ export interface NewAppointmentInput {
 
 interface AppStoreValue {
   hydrated: boolean;
-  session: Session | null;
-  signIn: (input: { code: string; method: Session["method"] }) => boolean;
-  signOut: () => void;
 
+  /* ------------------------------ 身分（分離） ----------------------------- */
+  staffSession: StaffSession | null;
+  patientSession: PatientSession | null;
+  signInStaff: (input: { code: string; method: StaffSession["method"] }) => boolean;
+  signOutStaff: () => void;
+  signInPatient: (input: { patientId?: ID; method: PatientSession["method"] }) => boolean;
+  signOutPatient: () => void;
+
+  /* ------------------------------- 員工端資料 ------------------------------ */
   clinic: Clinic;
   currentStaff: ReturnType<typeof repo.listStaff>[number];
   can: (p: Permission) => boolean;
@@ -81,31 +101,52 @@ interface AppStoreValue {
 
   createInvite: (input: { inviteeName: string; role: StaffRole }) => Invite;
   revokeInvite: (id: ID) => void;
+  patientPortalLink: (patientId: ID) => string;
 
   updateClinicSettings: (patch: Partial<Clinic>) => void;
+
+  /* ------------------------------- 病人端資料 ------------------------------ */
+  me: Patient | null;
+  myAppointments: Appointment[];
+  myConversation: Conversation | null;
+  myDocuments: DocumentCase[];
+  myReminders: Reminder[];
+  mySlots: (practitionerId: ID) => AvailableSlot[];
+  myConfirmAppointment: (id: ID) => void;
+  myCancelAppointment: (id: ID) => void;
+  myRescheduleAppointment: (id: ID, startAt: string) => void;
+  mySendMessage: (text: string) => void;
+  myUpdateProfile: (patch: Pick<Patient, "phone" | "preferredChannel" | "language">) => void;
 }
 
 const AppStoreContext = createContext<AppStoreValue | null>(null);
 
 const DEMO_CLINIC_ID = "clinic_cinghe";
 const DEMO_STAFF_ID = "staff_reception";
+export const DEMO_PATIENT_ID = "pt_chan";
 export const DEMO_INVITE_CODES = ["CINGHE-2026", "CINGHE-NURSE-77"];
+export const DEMO_PATIENT_OTP = "246810";
 
-function readSession(): Session | null {
+function read<T>(key: string): T | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(SESSION_KEY);
-    return raw ? (JSON.parse(raw) as Session) : null;
+    const raw = window.localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
   } catch {
     return null;
   }
 }
 
 export function AppStoreProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [staffSession, setStaffSession] = useState<StaffSession | null>(null);
+  const [patientSession, setPatientSession] = useState<PatientSession | null>(null);
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    setSession(readSession());
+    const s = read<StaffSession>(STAFF_SESSION_KEY);
+    const p = read<PatientSession>(PATIENT_SESSION_KEY);
+    // 防止舊格式或被竄改的資料互相冒充：kind 必須完全對應。
+    setStaffSession(s && s.kind === "staff" ? s : null);
+    setPatientSession(p && p.kind === "patient" ? p : null);
     setHydrated(true);
   }, []);
   const [, setVersion] = useState(0);
@@ -113,8 +154,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const seq = useRef(0);
   const nextId = (p: string) => `${p}_${Date.now().toString(36)}_${seq.current++}`;
 
-  const clinicId = session?.clinicId ?? DEMO_CLINIC_ID;
-  const staffId = session?.staffId ?? DEMO_STAFF_ID;
+  const clinicId = staffSession?.clinicId ?? patientSession?.clinicId ?? DEMO_CLINIC_ID;
+  const staffId = staffSession?.staffId ?? DEMO_STAFF_ID;
 
   const clinic = repo.getClinic(clinicId)!;
   const staff = repo.listStaff(clinicId);
@@ -163,39 +204,93 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const staffName = (id: ID) => staff.find((s) => s.id === id)?.name ?? "未指派";
   const serviceName = (id: ID) => clinic.services.find((s) => s.id === id)?.name ?? "其他服務";
 
+  /* --------------------------- 病人端（只讀自己） -------------------------- */
+  const myId = patientSession?.patientId ?? null;
+  const me = myId ? (patients.find((p) => p.id === myId) ?? null) : null;
+  const myAppointments = myId ? ownAppointments(repo, clinicId, myId) : [];
+  const myConversation = myId ? (ownConversations(repo, clinicId, myId)[0] ?? null) : null;
+  const myDocuments = myId ? ownDocuments(repo, clinicId, myId) : [];
+  const myReminders = myId ? ownReminders(repo, clinicId, myId) : [];
+
+  const patientActor = useCallback(
+    (): ActorRef => ({ type: "patient", id: myId ?? "unknown", name: me?.name ?? "病人" }),
+    [myId, me?.name],
+  );
+
+  /** 病人動作的守門：必須有病人 session，且該預約屬於自己。 */
+  const ownedAppointment = (id: ID): Appointment | null => {
+    if (!myId) return null;
+    return myAppointments.find((a) => a.id === id) ?? null;
+  };
+
   const value: AppStoreValue = {
     hydrated,
-    session,
-    signIn: ({ code, method }) => {
+    staffSession,
+    patientSession,
+
+    signInStaff: ({ code, method }) => {
       const invite = repo
         .listInvites(DEMO_CLINIC_ID)
         .find((i) => i.code.toUpperCase() === code.trim().toUpperCase() && i.status === "pending");
       if (!invite && method === "code") return false;
-      const s: Session = {
+      const s: StaffSession = {
+        kind: "staff",
         clinicId: DEMO_CLINIC_ID,
         staffId: DEMO_STAFF_ID,
         deviceBound: true,
         method,
         at: new Date().toISOString(),
       };
-      window.localStorage.setItem(SESSION_KEY, JSON.stringify(s));
-      setSession(s);
+      window.localStorage.setItem(STAFF_SESSION_KEY, JSON.stringify(s));
+      setStaffSession(s);
       repo.appendAudit({
         id: nextId("au"),
         clinicId: DEMO_CLINIC_ID,
         at: s.at,
         actor: { type: "staff", id: DEMO_STAFF_ID, name: "李樂怡" },
-        action: "登入系統",
-        target: method === "code" ? `邀請密令 ${invite?.code}` : method === "qr" ? "二維碼邀請" : "Passkey",
+        action: "員工登入行政後台",
+        target:
+          method === "code" ? `邀請密令 ${invite?.code}` : method === "qr" ? "員工二維碼" : "Passkey",
         result: "success",
         detail: "示範裝置已綁定",
       });
       bump();
       return true;
     },
-    signOut: () => {
-      window.localStorage.removeItem(SESSION_KEY);
-      setSession(null);
+    signOutStaff: () => {
+      window.localStorage.removeItem(STAFF_SESSION_KEY);
+      setStaffSession(null);
+    },
+
+    signInPatient: ({ patientId, method }) => {
+      const id = patientId ?? DEMO_PATIENT_ID;
+      const p = repo.listPatients(DEMO_CLINIC_ID).find((x) => x.id === id);
+      if (!p) return false;
+      const s: PatientSession = {
+        kind: "patient",
+        clinicId: DEMO_CLINIC_ID,
+        patientId: p.id,
+        method,
+        at: new Date().toISOString(),
+      };
+      window.localStorage.setItem(PATIENT_SESSION_KEY, JSON.stringify(s));
+      setPatientSession(s);
+      repo.appendAudit({
+        id: nextId("au"),
+        clinicId: DEMO_CLINIC_ID,
+        at: s.at,
+        actor: { type: "patient", id: p.id, name: p.name },
+        action: "病人登入個人空間",
+        target: method === "otp" ? "手機一次性驗證碼" : method === "qr" ? "病人二維碼" : "專屬連結",
+        result: "success",
+        detail: "示範認證",
+      });
+      bump();
+      return true;
+    },
+    signOutPatient: () => {
+      window.localStorage.removeItem(PATIENT_SESSION_KEY);
+      setPatientSession(null);
     },
 
     clinic,
@@ -419,11 +514,137 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       bump();
     },
 
+    patientPortalLink: (patientId) => {
+      audit({
+        action: "產生病人專屬連結",
+        target: `病人 ${patientId}`,
+        result: "success",
+        detail: "示範連結，7 日後失效",
+      });
+      bump();
+      const origin = typeof window === "undefined" ? "" : window.location.origin;
+      return `${origin}/patient/login?p=${patientId}`;
+    },
+
     updateClinicSettings: (patch) => {
       if (!guard("settings.write", "修改診所設定", clinic.name)) return;
       repo.updateClinic(clinicId, patch);
       audit({ action: "修改診所設定", target: clinic.name, result: "success", detail: Object.keys(patch).join(",") });
       toast.success("設定已儲存");
+      bump();
+    },
+
+    /* -------------------------------- 病人動作 ------------------------------- */
+    me,
+    myAppointments,
+    myConversation,
+    myDocuments,
+    myReminders,
+
+    mySlots: (practitionerId) => (myId ? availableSlots(repo, clinic, practitionerId) : []),
+
+    myConfirmAppointment: (id) => {
+      const ap = ownedAppointment(id);
+      if (!ap) return;
+      if (!canTransitionAppointment(ap.status, "confirmed")) {
+        toast.error("此預約現時不可確認");
+        return;
+      }
+      repo.updateAppointment(clinicId, id, { status: "confirmed" });
+      audit({
+        actor: patientActor(),
+        action: "病人確認到診",
+        target: `預約 ${id}`,
+        result: "success",
+        detail: `${ap.status} → confirmed`,
+      });
+      toast.success("已確認到診，多謝！");
+      bump();
+    },
+
+    myCancelAppointment: (id) => {
+      const ap = ownedAppointment(id);
+      if (!ap) return;
+      if (!canTransitionAppointment(ap.status, "cancelled")) {
+        toast.error("此預約現時不可取消，請與診所聯絡");
+        return;
+      }
+      repo.updateAppointment(clinicId, id, { status: "cancelled" });
+      audit({
+        actor: patientActor(),
+        action: "病人取消預約",
+        target: `預約 ${id}`,
+        result: "success",
+        detail: `${ap.status} → cancelled`,
+      });
+      toast.success("已取消，診所會收到通知");
+      bump();
+    },
+
+    myRescheduleAppointment: (id, startAt) => {
+      const ap = ownedAppointment(id);
+      if (!ap) return;
+      const dur = new Date(ap.endAt).getTime() - new Date(ap.startAt).getTime();
+      repo.updateAppointment(clinicId, id, {
+        startAt,
+        endAt: new Date(new Date(startAt).getTime() + dur).toISOString(),
+        status: "pending",
+      });
+      audit({
+        actor: patientActor(),
+        action: "病人申請改期",
+        target: `預約 ${id}`,
+        result: "success",
+        detail: startAt,
+      });
+      toast.success("已提交改期，待診所確認");
+      bump();
+    },
+
+    mySendMessage: (text) => {
+      if (!myId || !me) return;
+      const now = new Date().toISOString();
+      const cv = myConversation;
+      if (cv) {
+        repo.updateConversation(clinicId, cv.id, {
+          unread: true,
+          state: cv.state === "closed" ? "waiting_human" : cv.state,
+          lastAt: now,
+          messages: [
+            ...cv.messages,
+            {
+              id: nextId("m"),
+              conversationId: cv.id,
+              from: "patient",
+              authorName: me.name,
+              text,
+              at: now,
+            },
+          ],
+        });
+      }
+      audit({
+        actor: patientActor(),
+        action: "病人發送訊息",
+        target: cv ? `對話 ${cv.id}` : "新查詢",
+        result: "success",
+        detail: text.slice(0, 40),
+      });
+      toast.success("已送出，診所會盡快回覆");
+      bump();
+    },
+
+    myUpdateProfile: (patch) => {
+      if (!myId) return;
+      repo.updatePatient(clinicId, myId, patch);
+      audit({
+        actor: patientActor(),
+        action: "病人更新聯絡資料",
+        target: `病人 ${myId}`,
+        result: "success",
+        detail: Object.keys(patch).join(","),
+      });
+      toast.success("資料已更新");
       bump();
     },
   };
