@@ -1,9 +1,20 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { AlertTriangle, Bot, Hand, Phone, Send, Globe, MessageCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  Bot,
+  ClipboardList,
+  Globe,
+  Hand,
+  MessageCircle,
+  Phone,
+  Send,
+  Sparkles,
+} from "lucide-react";
 import { useState } from "react";
 
 import { PageContainer } from "@/components/layout/StaffShell";
 import { EmptyState, MdButton, MdCard, MdChip, MdFilterChip } from "@/components/m3";
+import { summarizeConversationForFrontdesk } from "@/frontdesk/conversation-summary";
 import { CHANNEL, CONVERSATION_STATE, fmtTime } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/state/app-store";
@@ -16,7 +27,7 @@ export const Route = createFileRoute("/staff/_app/inbox")({
   head: () => ({
     meta: [
       { title: "對話中心｜診所行政 Agent" },
-      { name: "description", content: "WhatsApp、電話與網頁訊息統一收件匣，支援 AI 建議與人工接管。" },
+      { name: "description", content: "WhatsApp、電話與網頁訊息統一收件匣，支援行政摘要、AI 建議與人工接管。" },
     ],
   }),
   component: InboxPage,
@@ -30,6 +41,7 @@ const channelIcon: Record<ChannelKind, typeof Phone> = {
 
 function InboxPage() {
   const {
+    clinic,
     conversations,
     urgentFlags,
     patientName,
@@ -55,9 +67,12 @@ function InboxPage() {
   const flag = selected?.urgentFlagId
     ? urgentFlags.find((f) => f.id === selected.urgentFlagId)
     : undefined;
+  const frontdeskSummary = selected
+    ? summarizeConversationForFrontdesk({ clinic, conversation: selected })
+    : null;
 
   return (
-    <PageContainer title="對話中心" subtitle="WhatsApp／電話／網頁訊息統一收件匣（模擬適配器）">
+    <PageContainer title="對話中心" subtitle="WhatsApp／電話／網頁訊息統一收件匣（目前使用模擬適配器）">
       <div className="mb-4 flex flex-wrap gap-2">
         {(
           [
@@ -79,6 +94,7 @@ function InboxPage() {
           {filtered.map((cv) => {
             const Icon = channelIcon[cv.channel];
             const state = CONVERSATION_STATE[cv.state];
+            const summary = summarizeConversationForFrontdesk({ clinic, conversation: cv });
             return (
               <button
                 key={cv.id}
@@ -100,6 +116,9 @@ function InboxPage() {
                   </span>
                   <span className="mt-0.5 block truncate md-body-m text-on-surface-variant">
                     {cv.messages[cv.messages.length - 1]?.text}
+                  </span>
+                  <span className="mt-1 block truncate md-body-s text-primary">
+                    {summary.title}
                   </span>
                   <span className="mt-2 flex flex-wrap items-center gap-1">
                     <MdChip tone={state.tone}>{state.label}</MdChip>
@@ -129,6 +148,49 @@ function InboxPage() {
                 </MdButton>
               )}
             </div>
+
+            {frontdeskSummary && (
+              <div className="border-b border-outline-variant bg-secondary-container/35 p-4">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-container text-on-primary-container">
+                    <Sparkles className="size-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="md-label-l text-on-surface">前台行政摘要</p>
+                      <MdChip tone={frontdeskSummary.decision.requiresHuman ? "error" : "primary"}>
+                        {frontdeskSummary.decision.requiresHuman ? "需要人手" : "可由流程處理"}
+                      </MdChip>
+                      {frontdeskSummary.decision.autoSendAllowed && (
+                        <MdChip tone="tertiary">允許自動回覆</MdChip>
+                      )}
+                    </div>
+                    <p className="mt-2 md-title-m text-on-surface">{frontdeskSummary.title}</p>
+                    <p className="mt-1 md-body-m text-on-surface-variant">{frontdeskSummary.detail}</p>
+                    <div className="mt-2 flex items-start gap-2 rounded-xl bg-surface-container p-3">
+                      <ClipboardList className="mt-0.5 size-4 shrink-0 text-primary" />
+                      <p className="md-body-s text-on-surface-variant">
+                        下一步：{frontdeskSummary.nextAction}
+                      </p>
+                    </div>
+                    {frontdeskSummary.decision.suggestedReply && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <MdButton
+                          size="sm"
+                          variant="tonal"
+                          onClick={() => setDraft(frontdeskSummary.decision.suggestedReply ?? "")}
+                        >
+                          填入建議回覆
+                        </MdButton>
+                        <span className="self-center md-body-s text-on-surface-variant">
+                          建議文字只處理行政事項；發送前仍可修改。
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {flag && (
               <div className="border-b border-outline-variant bg-error-container/40 p-4">
