@@ -94,3 +94,37 @@ describe("多租戶隔離", () => {
     );
   });
 });
+
+/* --------------------- 病人前台與行政後台的邊界測試 --------------------- */
+describe("雙端分離", () => {
+  it("病人只能讀到屬於自己的預約與文件", () => {
+    const repo = new InMemoryClinicRepository();
+    const mine = ownAppointments(repo, "clinic_cinghe", "pt_07");
+    expect(mine.length).toBeGreaterThan(0);
+    expect(mine.every((a) => a.patientId === "pt_07")).toBe(true);
+    expect(ownDocuments(repo, "clinic_cinghe", "pt_07").every((d) => d.patientId === "pt_07")).toBe(
+      true,
+    );
+  });
+
+  it("病人不能讀到另一診所的資料", () => {
+    const repo = new InMemoryClinicRepository();
+    expect(ownAppointments(repo, "clinic_haiyue", "pt_07")).toHaveLength(0);
+  });
+
+  it("可選空檔只暴露時間與負責醫師，不暴露診所排程細節", () => {
+    const repo = new InMemoryClinicRepository();
+    const clinic = repo.getClinic("clinic_cinghe")!;
+    const slots = availableSlots(repo, clinic, "staff_dr_ho");
+    expect(slots.length).toBeGreaterThan(0);
+    for (const s of slots) {
+      expect(Object.keys(s).sort()).toEqual(["practitionerId", "startAt"]);
+    }
+  });
+
+  it("病人確認到診是合法狀態轉換，取消亦然", () => {
+    expect(canTransitionAppointment("pending", "confirmed")).toBe(true);
+    expect(canTransitionAppointment("pending", "cancelled")).toBe(true);
+    expect(canTransitionAppointment("cancelled", "confirmed")).toBe(false);
+  });
+});
