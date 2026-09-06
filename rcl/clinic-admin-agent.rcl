@@ -1,0 +1,109 @@
+# Clinic Flow / RCL semantic authority source
+# 行政 Agent 只拥有行政执行权，不拥有医学诊断、治疗建议或临床分诊权。
+reality ClinicAdministrativeAgent {
+  facet policy.medical_diagnosis_allowed : Truth = false
+  facet policy.treatment_advice_allowed : Truth = false
+  facet policy.clinical_triage_allowed : Truth = false
+  facet policy.cross_tenant_access_allowed : Truth = false
+
+  facet task.risk_low : Truth = false
+  facet task.risk_medium : Truth = false
+  facet task.risk_high : Truth = false
+  facet task.human_approved : Truth = false
+  facet task.tenant_match : Truth = true
+  facet task.plan_valid : Truth = true
+  facet task.executed : Truth = false
+  facet task.blocked : Truth = false
+
+  subject admin_agent {
+    facet actions : Number = 0
+    warrant clinic.admin.execute on clinic_admin
+  }
+
+  subject clinic_staff {
+    facet approvals : Number = 0
+    warrant clinic.admin.approve on clinic_admin
+  }
+
+  knowledge authority {
+    claim tenant_safe : Truth = task.tenant_match
+      confidence 1.0
+      evidence "policy:tenant-boundary"
+      source "clinic-flow"
+      scope "clinic"
+      status observed
+
+    claim plan_safe : Truth = task.plan_valid
+      confidence 1.0
+      evidence "policy:closed-operation-set"
+      source "clinic-flow"
+      scope "agent-plan"
+      status observed
+
+    derive may_auto_execute : Truth =
+      task.risk_low and
+      knowledge_value(authority.tenant_safe) and
+      knowledge_value(authority.plan_safe)
+      from authority.tenant_safe, authority.plan_safe
+      confidence 1.0
+      evidence "policy:low-risk-only-auto"
+      source "rcl:inference"
+      scope "administrative-action"
+
+    derive may_human_execute : Truth =
+      (task.risk_medium or task.risk_high) and
+      task.human_approved and
+      knowledge_value(authority.tenant_safe) and
+      knowledge_value(authority.plan_safe)
+      from authority.tenant_safe, authority.plan_safe
+      confidence 1.0
+      evidence "policy:human-gate"
+      source "rcl:inference"
+      scope "administrative-action"
+
+    preserve policy.medical_diagnosis_allowed == false
+    preserve policy.treatment_advice_allowed == false
+    preserve policy.clinical_triage_allowed == false
+    preserve policy.cross_tenant_access_allowed == false
+  }
+
+  emergence auto_admin_action {
+    cause admin_agent
+    when supported(authority.may_auto_execute, 1.0) and knowledge_value(authority.may_auto_execute)
+    needs clinic.admin.execute on clinic_admin
+    alter task.executed <- true
+    alter admin_agent.actions <- admin_agent.actions + 1
+    preserve task.tenant_match
+    preserve task.plan_valid
+    witness "clinic-flow:low-risk-auto-execution"
+  }
+
+  emergence approved_admin_action {
+    cause admin_agent
+    when supported(authority.may_human_execute, 1.0) and knowledge_value(authority.may_human_execute)
+    needs clinic.admin.execute on clinic_admin
+    alter task.executed <- true
+    alter admin_agent.actions <- admin_agent.actions + 1
+    preserve task.human_approved
+    preserve task.tenant_match
+    preserve task.plan_valid
+    witness "clinic-flow:human-approved-execution"
+  }
+
+  emergence block_invalid_action {
+    cause admin_agent
+    when not task.tenant_match or not task.plan_valid
+    needs clinic.admin.execute on clinic_admin
+    alter task.blocked <- true
+    preserve task.executed == false
+    witness "clinic-flow:fail-closed"
+  }
+
+  learn authority
+  foresee auto_admin_action
+  foresee approved_admin_action
+  foresee block_invalid_action
+  realize auto_admin_action
+  realize approved_admin_action
+  realize block_invalid_action
+}
