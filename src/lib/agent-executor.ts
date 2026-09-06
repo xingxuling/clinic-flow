@@ -81,7 +81,6 @@ interface ValidationContext {
   repo: ClinicRepository;
   clinicId: ID;
   task: AgentTask;
-  now: string;
 }
 
 function overlaps(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean {
@@ -120,10 +119,7 @@ function validateAppointmentSlot(
   return conflict ? `时段与预约 ${conflict.id} 冲突` : null;
 }
 
-function validateOperation(
-  operation: AgentOperation,
-  ctx: ValidationContext,
-): string | null {
+function validateOperation(operation: AgentOperation, ctx: ValidationContext): string | null {
   const taskPatientId = ctx.task.relatedPatientId;
 
   switch (operation.kind) {
@@ -275,7 +271,6 @@ export function executeAgentPlan(input: ExecuteAgentPlanInput): AgentExecutionRe
     repo: input.repo,
     clinicId: input.clinicId,
     task: input.task,
-    now,
   };
 
   const validationErrors = input.plan.operations
@@ -361,7 +356,7 @@ export function executeAgentPlan(input: ExecuteAgentPlanInput): AgentExecutionRe
 
       case "urgent.escalate":
         input.repo.updateUrgentFlag(input.clinicId, operation.urgentFlagId, {
-          handledBy: input.approvedBy,
+          handledBy: input.approvedBy ?? "agent_auto",
           handledAt: now,
         });
         break;
