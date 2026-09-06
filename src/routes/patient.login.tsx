@@ -75,6 +75,14 @@ function PatientLogin() {
             ]}
           />
 
+          {error && method !== "otp" && (
+            <p className="mb-3 rounded-lg bg-error-container p-3 md-body-s text-on-error-container">
+              {error}
+            </p>
+          )}
+
+
+
           {method === "link" && (
             <div className="flex flex-col items-center gap-4 text-center">
               <LinkIcon className="size-12 text-primary" />
