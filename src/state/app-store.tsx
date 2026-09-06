@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -39,6 +40,7 @@ export interface NewAppointmentInput {
 }
 
 interface AppStoreValue {
+  hydrated: boolean;
   session: Session | null;
   signIn: (input: { code: string; method: Session["method"] }) => boolean;
   signOut: () => void;
@@ -100,7 +102,12 @@ function readSession(): Session | null {
 }
 
 export function AppStoreProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(() => readSession());
+  const [session, setSession] = useState<Session | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    setSession(readSession());
+    setHydrated(true);
+  }, []);
   const [, setVersion] = useState(0);
   const bump = useCallback(() => setVersion((v) => v + 1), []);
   const seq = useRef(0);
@@ -157,6 +164,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const serviceName = (id: ID) => clinic.services.find((s) => s.id === id)?.name ?? "其他服務";
 
   const value: AppStoreValue = {
+    hydrated,
     session,
     signIn: ({ code, method }) => {
       const invite = repo
