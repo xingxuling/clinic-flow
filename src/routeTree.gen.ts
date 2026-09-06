@@ -10,33 +10,180 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/app'
+import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppAgentRouteImport } from './routes/app.agent'
+import { Route as AppAppointmentsRouteImport } from './routes/app.appointments'
+import { Route as AppAuditRouteImport } from './routes/app.audit'
+import { Route as AppDocumentsRouteImport } from './routes/app.documents'
+import { Route as AppInboxRouteImport } from './routes/app.inbox'
+import { Route as AppPatientsRouteImport } from './routes/app.patients'
+import { Route as AppRemindersRouteImport } from './routes/app.reminders'
+import { Route as AppSettingsRouteImport } from './routes/app.settings'
+import { Route as AppStaffRouteImport } from './routes/app.staff'
+import { Route as AppTodayRouteImport } from './routes/app.today'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAgentRoute = AppAgentRouteImport.update({
+  id: '/agent',
+  path: '/agent',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAppointmentsRoute = AppAppointmentsRouteImport.update({
+  id: '/appointments',
+  path: '/appointments',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAuditRoute = AppAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDocumentsRoute = AppDocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInboxRoute = AppInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPatientsRoute = AppPatientsRouteImport.update({
+  id: '/patients',
+  path: '/patients',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRemindersRoute = AppRemindersRouteImport.update({
+  id: '/reminders',
+  path: '/reminders',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppStaffRoute = AppStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTodayRoute = AppTodayRouteImport.update({
+  id: '/today',
+  path: '/today',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/app': typeof AppRouteWithChildren
+  '/app/agent': typeof AppAgentRoute
+  '/app/appointments': typeof AppAppointmentsRoute
+  '/app/audit': typeof AppAuditRoute
+  '/app/documents': typeof AppDocumentsRoute
+  '/app/inbox': typeof AppInboxRoute
+  '/app/patients': typeof AppPatientsRoute
+  '/app/reminders': typeof AppRemindersRoute
+  '/app/settings': typeof AppSettingsRoute
+  '/app/staff': typeof AppStaffRoute
+  '/app/today': typeof AppTodayRoute
+  '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/app/agent': typeof AppAgentRoute
+  '/app/appointments': typeof AppAppointmentsRoute
+  '/app/audit': typeof AppAuditRoute
+  '/app/documents': typeof AppDocumentsRoute
+  '/app/inbox': typeof AppInboxRoute
+  '/app/patients': typeof AppPatientsRoute
+  '/app/reminders': typeof AppRemindersRoute
+  '/app/settings': typeof AppSettingsRoute
+  '/app/staff': typeof AppStaffRoute
+  '/app/today': typeof AppTodayRoute
+  '/app': typeof AppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/app': typeof AppRouteWithChildren
+  '/app/agent': typeof AppAgentRoute
+  '/app/appointments': typeof AppAppointmentsRoute
+  '/app/audit': typeof AppAuditRoute
+  '/app/documents': typeof AppDocumentsRoute
+  '/app/inbox': typeof AppInboxRoute
+  '/app/patients': typeof AppPatientsRoute
+  '/app/reminders': typeof AppRemindersRoute
+  '/app/settings': typeof AppSettingsRoute
+  '/app/staff': typeof AppStaffRoute
+  '/app/today': typeof AppTodayRoute
+  '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/app/agent'
+    | '/app/appointments'
+    | '/app/audit'
+    | '/app/documents'
+    | '/app/inbox'
+    | '/app/patients'
+    | '/app/reminders'
+    | '/app/settings'
+    | '/app/staff'
+    | '/app/today'
+    | '/app/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/app/agent'
+    | '/app/appointments'
+    | '/app/audit'
+    | '/app/documents'
+    | '/app/inbox'
+    | '/app/patients'
+    | '/app/reminders'
+    | '/app/settings'
+    | '/app/staff'
+    | '/app/today'
+    | '/app'
+  id:
+    | '__root__'
+    | '/'
+    | '/app'
+    | '/app/agent'
+    | '/app/appointments'
+    | '/app/audit'
+    | '/app/documents'
+    | '/app/inbox'
+    | '/app/patients'
+    | '/app/reminders'
+    | '/app/settings'
+    | '/app/staff'
+    | '/app/today'
+    | '/app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +195,126 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app/': {
+      id: '/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/agent': {
+      id: '/app/agent'
+      path: '/agent'
+      fullPath: '/app/agent'
+      preLoaderRoute: typeof AppAgentRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/appointments': {
+      id: '/app/appointments'
+      path: '/appointments'
+      fullPath: '/app/appointments'
+      preLoaderRoute: typeof AppAppointmentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/audit': {
+      id: '/app/audit'
+      path: '/audit'
+      fullPath: '/app/audit'
+      preLoaderRoute: typeof AppAuditRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/documents': {
+      id: '/app/documents'
+      path: '/documents'
+      fullPath: '/app/documents'
+      preLoaderRoute: typeof AppDocumentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/inbox': {
+      id: '/app/inbox'
+      path: '/inbox'
+      fullPath: '/app/inbox'
+      preLoaderRoute: typeof AppInboxRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/patients': {
+      id: '/app/patients'
+      path: '/patients'
+      fullPath: '/app/patients'
+      preLoaderRoute: typeof AppPatientsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/reminders': {
+      id: '/app/reminders'
+      path: '/reminders'
+      fullPath: '/app/reminders'
+      preLoaderRoute: typeof AppRemindersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/settings': {
+      id: '/app/settings'
+      path: '/settings'
+      fullPath: '/app/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/staff': {
+      id: '/app/staff'
+      path: '/staff'
+      fullPath: '/app/staff'
+      preLoaderRoute: typeof AppStaffRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/today': {
+      id: '/app/today'
+      path: '/today'
+      fullPath: '/app/today'
+      preLoaderRoute: typeof AppTodayRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
+interface AppRouteChildren {
+  AppAgentRoute: typeof AppAgentRoute
+  AppAppointmentsRoute: typeof AppAppointmentsRoute
+  AppAuditRoute: typeof AppAuditRoute
+  AppDocumentsRoute: typeof AppDocumentsRoute
+  AppInboxRoute: typeof AppInboxRoute
+  AppPatientsRoute: typeof AppPatientsRoute
+  AppRemindersRoute: typeof AppRemindersRoute
+  AppSettingsRoute: typeof AppSettingsRoute
+  AppStaffRoute: typeof AppStaffRoute
+  AppTodayRoute: typeof AppTodayRoute
+  AppIndexRoute: typeof AppIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAgentRoute: AppAgentRoute,
+  AppAppointmentsRoute: AppAppointmentsRoute,
+  AppAuditRoute: AppAuditRoute,
+  AppDocumentsRoute: AppDocumentsRoute,
+  AppInboxRoute: AppInboxRoute,
+  AppPatientsRoute: AppPatientsRoute,
+  AppRemindersRoute: AppRemindersRoute,
+  AppSettingsRoute: AppSettingsRoute,
+  AppStaffRoute: AppStaffRoute,
+  AppTodayRoute: AppTodayRoute,
+  AppIndexRoute: AppIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

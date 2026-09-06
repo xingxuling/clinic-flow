@@ -1,0 +1,17 @@
+{
+  "name": "診所行政 Agent",
+  "short_name": "診所行政",
+  "description": "香港小型診所的邀請制行政後台。",
+  "lang": "zh-Hant-HK",
+  "start_url": "/app/today",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f3f6f6",
+  "theme_color": "#0f6c73",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
