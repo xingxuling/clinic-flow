@@ -14,9 +14,12 @@ import { Route as AppRouteImport } from './routes/app'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppAgentRouteImport } from './routes/app.agent'
 import { Route as AppAppointmentsRouteImport } from './routes/app.appointments'
+import { Route as AppAuditRouteImport } from './routes/app.audit'
 import { Route as AppDocumentsRouteImport } from './routes/app.documents'
 import { Route as AppInboxRouteImport } from './routes/app.inbox'
+import { Route as AppPatientsRouteImport } from './routes/app.patients'
 import { Route as AppRemindersRouteImport } from './routes/app.reminders'
+import { Route as AppStaffRouteImport } from './routes/app.staff'
 import { Route as AppTodayRouteImport } from './routes/app.today'
 
 const IndexRoute = IndexRouteImport.update({
@@ -44,6 +47,11 @@ const AppAppointmentsRoute = AppAppointmentsRouteImport.update({
   path: '/appointments',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAuditRoute = AppAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDocumentsRoute = AppDocumentsRouteImport.update({
   id: '/documents',
   path: '/documents',
@@ -54,9 +62,19 @@ const AppInboxRoute = AppInboxRouteImport.update({
   path: '/inbox',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPatientsRoute = AppPatientsRouteImport.update({
+  id: '/patients',
+  path: '/patients',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppRemindersRoute = AppRemindersRouteImport.update({
   id: '/reminders',
   path: '/reminders',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppStaffRoute = AppStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
   getParentRoute: () => AppRoute,
 } as any)
 const AppTodayRoute = AppTodayRouteImport.update({
@@ -70,9 +88,12 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/app/agent': typeof AppAgentRoute
   '/app/appointments': typeof AppAppointmentsRoute
+  '/app/audit': typeof AppAuditRoute
   '/app/documents': typeof AppDocumentsRoute
   '/app/inbox': typeof AppInboxRoute
+  '/app/patients': typeof AppPatientsRoute
   '/app/reminders': typeof AppRemindersRoute
+  '/app/staff': typeof AppStaffRoute
   '/app/today': typeof AppTodayRoute
   '/app/': typeof AppIndexRoute
 }
@@ -80,9 +101,12 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app/agent': typeof AppAgentRoute
   '/app/appointments': typeof AppAppointmentsRoute
+  '/app/audit': typeof AppAuditRoute
   '/app/documents': typeof AppDocumentsRoute
   '/app/inbox': typeof AppInboxRoute
+  '/app/patients': typeof AppPatientsRoute
   '/app/reminders': typeof AppRemindersRoute
+  '/app/staff': typeof AppStaffRoute
   '/app/today': typeof AppTodayRoute
   '/app': typeof AppIndexRoute
 }
@@ -92,9 +116,12 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/app/agent': typeof AppAgentRoute
   '/app/appointments': typeof AppAppointmentsRoute
+  '/app/audit': typeof AppAuditRoute
   '/app/documents': typeof AppDocumentsRoute
   '/app/inbox': typeof AppInboxRoute
+  '/app/patients': typeof AppPatientsRoute
   '/app/reminders': typeof AppRemindersRoute
+  '/app/staff': typeof AppStaffRoute
   '/app/today': typeof AppTodayRoute
   '/app/': typeof AppIndexRoute
 }
@@ -105,9 +132,12 @@ export interface FileRouteTypes {
     | '/app'
     | '/app/agent'
     | '/app/appointments'
+    | '/app/audit'
     | '/app/documents'
     | '/app/inbox'
+    | '/app/patients'
     | '/app/reminders'
+    | '/app/staff'
     | '/app/today'
     | '/app/'
   fileRoutesByTo: FileRoutesByTo
@@ -115,9 +145,12 @@ export interface FileRouteTypes {
     | '/'
     | '/app/agent'
     | '/app/appointments'
+    | '/app/audit'
     | '/app/documents'
     | '/app/inbox'
+    | '/app/patients'
     | '/app/reminders'
+    | '/app/staff'
     | '/app/today'
     | '/app'
   id:
@@ -126,9 +159,12 @@ export interface FileRouteTypes {
     | '/app'
     | '/app/agent'
     | '/app/appointments'
+    | '/app/audit'
     | '/app/documents'
     | '/app/inbox'
+    | '/app/patients'
     | '/app/reminders'
+    | '/app/staff'
     | '/app/today'
     | '/app/'
   fileRoutesById: FileRoutesById
@@ -175,6 +211,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAppointmentsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/audit': {
+      id: '/app/audit'
+      path: '/audit'
+      fullPath: '/app/audit'
+      preLoaderRoute: typeof AppAuditRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/documents': {
       id: '/app/documents'
       path: '/documents'
@@ -189,11 +232,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppInboxRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/patients': {
+      id: '/app/patients'
+      path: '/patients'
+      fullPath: '/app/patients'
+      preLoaderRoute: typeof AppPatientsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/reminders': {
       id: '/app/reminders'
       path: '/reminders'
       fullPath: '/app/reminders'
       preLoaderRoute: typeof AppRemindersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/staff': {
+      id: '/app/staff'
+      path: '/staff'
+      fullPath: '/app/staff'
+      preLoaderRoute: typeof AppStaffRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/today': {
@@ -209,9 +266,12 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppAgentRoute: typeof AppAgentRoute
   AppAppointmentsRoute: typeof AppAppointmentsRoute
+  AppAuditRoute: typeof AppAuditRoute
   AppDocumentsRoute: typeof AppDocumentsRoute
   AppInboxRoute: typeof AppInboxRoute
+  AppPatientsRoute: typeof AppPatientsRoute
   AppRemindersRoute: typeof AppRemindersRoute
+  AppStaffRoute: typeof AppStaffRoute
   AppTodayRoute: typeof AppTodayRoute
   AppIndexRoute: typeof AppIndexRoute
 }
@@ -219,9 +279,12 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppAgentRoute: AppAgentRoute,
   AppAppointmentsRoute: AppAppointmentsRoute,
+  AppAuditRoute: AppAuditRoute,
   AppDocumentsRoute: AppDocumentsRoute,
   AppInboxRoute: AppInboxRoute,
+  AppPatientsRoute: AppPatientsRoute,
   AppRemindersRoute: AppRemindersRoute,
+  AppStaffRoute: AppStaffRoute,
   AppTodayRoute: AppTodayRoute,
   AppIndexRoute: AppIndexRoute,
 }
