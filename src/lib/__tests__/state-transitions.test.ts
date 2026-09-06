@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { availableSlots, ownAppointments, ownDocuments } from "@/data/patient-view";
 import { canTransitionAppointment, InMemoryClinicRepository } from "@/data/repository";
 import { canTransitionAgentTask, detectUrgent, initialStatusFor, mayAutoExecute } from "@/lib/agent-rules";
 import { hasPermission } from "@/lib/permissions";
