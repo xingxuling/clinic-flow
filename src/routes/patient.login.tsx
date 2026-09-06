@@ -14,6 +14,10 @@ export const Route = createFileRoute("/patient/login")({
       { property: "og:description", content: "以專屬連結、二維碼或手機驗證碼進入自己的預約空間。" },
     ],
   }),
+  validateSearch: (search: Record<string, unknown>): { p?: string } => {
+    const p = search["p"];
+    return typeof p === "string" && p.length > 0 ? { p } : {};
+  },
   component: PatientLogin,
 });
 
@@ -21,6 +25,7 @@ type Method = "link" | "qr" | "otp";
 
 function PatientLogin() {
   const { signInPatient, patientSession, hydrated } = useApp();
+  const { p: requestedPatientId } = Route.useSearch();
   const navigate = useNavigate();
   const [method, setMethod] = useState<Method>("link");
   const [phone, setPhone] = useState("");
@@ -33,9 +38,17 @@ function PatientLogin() {
   }, [hydrated, patientSession, navigate]);
 
   function enter(m: Method) {
-    signInPatient({ method: m });
+    // 專屬連結的 ?p= 只有在診所曾發出該連結時才有效（示範白名單，取代真實簽名 token）。
+    const ok = signInPatient(
+      requestedPatientId ? { patientId: requestedPatientId, method: m } : { method: m },
+    );
+    if (!ok) {
+      setError("此連結無效或已失效，請向診所索取新的專屬連結。");
+      return;
+    }
     navigate({ to: "/patient/home" });
   }
+
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-surface-container-lowest px-4 py-10">
@@ -63,6 +76,14 @@ function PatientLogin() {
               { value: "otp", label: "手機驗證" },
             ]}
           />
+
+          {error && method !== "otp" && (
+            <p className="mb-3 rounded-lg bg-error-container p-3 md-body-s text-on-error-container">
+              {error}
+            </p>
+          )}
+
+
 
           {method === "link" && (
             <div className="flex flex-col items-center gap-4 text-center">

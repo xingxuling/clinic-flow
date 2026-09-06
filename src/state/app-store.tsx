@@ -39,9 +39,31 @@ import type {
   StaffSession,
 } from "@/types/domain";
 
+import { isPatientSession, isStaffSession, resolvePortalPatientId } from "@/lib/session";
+
 const STAFF_SESSION_KEY = "cinghe.staff-session.v1";
 const PATIENT_SESSION_KEY = "cinghe.patient-session.v1";
+const PORTAL_LINKS_KEY = "cinghe.portal-links.v1";
 const repo = new InMemoryClinicRepository();
+
+/** 示範版「已發出專屬連結」白名單；真實環境改為伺服器簽發的一次性簽名 token。 */
+function readIssuedLinks(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(PORTAL_LINKS_KEY);
+    const arr = raw ? (JSON.parse(raw) as unknown) : [];
+    return Array.isArray(arr) ? arr.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function addIssuedLink(patientId: string) {
+  if (typeof window === "undefined") return;
+  const next = Array.from(new Set([...readIssuedLinks(), patientId]));
+  window.localStorage.setItem(PORTAL_LINKS_KEY, JSON.stringify(next));
+}
+
 
 export interface NewAppointmentInput {
   patientId: ID;
@@ -145,8 +167,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     const s = read<StaffSession>(STAFF_SESSION_KEY);
     const p = read<PatientSession>(PATIENT_SESSION_KEY);
     // 防止舊格式或被竄改的資料互相冒充：kind 必須完全對應。
-    setStaffSession(s && s.kind === "staff" ? s : null);
-    setPatientSession(p && p.kind === "patient" ? p : null);
+    setStaffSession(isStaffSession(s) ? s : null);
+    setPatientSession(isPatientSession(p) ? p : null);
+
     setHydrated(true);
   }, []);
   const [, setVersion] = useState(0);
@@ -263,9 +286,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     },
 
     signInPatient: ({ patientId, method }) => {
-      const id = patientId ?? DEMO_PATIENT_ID;
+      // 只接受示範病人或診所曾經發出過專屬連結的病人：單靠改 URL 的 ?p= 參數無效。
+      const id = resolvePortalPatientId(patientId, readIssuedLinks(), DEMO_PATIENT_ID);
+      if (!id) return false;
       const p = repo.listPatients(DEMO_CLINIC_ID).find((x) => x.id === id);
       if (!p) return false;
+
       const s: PatientSession = {
         kind: "patient",
         clinicId: DEMO_CLINIC_ID,
@@ -515,7 +541,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     },
 
     patientPortalLink: (patientId) => {
+      addIssuedLink(patientId);
       audit({
+
         action: "產生病人專屬連結",
         target: `病人 ${patientId}`,
         result: "success",
