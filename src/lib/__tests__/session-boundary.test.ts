@@ -83,7 +83,7 @@ describe("病人資料過濾（clinicId + patientId 雙重收窄）", () => {
 
   it("空檔 DTO 只有 startAt 與 practitionerId", () => {
     const clinic = repo.getClinic(clinicId)!;
-    const slots = availableSlots(repo, clinic, "staff_dentist_1");
+    const slots = availableSlots(repo, clinic, "staff_dr_lam");
     expect(slots.length).toBeGreaterThan(0);
     for (const s of slots) expect(Object.keys(s).sort()).toEqual(["practitionerId", "startAt"]);
   });
