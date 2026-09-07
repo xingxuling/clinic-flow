@@ -34,7 +34,7 @@ export const Route = createFileRoute("/staff/_app/appointments")({
 
 function toLocalInput(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1,)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function AppointmentsPage() {
@@ -99,15 +99,15 @@ function AppointmentsPage() {
     const slots: string[] = [];
     for (let h = 9; h < 19; h++) {
       for (const m of [0, 30]) {
-        const s = new Date(day);
-        s.setHours(h, m, 0, 0);
+        const slot = new Date(day);
+        slot.setHours(h, m, 0, 0);
         const busy = visibleAppointments.some(
           (appointment) =>
             appointment.status !== "cancelled" &&
-            new Date(appointment.startAt) <= s &&
-            s < new Date(appointment.endAt),
+            new Date(appointment.startAt) <= slot &&
+            slot < new Date(appointment.endAt),
         );
-        if (!busy && s > new Date()) slots.push(s.toISOString());
+        if (!busy && slot > new Date()) slots.push(slot.toISOString());
       }
     }
     return slots.slice(0, 12);
@@ -116,7 +116,7 @@ function AppointmentsPage() {
   return (
     <PageContainer
       title={`${vertical.labels.booking}中心`}
-      subtitle={`${vertical.displayName} · ${vertical.labels.customer} → ${vertical.labels.service ?? "服務"} → ${vertical.labels.resource}`}
+      subtitle={`${vertical.displayName} · ${vertical.labels.customer} → 服務 → ${vertical.labels.resource}`}
       actions={
         <div className="flex flex-wrap items-center gap-2">
           <MdSegmented
