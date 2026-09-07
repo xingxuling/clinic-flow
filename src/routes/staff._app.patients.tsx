@@ -1,15 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Search, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { useServiceBookings } from "@/bookings/use-service-bookings";
 import { LegacyImportPanel } from "@/components/importing/LegacyImportPanel";
 import { PageContainer } from "@/components/layout/StaffShell";
-import { EmptyState, MdCard, MdChip, MdTextField, SectionHeader } from "@/components/m3";
+import { EmptyState, MdButton, MdCard, MdChip, MdTextField, SectionHeader } from "@/components/m3";
 import { VerticalSwitcher } from "@/components/verticals/VerticalSwitcher";
 import { patientToServiceCustomer } from "@/customers/types";
 import { useServiceCustomers } from "@/customers/use-service-customers";
 import { CHANNEL, fmtDate } from "@/lib/labels";
+import { useMessagingControls } from "@/messaging/use-messaging-controls";
 import { useApp } from "@/state/app-store";
 import { useTenantVertical } from "@/verticals/use-tenant-vertical";
 
@@ -30,16 +32,26 @@ function maskPhone(phone: string, mask: boolean) {
   return `${digits.slice(0, Math.min(4, digits.length))} ••••`;
 }
 
+function consentLabel(state: string): string {
+  return {
+    unknown: "未記錄 WhatsApp 同意",
+    opted_in: "已記錄 WhatsApp 同意",
+    opted_out: "已退訂 WhatsApp",
+  }[state] ?? state;
+}
+
 function CustomersPage() {
   const {
     patients,
     clinic,
+    currentStaff,
     appointments,
     setAppointmentStatus,
     rescheduleAppointment,
     createAppointment,
   } = useApp();
   const vertical = useTenantVertical(clinic);
+  const messaging = useMessagingControls(clinic.id, vertical.id);
   const { customers } = useServiceCustomers({ clinic, vertical, legacyPatients: patients });
   const { bookings } = useServiceBookings({
     clinic,
@@ -92,6 +104,12 @@ function CustomersPage() {
         <div className="md-body-m text-on-surface-variant">
           <p>只保存完成聯絡、排程與跟進所需的資料；需要專業判斷的內容交由人工處理。</p>
           <p className="mt-1">
+            客戶可隨時要求停止 Agent 或退出 WhatsApp 主動訊息；這些狀態會持久保存並在所有自動發送前強制檢查。
+          </p>
+          <p className="mt-1 md-body-s">
+            「記錄同意」只可在已取得客戶真實 opt-in 後使用；正式環境還應保存同意來源／證據，不把後台勾選本身當成同意。
+          </p>
+          <p className="mt-1">
             {mask ? "列表電話號碼已按隱私設定遮蔽部分數字。" : "列表顯示完整電話號碼。"}
           </p>
         </div>
@@ -118,6 +136,10 @@ function CustomersPage() {
                 new Date(booking.startAt) > new Date() &&
                 booking.status !== "cancelled",
             );
+            const control = messaging.getCustomer(customer.id);
+            const utilityAllowed = control.whatsappConsentScopes.includes("utility");
+            const marketingAllowed = control.whatsappConsentScopes.includes("marketing");
+
             return (
               <MdCard key={customer.id} className="p-4">
                 <div className="flex items-start justify-between gap-2">
@@ -141,6 +163,80 @@ function CustomersPage() {
                       {tag}
                     </MdChip>
                   ))}
+                </div>
+
+                <div className="mt-3 rounded-xl border border-outline-variant p-3">
+                  <p className="md-label-m text-on-surface-variant">Agent / WhatsApp</p>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    <MdChip tone={control.automationMode === "agent_allowed" ? "primary" : "tertiary"}>
+                      {control.automationMode === "agent_allowed" ? "可由 Agent 處理" : "僅人工"}
+                    </MdChip>
+                    <MdChip tone={control.whatsappConsent === "opted_out" ? "error" : control.whatsappConsent === "opted_in" ? "secondary" : "neutral"}>
+                      {consentLabel(control.whatsappConsent)}
+                    </MdChip>
+                    {utilityAllowed && <MdChip tone="secondary">服務提醒</MdChip>}
+                    {marketingAllowed && <MdChip tone="secondary">Marketing</MdChip>}
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {control.automationMode === "agent_allowed" ? (
+                      <MdButton
+                        size="sm"
+                        variant="outlined"
+                        onClick={() => messaging.setHumanOnly(customer.id, "STAFF_SET_HUMAN_ONLY", currentStaff.id)}
+                      >
+                        切到僅人工
+                      </MdButton>
+                    ) : (
+                      <MdButton
+                        size="sm"
+                        variant="outlined"
+                        onClick={() => messaging.resumeAgent(customer.id, currentStaff.id)}
+                      >
+                        明確恢復 Agent
+                      </MdButton>
+                    )}
+
+                    {!utilityAllowed && control.whatsappConsent !== "opted_out" && (
+                      <MdButton
+                        size="sm"
+                        variant="tonal"
+                        onClick={() => {
+                          messaging.recordWhatsAppOptIn(customer.id, ["utility"], currentStaff.id);
+                          toast.success("已記錄服務類 WhatsApp opt-in", {
+                            description: "正式上線仍需保存客戶實際同意的來源證據。",
+                          });
+                        }}
+                      >
+                        記錄服務類同意
+                      </MdButton>
+                    )}
+
+                    {utilityAllowed && !marketingAllowed && control.whatsappConsent !== "opted_out" && (
+                      <MdButton
+                        size="sm"
+                        variant="text"
+                        onClick={() => {
+                          messaging.recordWhatsAppOptIn(customer.id, ["utility", "marketing"], currentStaff.id);
+                          toast.success("已記錄 Marketing opt-in", {
+                            description: "只應在客戶已明確同意接收 Marketing 訊息後使用。",
+                          });
+                        }}
+                      >
+                        記錄 Marketing 同意
+                      </MdButton>
+                    )}
+
+                    {control.whatsappConsent !== "opted_out" && (
+                      <MdButton
+                        size="sm"
+                        variant="text"
+                        onClick={() => messaging.recordWhatsAppOptOut(customer.id, currentStaff.id)}
+                      >
+                        記錄停止 WhatsApp
+                      </MdButton>
+                    )}
+                  </div>
                 </div>
 
                 {customer.subjects.length > 0 && (
