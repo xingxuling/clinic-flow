@@ -1,4 +1,7 @@
-import { matchEscalationKeywords } from "@/core/escalation";
+import {
+  matchEscalationKeywords,
+  matchesRestrictedQuestion,
+} from "@/core/escalation";
 import {
   matchAuthorizedFaq,
   MEDICAL_ADVICE_PATTERNS,
@@ -80,6 +83,23 @@ function planFrontdeskCore(input: {
         "NO_UNAUTHORIZED_PROFESSIONAL_JUDGMENT",
       ],
       matchedUrgentKeywords: escalation.matched,
+      faqEntryId: null,
+    };
+  }
+
+  // 受限专业问题必须早于普通 Booking 意图处理。
+  // 例如“想预约，不过只狗係咪病？要唔要食药？”不能仅当成预约请求吞掉专业问题。
+  if (matchesRestrictedQuestion(input.text, input.restrictedQuestionPatterns)) {
+    return {
+      kind: "human_handoff",
+      risk: "medium",
+      appointmentIntent: null,
+      autoSendAllowed: false,
+      requiresHuman: true,
+      suggestedReply: `呢個問題需要${input.labels.staff}確認，我已經幫你轉交同事跟進。`,
+      summary: "訊息包含行業包標記為受限的專業問題，已轉人工。",
+      reasons: [input.restrictedReason, "NO_UNAUTHORIZED_PROFESSIONAL_JUDGMENT"],
+      matchedUrgentKeywords: [],
       faqEntryId: null,
     };
   }
