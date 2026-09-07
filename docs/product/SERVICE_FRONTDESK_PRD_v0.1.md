@@ -5,7 +5,7 @@
 > **首個垂直版本：Clinic Flow / Dental Pack**  
 > **文件日期：2026-09-07**  
 > **文件狀態：Pilot PRD / 候選產品基線**  
-> **DWAC Requirement Ledger SHA256：** `e6a528161655879df6af85a46ccd82e6c566cf134850a6a5cc70bd76087f1a42`
+> **DWAC Requirement Ledger SHA256：** `e5f310d4cc43c2c5faaa46078623a287e42d9287c0c656e53bae5ab130d88a94`
 
 ---
 
