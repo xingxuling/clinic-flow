@@ -45,8 +45,8 @@ export class LegacyImportService {
         value: extracted?.value ?? "",
         reviewedValue: extracted?.value ?? "",
         confidence: extracted?.confidence ?? 0,
-        sourceRegion: extracted?.sourceRegion,
-        evidenceText: extracted?.evidenceText,
+        ...(extracted?.sourceRegion ? { sourceRegion: extracted.sourceRegion } : {}),
+        ...(extracted?.evidenceText ? { evidenceText: extracted.evidenceText } : {}),
         accepted: false,
         corrected: false,
       };
@@ -140,6 +140,9 @@ export class LegacyImportService {
     const language = fieldValue(candidate, "customer.language") || "zh-HK";
     const notes = fieldValue(candidate, "customer.notes_admin");
     const subject = subjectFields(candidate);
+    const lastService = fieldValue(candidate, "follow_up.last_service");
+    const lastServiceDate = fieldValue(candidate, "follow_up.last_service_date");
+    const followUpHint = fieldValue(candidate, "follow_up.hint");
 
     return {
       customer: {
@@ -166,9 +169,9 @@ export class LegacyImportService {
         sourceRef: `${candidate.extraction.providerId}:${candidate.source.id}`,
       },
       followUp: {
-        lastService: fieldValue(candidate, "follow_up.last_service") || undefined,
-        lastServiceDate: fieldValue(candidate, "follow_up.last_service_date") || undefined,
-        followUpHint: fieldValue(candidate, "follow_up.hint") || undefined,
+        ...(lastService ? { lastService } : {}),
+        ...(lastServiceDate ? { lastServiceDate } : {}),
+        ...(followUpHint ? { followUpHint } : {}),
       },
     };
   }
