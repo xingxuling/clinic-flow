@@ -153,7 +153,7 @@ export class LegacyImportService {
             ? [
                 {
                   id: id("sub"),
-                  kind: "none",
+                  kind: candidate.schema.subjectKind,
                   displayName: subject.name ?? candidate.schema.subjectLabel,
                   fields: subject,
                 },
