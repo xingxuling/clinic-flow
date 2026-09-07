@@ -57,6 +57,16 @@ export interface NewServiceCustomerInput {
  * 旧 Clinic/Patient 模型的兼容投影。新 Core 不应要求其他行业创建 Patient。
  */
 export function patientToServiceCustomer(patient: Patient): ServiceCustomer {
+  const followUp: CustomerFollowUpSnapshot = {
+    ...(patient.lastVisitAt ? { lastServiceDate: patient.lastVisitAt } : {}),
+    ...(patient.nextRecallAt
+      ? {
+          followUpHint: `下次跟進：${patient.nextRecallAt}`,
+          dueAt: patient.nextRecallAt,
+        }
+      : {}),
+  };
+
   return {
     id: patient.id,
     tenantId: patient.clinicId,
@@ -68,11 +78,7 @@ export function patientToServiceCustomer(patient: Patient): ServiceCustomer {
     tags: [...patient.tags],
     notesAdmin: patient.notesAdmin,
     subjects: [],
-    followUp: {
-      lastServiceDate: patient.lastVisitAt,
-      followUpHint: patient.nextRecallAt ? `下次跟進：${patient.nextRecallAt}` : undefined,
-      dueAt: patient.nextRecallAt,
-    },
+    ...(Object.keys(followUp).length > 0 ? { followUp } : {}),
     source: "legacy_patient_compat",
     sourceRef: `patient:${patient.id}`,
     createdAt: patient.lastVisitAt ?? new Date(0).toISOString(),
