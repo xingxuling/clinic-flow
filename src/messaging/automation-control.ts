@@ -1,5 +1,6 @@
 export type CustomerAutomationMode = "agent_allowed" | "human_only";
 export type WhatsAppConsentState = "unknown" | "opted_in" | "opted_out";
+export type WhatsAppConsentScope = "utility" | "marketing" | "authentication";
 
 export interface TenantAutomationControl {
   tenantId: string;
@@ -14,6 +15,7 @@ export interface CustomerMessagingControl {
   customerId: string;
   automationMode: CustomerAutomationMode;
   whatsappConsent: WhatsAppConsentState;
+  whatsappConsentScopes: WhatsAppConsentScope[];
   optInAt?: string;
   optOutAt?: string;
   lastCustomerMessageAt?: string;
@@ -45,6 +47,17 @@ function writeArray<T>(key: string, rows: T[]): void {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(key, JSON.stringify(rows));
   window.dispatchEvent(new CustomEvent(MESSAGING_CONTROL_CHANGED_EVENT));
+}
+
+function normalizeCustomerControl(row: CustomerMessagingControl): CustomerMessagingControl {
+  return {
+    ...row,
+    whatsappConsentScopes: Array.isArray(row.whatsappConsentScopes)
+      ? [...row.whatsappConsentScopes]
+      : row.whatsappConsent === "opted_in"
+        ? ["utility"]
+        : [],
+  };
 }
 
 export class BrowserMessagingAutomationControlRepository {
@@ -81,13 +94,14 @@ export class BrowserMessagingAutomationControlRepository {
         item.customerId === customerId,
     );
     return row
-      ? clone(row)
+      ? clone(normalizeCustomerControl(row))
       : {
           tenantId,
           verticalId,
           customerId,
           automationMode: "agent_allowed",
           whatsappConsent: "unknown",
+          whatsappConsentScopes: [],
           updatedAt: new Date(0).toISOString(),
         };
   }
@@ -106,6 +120,9 @@ export class BrowserMessagingAutomationControlRepository {
       tenantId,
       verticalId,
       customerId,
+      whatsappConsentScopes: clone(
+        patch.whatsappConsentScopes ?? current.whatsappConsentScopes,
+      ),
       updatedAt: new Date().toISOString(),
     };
     const index = rows.findIndex(
@@ -135,12 +152,15 @@ export class BrowserMessagingAutomationControlRepository {
     tenantId: string;
     verticalId: string;
     customerId: string;
+    scopes?: WhatsAppConsentScope[];
     at?: string;
     updatedBy?: string;
   }): CustomerMessagingControl {
     const at = input.at ?? new Date().toISOString();
+    const scopes = input.scopes?.length ? [...new Set(input.scopes)] : ["utility" as const];
     return this.updateCustomer(input.tenantId, input.verticalId, input.customerId, {
       whatsappConsent: "opted_in",
+      whatsappConsentScopes: scopes,
       optInAt: at,
       automationMode: "agent_allowed",
       ...(input.updatedBy ? { updatedBy: input.updatedBy } : {}),
@@ -158,6 +178,7 @@ export class BrowserMessagingAutomationControlRepository {
     const at = input.at ?? new Date().toISOString();
     return this.updateCustomer(input.tenantId, input.verticalId, input.customerId, {
       whatsappConsent: "opted_out",
+      whatsappConsentScopes: [],
       optOutAt: at,
       automationMode: "human_only",
       ...(input.updatedBy ? { updatedBy: input.updatedBy } : {}),
