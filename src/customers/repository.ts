@@ -1,7 +1,7 @@
 import type { NewServiceCustomerInput, ServiceCustomer } from "@/customers/types";
 
 export interface ServiceCustomerRepository {
-  list(tenantId: string): ServiceCustomer[];
+  list(tenantId: string, verticalId?: string): ServiceCustomer[];
   get(tenantId: string, customerId: string): ServiceCustomer | null;
   add(input: NewServiceCustomerInput): ServiceCustomer;
   update(tenantId: string, customerId: string, patch: Partial<ServiceCustomer>): ServiceCustomer | null;
@@ -34,16 +34,22 @@ export class BrowserServiceCustomerRepository implements ServiceCustomerReposito
       if (!raw) return [];
       const parsed = JSON.parse(raw) as unknown;
       if (!Array.isArray(parsed)) return [];
-      return parsed.filter((row): row is ServiceCustomer => {
-        if (!row || typeof row !== "object") return false;
-        const value = row as Partial<ServiceCustomer>;
-        return Boolean(
-          typeof value.id === "string" &&
-            typeof value.tenantId === "string" &&
-            typeof value.displayName === "string" &&
-            typeof value.phone === "string",
-        );
-      });
+      return parsed
+        .filter((row): row is ServiceCustomer => {
+          if (!row || typeof row !== "object") return false;
+          const value = row as Partial<ServiceCustomer>;
+          return Boolean(
+            typeof value.id === "string" &&
+              typeof value.tenantId === "string" &&
+              typeof value.displayName === "string" &&
+              typeof value.phone === "string",
+          );
+        })
+        .map((row) => ({
+          ...row,
+          // v1 early demo rows predated vertical isolation and originated from the dental-only prototype.
+          verticalId: typeof row.verticalId === "string" && row.verticalId ? row.verticalId : "dental",
+        }));
     } catch {
       return [];
     }
@@ -55,10 +61,10 @@ export class BrowserServiceCustomerRepository implements ServiceCustomerReposito
     window.dispatchEvent(new CustomEvent("service-frontdesk:customers-changed"));
   }
 
-  list(tenantId: string): ServiceCustomer[] {
+  list(tenantId: string, verticalId?: string): ServiceCustomer[] {
     return clone(
       this.readAll()
-        .filter((row) => row.tenantId === tenantId)
+        .filter((row) => row.tenantId === tenantId && (!verticalId || row.verticalId === verticalId))
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
     );
   }
@@ -72,18 +78,23 @@ export class BrowserServiceCustomerRepository implements ServiceCustomerReposito
     const now = new Date().toISOString();
     const phone = normalizePhone(input.phone);
     if (!input.tenantId.trim()) throw new Error("CUSTOMER_TENANT_REQUIRED");
+    if (!input.verticalId.trim()) throw new Error("CUSTOMER_VERTICAL_REQUIRED");
     if (!input.displayName.trim()) throw new Error("CUSTOMER_NAME_REQUIRED");
     if (phone.length < 6) throw new Error("CUSTOMER_PHONE_INVALID");
 
     const rows = this.readAll();
     const duplicate = rows.find(
-      (row) => row.tenantId === input.tenantId && normalizePhone(row.phone) === phone,
+      (row) =>
+        row.tenantId === input.tenantId &&
+        row.verticalId === input.verticalId &&
+        normalizePhone(row.phone) === phone,
     );
     if (duplicate) throw new Error(`CUSTOMER_PHONE_DUPLICATE:${duplicate.id}`);
 
     const customer: ServiceCustomer = {
       id: makeId(),
       tenantId: input.tenantId,
+      verticalId: input.verticalId,
       displayName: input.displayName.trim(),
       phone,
       preferredChannel: input.preferredChannel ?? "whatsapp",
@@ -111,6 +122,7 @@ export class BrowserServiceCustomerRepository implements ServiceCustomerReposito
       ...clone(patch),
       id: rows[index]!.id,
       tenantId: rows[index]!.tenantId,
+      verticalId: rows[index]!.verticalId,
       updatedAt: new Date().toISOString(),
     };
     this.writeAll(rows);
