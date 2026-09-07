@@ -6,10 +6,15 @@ import type { ServiceConversation } from "@/conversations/types";
 import type { ServiceCustomer } from "@/customers/types";
 import type { ChannelSendReceipt, MessagingAdapter } from "@/integrations/messaging-adapter";
 import {
+  messagingAutomationControlRepository,
+  type BrowserMessagingAutomationControlRepository,
+} from "@/messaging/automation-control";
+import { evaluateWhatsAppPolicy } from "@/messaging/whatsapp-policy";
+import {
   serviceWorkItemRepository,
   type BrowserServiceWorkItemRepository,
 } from "@/work-items/repository";
-import type { ServiceWorkItem } from "@/work-items/types";
+import type { ServiceMessagePurpose, ServiceWorkItem } from "@/work-items/types";
 
 export interface ServiceWorkItemDispatchResult {
   ok: boolean;
@@ -25,14 +30,28 @@ const DISPATCHABLE_KINDS = new Set<ServiceWorkItem["kind"]>([
   "booking_reminder",
 ]);
 
+function inferredPurpose(item: ServiceWorkItem): ServiceMessagePurpose {
+  if (item.messagePurpose) return item.messagePurpose;
+  return item.kind === "booking_reminder" ? "utility" : "marketing";
+}
+
 /**
  * 已批准工作项的通道执行层。
+ *
+ * WhatsApp 主动发送必须先通过：
+ * - 客户 opt-in / message category scope；
+ * - 商户 Agent 总开关与客户 human-only 开关；
+ * - 24 小时 customer-service window；
+ * - 超窗 approved template；
+ * - production 环境只允许 WhatsApp Business Platform provider。
+ *
  * 真实 send 成功后先固化 provider receipt，再投影 Conversation；重试不会二次发送。
  */
 export class ServiceWorkItemDispatchRuntime {
   constructor(
     private readonly workItems: BrowserServiceWorkItemRepository = serviceWorkItemRepository,
     private readonly conversations: BrowserServiceConversationRepository = serviceConversationRepository,
+    private readonly controls: BrowserMessagingAutomationControlRepository = messagingAutomationControlRepository,
   ) {}
 
   async dispatch(input: {
@@ -41,6 +60,7 @@ export class ServiceWorkItemDispatchRuntime {
     workItemId: string;
     customer: ServiceCustomer;
     adapter: MessagingAdapter;
+    production?: boolean;
   }): Promise<ServiceWorkItemDispatchResult> {
     const item = this.workItems.get(input.tenantId, input.workItemId);
     if (!item) {
@@ -59,6 +79,7 @@ export class ServiceWorkItemDispatchRuntime {
       return { ok: false, duplicate: false, workItem: item, sendReceipt: null, conversation: null, errorCode: "CHANNEL_ADAPTER_MISMATCH" };
     }
 
+    // 已成功发送的任务只允许修补本地 Conversation 投影，不再经过外部 send。
     if (item.status === "done" && item.dispatchReceipt) {
       let conversation = item.dispatchReceipt.providerMessageId
         ? this.conversations.findByProviderMessageId(
@@ -105,6 +126,36 @@ export class ServiceWorkItemDispatchRuntime {
       return { ok: false, duplicate: false, workItem: item, sendReceipt: null, conversation: null, errorCode: `WORK_ITEM_NOT_READY:${item.status}` };
     }
 
+    if (input.adapter.channel === "whatsapp") {
+      const tenantControl = this.controls.getTenant(input.tenantId);
+      const customerControl = this.controls.getCustomer(
+        input.tenantId,
+        input.verticalId,
+        input.customer.id,
+      );
+      const policy = evaluateWhatsAppPolicy({
+        tenantId: input.tenantId,
+        adapter: input.adapter,
+        production: Boolean(input.production),
+        actor: "agent",
+        initiation: "business_initiated",
+        tenantControl,
+        customerControl,
+        purpose: inferredPurpose(item),
+        ...(item.whatsappTemplate ? { template: item.whatsappTemplate } : {}),
+      });
+      if (!policy.allowed) {
+        return {
+          ok: false,
+          duplicate: false,
+          workItem: item,
+          sendReceipt: null,
+          conversation: null,
+          errorCode: policy.blockCode ?? "WHATSAPP_POLICY_BLOCKED",
+        };
+      }
+    }
+
     const sendReceipt = await input.adapter.send({
       clinicId: input.tenantId,
       patientId: input.customer.id,
@@ -112,6 +163,7 @@ export class ServiceWorkItemDispatchRuntime {
       text: item.proposedMessage,
       replyOptions: (item.proposedReplyOptions ?? []).map((option) => ({ ...option })),
       correlationId: item.id,
+      ...(item.whatsappTemplate ? { whatsappTemplate: { ...item.whatsappTemplate } } : {}),
     });
     if (!sendReceipt.ok) {
       return { ok: false, duplicate: false, workItem: item, sendReceipt, conversation: null, errorCode: sendReceipt.errorCode ?? "SEND_FAILED" };
