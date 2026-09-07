@@ -7,6 +7,7 @@ import { PageContainer } from "@/components/layout/StaffShell";
 import { EmptyState, MdButton, MdCard, MdChip, MdFilterChip, SectionHeader } from "@/components/m3";
 import { useServiceCustomers } from "@/customers/use-service-customers";
 import { getAgentPlan } from "@/data/agent-plans";
+import { MockWhatsAppAdapter } from "@/integrations/messaging-adapter";
 import { executeAgentPlan } from "@/lib/agent-executor";
 import {
   createAgentStoreRepository,
@@ -18,6 +19,7 @@ import type { AgentTaskStatus } from "@/types/domain";
 import { filterByVertical } from "@/verticals/entity-scope";
 import { safetyBoundaryText } from "@/verticals/presentation";
 import { useTenantVertical } from "@/verticals/use-tenant-vertical";
+import { serviceWorkItemDispatchRuntime } from "@/work-items/dispatch-runtime";
 import { serviceWorkItemRepository } from "@/work-items/repository";
 import type { ServiceWorkItemStatus } from "@/work-items/types";
 import { useServiceWorkItems } from "@/work-items/use-service-work-items";
@@ -80,6 +82,7 @@ function AgentPage() {
   const { customers } = useServiceCustomers({ clinic, vertical, legacyPatients: patients });
   const workItems = useServiceWorkItems(clinic.id, vertical.id);
   const [filter, setFilter] = useState<AgentTaskStatus | "all">("all");
+  const [dispatchingId, setDispatchingId] = useState<string | null>(null);
 
   const verticalTasks = filterByVertical(agentTasks, vertical.id);
   const list = verticalTasks.filter((task) => filter === "all" || task.status === filter);
@@ -109,6 +112,53 @@ function AgentPage() {
     if (!item || item.status !== "waiting_approval") return;
     serviceWorkItemRepository.setStatus(clinic.id, item.id, "rejected", currentStaff.id);
     toast.success("工作項已否決");
+  }
+
+  async function dispatchWorkItem(id: string) {
+    const item = workItems.find((row) => row.id === id);
+    if (!item?.customerId) {
+      toast.error("缺少客戶資料，未發送");
+      return;
+    }
+    const customer = customers.find((row) => row.id === item.customerId);
+    if (!customer) {
+      toast.error("找不到客戶，未發送");
+      return;
+    }
+    if (!can("conversation.reply")) {
+      toast.error("權限不足，未發送", { description: "需要 conversation.reply 權限。" });
+      return;
+    }
+
+    setDispatchingId(id);
+    try {
+      const adapter = new MockWhatsAppAdapter();
+      const result = await serviceWorkItemDispatchRuntime.dispatch({
+        tenantId: clinic.id,
+        verticalId: vertical.id,
+        workItemId: item.id,
+        customer,
+        adapter,
+      });
+      if (!result.ok) {
+        toast.error("尚未發送", {
+          description:
+            result.errorCode === "CHANNEL_ADAPTER_MISMATCH"
+              ? `客戶首選渠道是 ${customer.preferredChannel}，目前 Demo 只配置 WhatsApp Adapter。`
+              : result.errorCode ?? "通道執行失敗",
+        });
+        return;
+      }
+      toast.success(result.duplicate ? "已核對既有發送收據" : "Mock WhatsApp 已發送", {
+        description: result.duplicate
+          ? "沒有重複發送；如 Conversation 曾缺失，只補了本地投影。"
+          : `Provider receipt：${result.sendReceipt?.providerMessageId ?? "已確認"}。Inbox 已同步出站訊息。`,
+      });
+    } catch (error) {
+      toast.error("發送失敗", { description: error instanceof Error ? error.message : String(error) });
+    } finally {
+      setDispatchingId(null);
+    }
   }
 
   function approveAndExecute(taskId: string) {
@@ -195,7 +245,7 @@ function AgentPage() {
         <MdCard className="p-4">
           <p className="md-label-l text-on-surface-variant">原生工作項</p>
           <p className="mt-2 text-2xl font-semibold text-on-surface">{workItems.length}</p>
-          <p className="mt-1 md-body-s text-on-surface-variant">Follow-up、行政覆核與未來通道任務</p>
+          <p className="mt-1 md-body-s text-on-surface-variant">Follow-up、行政覆核與通道任務</p>
         </MdCard>
         <MdCard className="p-4">
           <p className="md-label-l text-on-surface-variant">受限問題規則</p>
@@ -257,7 +307,7 @@ function AgentPage() {
 
                   {item.proposedMessage && (
                     <div className="mt-4 rounded-2xl bg-surface-container p-4">
-                      <p className="md-label-m text-on-surface-variant">待批准訊息草稿</p>
+                      <p className="md-label-m text-on-surface-variant">訊息草稿</p>
                       <p className="mt-2 whitespace-pre-wrap md-body-m text-on-surface">{item.proposedMessage}</p>
                     </div>
                   )}
@@ -269,9 +319,24 @@ function AgentPage() {
                     </div>
                   )}
                   {item.status === "ready_to_send" && (
-                    <p className="mt-4 rounded-xl bg-primary-container p-3 md-body-s text-on-primary-container">
-                      已批准，等待 Messaging Adapter。此狀態不代表訊息已送出。
-                    </p>
+                    <div className="mt-4 rounded-xl bg-primary-container p-3 text-on-primary-container">
+                      <p className="md-body-s">已批准，但尚未發送。正式產品會由已配置 Messaging Adapter 執行。</p>
+                      <MdButton
+                        size="sm"
+                        variant="tonal"
+                        className="mt-3"
+                        disabled={dispatchingId === item.id}
+                        onClick={() => void dispatchWorkItem(item.id)}
+                      >
+                        用 Mock WhatsApp 發送（Demo）
+                      </MdButton>
+                    </div>
+                  )}
+                  {item.status === "done" && item.dispatchReceipt && (
+                    <div className="mt-4 rounded-xl bg-secondary-container p-3 md-body-s text-on-secondary-container">
+                      已由 {item.dispatchReceipt.providerId} 發送 · {fmtDateTime(item.dispatchReceipt.sentAt)}
+                      {item.dispatchReceipt.providerMessageId ? ` · ${item.dispatchReceipt.providerMessageId}` : ""}
+                    </div>
                   )}
                 </MdCard>
               );
