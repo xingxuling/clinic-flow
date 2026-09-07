@@ -1,6 +1,20 @@
 import type { ServiceVerticalPack } from "@/verticals/types";
 import type { VerticalImportSchema } from "@/importing/types";
 
+function followUpServiceNames(pack: ServiceVerticalPack): string[] {
+  const prioritizedIds: string[] = [];
+  for (const rule of pack.followUpRules) {
+    for (const serviceId of rule.serviceIds ?? []) {
+      if (!prioritizedIds.includes(serviceId)) prioritizedIds.push(serviceId);
+    }
+  }
+  const prioritized = prioritizedIds
+    .map((id) => pack.services.find((service) => service.id === id)?.name)
+    .filter((value): value is string => Boolean(value));
+  const rest = pack.services.map((service) => service.name).filter((name) => !prioritized.includes(name));
+  return [...prioritized, ...rest];
+}
+
 export function createVerticalImportSchema(pack: ServiceVerticalPack): VerticalImportSchema {
   const subjectFields = pack.subjectFields.map((field) => ({
     key: `subject.${field.key}`,
@@ -60,7 +74,7 @@ export function createVerticalImportSchema(pack: ServiceVerticalPack): VerticalI
         label: "上次服務",
         kind: "select",
         required: false,
-        options: pack.services.map((service) => service.name),
+        options: followUpServiceNames(pack),
         target: "follow_up",
       },
       {
