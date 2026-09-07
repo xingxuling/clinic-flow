@@ -16,8 +16,8 @@ import { useTenantVertical } from "@/verticals/use-tenant-vertical";
 export const Route = createFileRoute("/staff/_app/patients")({
   head: () => ({
     meta: [
-      { title: "客戶目錄｜Service Frontdesk" },
-      { name: "description", content: "通用服務業客戶目錄、舊資料拍照匯入與人工核對。" },
+      { title: "客戶｜Service Frontdesk" },
+      { name: "description", content: "通用服務業客戶、服務對象、舊資料匯入與跟進資料。" },
     ],
   }),
   component: CustomersPage,
@@ -75,8 +75,8 @@ function CustomersPage() {
 
   return (
     <PageContainer
-      title={`${vertical.labels.customer}目錄`}
-      subtitle={`通用客戶資料庫：${vertical.labels.customer}、${vertical.labels.subject}、跟進資料與舊系統匯入。`}
+      title="客戶"
+      subtitle={`${vertical.displayName} · ${vertical.labels.customer} · ${vertical.labels.subject} · 聯絡、跟進與資料匯入`}
     >
       <VerticalSwitcher tenantId={clinic.id} vertical={vertical} />
 
@@ -90,7 +90,7 @@ function CustomersPage() {
       <MdCard className="mb-5 flex items-start gap-3 p-4">
         <ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" />
         <div className="md-body-m text-on-surface-variant">
-          <p>只保留完成客戶溝通、排程與跟進所需資料；專業判斷資料不應進入通用 Frontdesk Core。</p>
+          <p>只保存完成聯絡、排程與跟進所需的資料；需要專業判斷的內容交由人工處理。</p>
           <p className="mt-1">
             {mask ? "列表電話號碼已按隱私設定遮蔽部分數字。" : "列表顯示完整電話號碼。"}
           </p>
@@ -99,15 +99,15 @@ function CustomersPage() {
 
       <MdTextField
         label=""
-        placeholder={`搜尋${vertical.labels.customer}姓名、電話或標籤`}
+        placeholder={`搜尋${vertical.labels.customer}、電話或標籤`}
         value={q}
         onChange={(event) => setQ(event.target.value)}
         className="mb-4 max-w-sm"
       />
 
-      <SectionHeader title={vertical.labels.customers} count={list.length} />
+      <SectionHeader title="客戶列表" count={list.length} />
       {list.length === 0 ? (
-        <EmptyState text={`沒有符合的${vertical.labels.customer}。`} />
+        <EmptyState text={`目前沒有符合條件的${vertical.labels.customer}。`} />
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {list.map((customer) => {
@@ -125,7 +125,7 @@ function CustomersPage() {
                     <p className="md-title-m truncate text-on-surface">{customer.displayName}</p>
                     <p className="md-body-s text-on-surface-variant">
                       {legacy
-                        ? `Dental 舊檔 ${legacy.fileNo}`
+                        ? `既有牙科檔案 ${legacy.fileNo}`
                         : customer.source === "legacy_import"
                           ? "拍照 / 文件匯入"
                           : "客戶資料"}
@@ -160,7 +160,7 @@ function CustomersPage() {
                 )}
 
                 <dl className="mt-3 space-y-1 md-body-s text-on-surface-variant">
-                  <div>上次服務：{customer.followUp?.lastService ?? (legacy?.lastVisitAt ? "到診" : "—")}</div>
+                  <div>上次服務：{customer.followUp?.lastService ?? (legacy?.lastVisitAt ? "到店 / 到場" : "—")}</div>
                   <div>
                     上次日期：
                     {customer.followUp?.lastServiceDate
@@ -176,7 +176,7 @@ function CustomersPage() {
                       (legacy?.nextRecallAt ? fmtDate(legacy.nextRecallAt) : "—")}
                   </div>
                   {customer.followUp?.dueAt && <div>建議跟進日期：{fmtDate(customer.followUp.dueAt)}</div>}
-                  <div>{vertical.labels.bookings}：{upcoming.length} 宗</div>
+                  <div>未來排程：{upcoming.length} 宗</div>
                   <div>行政備註：{customer.notesAdmin || "—"}</div>
                 </dl>
               </MdCard>
@@ -186,7 +186,7 @@ function CustomersPage() {
       )}
 
       <p className="mt-6 flex items-center gap-2 md-body-s text-on-surface-variant">
-        <Search className="size-4" /> Dental Seed 只屬 Dental Pack；新 Customer / Booking 按 Tenant + Vertical 隔離並持久化。
+        <Search className="size-4" /> 不同商戶與行業的客戶及排程資料會分開保存；舊牙科示範資料只出現在牙科行業。
       </p>
     </PageContainer>
   );
