@@ -26,36 +26,36 @@ export interface NavItem {
 }
 
 /**
- * 员工后台导航由行业包提供称谓，但路由和 Core 能力保持稳定。
- * 新行业不应复制一份 Navigation Shell。
+ * Staff navigation uses short capability labels so every Vertical fits the same shell.
+ * Industry-specific wording belongs inside each page, not in the narrow rail / bottom bar.
  */
-export function staffNavItemsFor(vertical: ServiceVerticalPack): NavItem[] {
+export function staffNavItemsFor(_vertical: ServiceVerticalPack): NavItem[] {
   return [
     { to: "/staff/today", label: "今日", icon: LayoutDashboard, inBottomBar: true },
     { to: "/staff/inbox", label: "對話", icon: MessageSquare, badgeKey: "inbox", inBottomBar: true },
-    { to: "/staff/appointments", label: vertical.labels.booking, icon: CalendarDays, inBottomBar: true },
+    { to: "/staff/bookings", label: "排程", icon: CalendarDays, inBottomBar: true },
     { to: "/staff/agent", label: "Agent", icon: Bot, badgeKey: "agent", inBottomBar: true },
-    { to: "/staff/reminders", label: "跟進召回", icon: ClipboardList },
-    { to: "/staff/documents", label: "行政資料", icon: FileText, badgeKey: "documents" },
-    { to: "/staff/patients", label: `${vertical.labels.customer}目錄`, icon: Users },
-    { to: "/staff/staff", label: "員工權限", icon: UserCog },
-    { to: "/staff/audit", label: "審計日誌", icon: ScrollText },
-    { to: "/staff/settings", label: "商戶設定", icon: Settings },
+    { to: "/staff/follow-ups", label: "跟進", icon: ClipboardList },
+    { to: "/staff/customers", label: "客戶", icon: Users },
+    { to: "/staff/documents", label: "資料", icon: FileText, badgeKey: "documents" },
+    { to: "/staff/staff", label: "員工", icon: UserCog },
+    { to: "/staff/audit", label: "審計", icon: ScrollText },
+    { to: "/staff/settings", label: "設定", icon: Settings },
   ];
 }
 
-/** 兼容仍未迁移到 Vertical Context 的旧调用。 */
+/** Compatibility export for code that has not yet moved to Vertical Context. */
 export const STAFF_NAV_ITEMS: NavItem[] = [
   { to: "/staff/today", label: "今日", icon: LayoutDashboard, inBottomBar: true },
   { to: "/staff/inbox", label: "對話", icon: MessageSquare, badgeKey: "inbox", inBottomBar: true },
-  { to: "/staff/appointments", label: "預約", icon: CalendarDays, inBottomBar: true },
+  { to: "/staff/bookings", label: "排程", icon: CalendarDays, inBottomBar: true },
   { to: "/staff/agent", label: "Agent", icon: Bot, badgeKey: "agent", inBottomBar: true },
-  { to: "/staff/reminders", label: "跟進召回", icon: ClipboardList },
-  { to: "/staff/documents", label: "行政資料", icon: FileText, badgeKey: "documents" },
-  { to: "/staff/patients", label: "客戶目錄", icon: Users },
-  { to: "/staff/staff", label: "員工權限", icon: UserCog },
-  { to: "/staff/audit", label: "審計日誌", icon: ScrollText },
-  { to: "/staff/settings", label: "商戶設定", icon: Settings },
+  { to: "/staff/follow-ups", label: "跟進", icon: ClipboardList },
+  { to: "/staff/customers", label: "客戶", icon: Users },
+  { to: "/staff/documents", label: "資料", icon: FileText, badgeKey: "documents" },
+  { to: "/staff/staff", label: "員工", icon: UserCog },
+  { to: "/staff/audit", label: "審計", icon: ScrollText },
+  { to: "/staff/settings", label: "設定", icon: Settings },
 ];
 
 export interface PatientNavItem {
@@ -64,7 +64,7 @@ export interface PatientNavItem {
   icon: typeof Home;
 }
 
-/** 旧牙科病人 Portal 暂时维持兼容，后续再迁成通用 Customer Portal。 */
+/** Dental-only compatibility portal; it is intentionally separate from staff canonical routes. */
 export const PATIENT_NAV_ITEMS: PatientNavItem[] = [
   { to: "/patient/home", label: "首頁", icon: Home },
   { to: "/patient/appointments", label: "預約", icon: CalendarCheck },
