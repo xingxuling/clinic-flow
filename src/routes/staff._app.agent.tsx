@@ -27,10 +27,10 @@ import { useServiceWorkItems } from "@/work-items/use-service-work-items";
 export const Route = createFileRoute("/staff/_app/agent")({
   head: () => ({
     meta: [
-      { title: "Agent 任務台｜Service Frontdesk" },
+      { title: "Agent｜Service Frontdesk" },
       {
         name: "description",
-        content: "查看 Agent 準備做什麼、依據什麼、會修改什麼；高風險或受限專業事項必須人工處理。",
+        content: "查看待辦、人工批准、發送狀態與受控 Agent 操作。",
       },
     ],
   }),
@@ -47,7 +47,7 @@ const FILTERS: { value: AgentTaskStatus | "all"; label: string }[] = [
 
 const WORK_ITEM_STATUS: Record<ServiceWorkItemStatus, { label: string; tone: Tone }> = {
   waiting_approval: { label: "等待批准", tone: "tertiary" },
-  ready_to_send: { label: "待通道發送", tone: "primary" },
+  ready_to_send: { label: "待發送", tone: "primary" },
   done: { label: "已完成", tone: "secondary" },
   rejected: { label: "已否決", tone: "neutral" },
 };
@@ -99,11 +99,11 @@ function AgentPage() {
       currentStaff.id,
     );
     if (!updated) {
-      toast.error("工作項不存在");
+      toast.error("待辦不存在");
       return;
     }
     toast.success("草稿已批准", {
-      description: "已進入待通道發送狀態；尚未聲稱 WhatsApp 已送出。",
+      description: "已進入待發送狀態；尚未聲稱訊息已送出。",
     });
   }
 
@@ -111,7 +111,7 @@ function AgentPage() {
     const item = workItems.find((row) => row.id === id);
     if (!item || item.status !== "waiting_approval") return;
     serviceWorkItemRepository.setStatus(clinic.id, item.id, "rejected", currentStaff.id);
-    toast.success("工作項已否決");
+    toast.success("待辦已否決");
   }
 
   async function dispatchWorkItem(id: string) {
@@ -126,7 +126,7 @@ function AgentPage() {
       return;
     }
     if (!can("conversation.reply")) {
-      toast.error("權限不足，未發送", { description: "需要 conversation.reply 權限。" });
+      toast.error("權限不足，未發送", { description: "目前角色沒有回覆對話權限。" });
       return;
     }
 
@@ -144,15 +144,15 @@ function AgentPage() {
         toast.error("尚未發送", {
           description:
             result.errorCode === "CHANNEL_ADAPTER_MISMATCH"
-              ? `客戶首選渠道是 ${customer.preferredChannel}，目前 Demo 只配置 WhatsApp Adapter。`
-              : result.errorCode ?? "通道執行失敗",
+              ? `客戶首選渠道是 ${customer.preferredChannel}，目前 Demo 只提供 WhatsApp 模擬發送。`
+              : result.errorCode ?? "發送失敗",
         });
         return;
       }
-      toast.success(result.duplicate ? "已核對既有發送收據" : "Mock WhatsApp 已發送", {
+      toast.success(result.duplicate ? "已核對既有發送回執" : "模擬 WhatsApp 已發送", {
         description: result.duplicate
-          ? "沒有重複發送；如 Conversation 曾缺失，只補了本地投影。"
-          : `Provider receipt：${result.sendReceipt?.providerMessageId ?? "已確認"}。Inbox 已同步出站訊息。`,
+          ? "沒有重複發送；如對話紀錄曾缺失，只補回本地紀錄。"
+          : `發送回執：${result.sendReceipt?.providerMessageId ?? "已確認"}。對話已同步。`,
       });
     } catch (error) {
       toast.error("發送失敗", { description: error instanceof Error ? error.message : String(error) });
@@ -164,14 +164,14 @@ function AgentPage() {
   function approveAndExecute(taskId: string) {
     const task = verticalTasks.find((row) => row.id === taskId);
     if (!task) {
-      toast.error("任務不屬於目前行業", { description: "已阻止跨 Vertical 執行。" });
+      toast.error("任務不屬於目前行業", { description: "已阻止跨行業執行。" });
       return;
     }
 
     const plan = getAgentPlan(taskId);
     if (!plan) {
       toast.error("未執行", {
-        description: "此任務尚未配置機器可執行計劃；系統不會把純文字說明當成執行指令。",
+        description: "此任務沒有可執行步驟；系統不會把文字說明直接當成操作指令。",
       });
       return;
     }
@@ -233,8 +233,8 @@ function AgentPage() {
 
   return (
     <PageContainer
-      title="Agent 任務台"
-      subtitle={`${vertical.displayName} · Agent 只執行可驗證的服務前台動作；受限專業問題與高風險動作轉人工。`}
+      title="Agent"
+      subtitle={`${vertical.displayName} · 待辦、人工批准、發送與受控執行`}
     >
       <div className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <MdCard className="p-4">
@@ -243,9 +243,9 @@ function AgentPage() {
           <p className="mt-1 md-body-s text-on-surface-variant">{vertical.labels.customer} · {vertical.labels.booking}</p>
         </MdCard>
         <MdCard className="p-4">
-          <p className="md-label-l text-on-surface-variant">原生工作項</p>
+          <p className="md-label-l text-on-surface-variant">待辦</p>
           <p className="mt-2 text-2xl font-semibold text-on-surface">{workItems.length}</p>
-          <p className="mt-1 md-body-s text-on-surface-variant">Follow-up、行政覆核與通道任務</p>
+          <p className="mt-1 md-body-s text-on-surface-variant">提醒、跟進、行政核對與發送任務</p>
         </MdCard>
         <MdCard className="p-4">
           <p className="md-label-l text-on-surface-variant">受限問題規則</p>
@@ -265,9 +265,9 @@ function AgentPage() {
       </MdCard>
 
       <section className="mb-7">
-        <SectionHeader title="Service Work Items" count={workItems.length} />
+        <SectionHeader title="待辦" count={workItems.length} />
         {workItems.length === 0 ? (
-          <EmptyState text="目前沒有原生工作項；可由跟進頁、入站訊息或整合 Adapter 產生。" />
+          <EmptyState text="目前沒有待辦；可從跟進、對話或資料流程建立。" />
         ) : (
           <div className="grid gap-3 xl:grid-cols-2">
             {workItems.map((item) => {
@@ -320,7 +320,7 @@ function AgentPage() {
                   )}
                   {item.status === "ready_to_send" && (
                     <div className="mt-4 rounded-xl bg-primary-container p-3 text-on-primary-container">
-                      <p className="md-body-s">已批准，但尚未發送。正式產品會由已配置 Messaging Adapter 執行。</p>
+                      <p className="md-body-s">已批准，但尚未發送。正式環境會由已連接渠道執行。</p>
                       <MdButton
                         size="sm"
                         variant="tonal"
@@ -328,13 +328,13 @@ function AgentPage() {
                         disabled={dispatchingId === item.id}
                         onClick={() => void dispatchWorkItem(item.id)}
                       >
-                        用 Mock WhatsApp 發送（Demo）
+                        模擬發送（Demo）
                       </MdButton>
                     </div>
                   )}
                   {item.status === "done" && item.dispatchReceipt && (
                     <div className="mt-4 rounded-xl bg-secondary-container p-3 md-body-s text-on-secondary-container">
-                      已由 {item.dispatchReceipt.providerId} 發送 · {fmtDateTime(item.dispatchReceipt.sentAt)}
+                      發送回執：{item.dispatchReceipt.providerId} · {fmtDateTime(item.dispatchReceipt.sentAt)}
                       {item.dispatchReceipt.providerMessageId ? ` · ${item.dispatchReceipt.providerMessageId}` : ""}
                     </div>
                   )}
@@ -348,7 +348,7 @@ function AgentPage() {
       {verticalTasks.length > 0 && (
         <section>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <SectionHeader title="Legacy Agent Tasks" count={list.length} />
+            <SectionHeader title="既有 Agent 任務" count={list.length} />
             <div className="flex flex-wrap gap-2">
               {FILTERS.map((item) => (
                 <MdFilterChip key={item.value} selected={filter === item.value} onClick={() => setFilter(item.value)}>
@@ -359,7 +359,7 @@ function AgentPage() {
           </div>
 
           {list.length === 0 ? (
-            <EmptyState text="沒有符合條件的兼容任務。" />
+            <EmptyState text="沒有符合條件的既有任務。" />
           ) : (
             <div className="grid gap-3 xl:grid-cols-2">
               {list.map((task) => {
@@ -420,13 +420,13 @@ function AgentPage() {
                     <div className="mt-3 rounded-2xl bg-surface-container p-3 md-body-s text-on-surface-variant">
                       {plan ? (
                         <>
-                          <strong className="text-on-surface">可執行計劃：</strong>
-                          {plan.operations.length} 個受控動作；批准前先完整驗證，任何一項不合法則整單不執行。
+                          <strong className="text-on-surface">可執行步驟：</strong>
+                          {plan.operations.length} 個受控動作；批准前會先完整驗證，任何一項不合法則整單不執行。
                         </>
                       ) : (
                         <>
-                          <strong className="text-on-surface">僅文字任務：</strong>
-                          尚無機器可執行計劃，批准動作會被安全阻止。
+                          <strong className="text-on-surface">未配置執行步驟：</strong>
+                          這項任務只有文字說明，批准動作會被安全阻止。
                         </>
                       )}
                     </div>
