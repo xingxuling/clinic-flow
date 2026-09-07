@@ -7,6 +7,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 
+import { useServiceBookings } from "@/bookings/use-service-bookings";
 import { PageContainer } from "@/components/layout/StaffShell";
 import { EmptyState, MdButton, MdCard, MdChip, SectionHeader } from "@/components/m3";
 import { useServiceCustomers } from "@/customers/use-service-customers";
@@ -74,12 +75,23 @@ function TodayPage() {
     urgentFlags,
     staffName,
     setAppointmentStatus,
+    rescheduleAppointment,
+    createAppointment,
     escalateUrgentFlag,
   } = useApp();
   const vertical = useTenantVertical(clinic);
   const { customerName } = useServiceCustomers({ clinic, vertical, legacyPatients: patients });
+  const { bookings, setStatus } = useServiceBookings({
+    clinic,
+    vertical,
+    legacyAppointments: appointments,
+    legacyActions: {
+      setStatus: setAppointmentStatus,
+      reschedule: rescheduleAppointment,
+      create: createAppointment,
+    },
+  });
 
-  const visibleAppointments = filterByVertical(appointments, vertical.id);
   const visibleConversations = filterByVertical(conversations, vertical.id);
   const visibleAgentTasks = filterByVertical(agentTasks, vertical.id);
   const visibleFlags = filterByVertical(urgentFlags, vertical.id);
@@ -90,8 +102,8 @@ function TodayPage() {
     "服務";
 
   const now = new Date();
-  const todayAppointments = visibleAppointments.filter((appointment) => isSameDay(appointment.startAt, now));
-  const pending = todayAppointments.filter((appointment) => appointment.status === "pending");
+  const todayBookings = bookings.filter((booking) => isSameDay(booking.startAt, now));
+  const pending = todayBookings.filter((booking) => booking.status === "pending");
   const unread = visibleConversations.filter((conversation) => conversation.unread);
   const waitingReply = visibleConversations.filter((conversation) => conversation.state === "waiting_human");
   const waitingApproval = visibleAgentTasks.filter((task) => task.status === "waiting_approval");
@@ -133,10 +145,10 @@ function TodayPage() {
         <MdChip tone="primary">{vertical.labels.booking}</MdChip>
       </div>
 
-      {vertical.id !== "dental" && visibleAppointments.length === 0 && visibleConversations.length === 0 && (
+      {vertical.id !== "dental" && bookings.length === 0 && visibleConversations.length === 0 && (
         <MdCard className="mb-5 border border-outline-variant bg-surface-container p-3">
           <p className="md-body-s text-on-surface-variant">
-            此行業目前尚未建立排程或對話。舊 Dental Seed 會被 vertical scope 隔離，不會跨行業顯示。
+            此行業目前尚未建立排程或對話。舊 Dental Seed 會被 vertical scope 隔離；新 Service Booking 建立後會直接出現在這裡。
           </p>
         </MdCard>
       )}
@@ -205,31 +217,31 @@ function TodayPage() {
 
       <div className="grid gap-6 xl:grid-cols-3">
         <section className="xl:col-span-2">
-          <SectionHeader title={`今日${vertical.labels.bookings}`} count={todayAppointments.length} />
-          {todayAppointments.length === 0 ? (
+          <SectionHeader title={`今日${vertical.labels.bookings}`} count={todayBookings.length} />
+          {todayBookings.length === 0 ? (
             <EmptyState text={`今日暫時沒有${vertical.labels.booking}。`} />
           ) : (
             <MdCard className="divide-y divide-outline-variant overflow-hidden">
-              {todayAppointments.map((appointment) => {
-                const status = bookingStatusFor(vertical, appointment.status);
+              {todayBookings.map((booking) => {
+                const status = bookingStatusFor(vertical, booking.status);
                 return (
-                  <div key={appointment.id} className="flex flex-wrap items-center gap-3 p-4">
+                  <div key={booking.id} className="flex flex-wrap items-center gap-3 p-4">
                     <div className="w-16 shrink-0">
-                      <p className="md-title-m text-on-surface">{fmtTime(appointment.startAt)}</p>
-                      <p className="md-body-s text-on-surface-variant">{fmtTime(appointment.endAt)}</p>
+                      <p className="md-title-m text-on-surface">{fmtTime(booking.startAt)}</p>
+                      <p className="md-body-s text-on-surface-variant">{fmtTime(booking.endAt)}</p>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="md-title-m truncate text-on-surface">{customerName(appointment.patientId)}</p>
+                      <p className="md-title-m truncate text-on-surface">{customerName(booking.customerId)}</p>
                       <p className="md-body-s truncate text-on-surface-variant">
-                        {serviceName(appointment.serviceId)} · {staffName(appointment.practitionerId)} · {appointment.room}
+                        {serviceName(booking.serviceId)} · {staffName(booking.resourceId)} · {booking.venue}
                       </p>
                     </div>
                     <MdChip tone={status.tone}>{status.label}</MdChip>
-                    {appointment.status === "pending" && (
-                      <MdButton size="sm" variant="tonal" onClick={() => setAppointmentStatus(appointment.id, "confirmed")}>確認</MdButton>
+                    {booking.status === "pending" && (
+                      <MdButton size="sm" variant="tonal" onClick={() => setStatus(booking.id, "confirmed")}>確認</MdButton>
                     )}
-                    {appointment.status === "confirmed" && (
-                      <MdButton size="sm" variant="outlined" onClick={() => setAppointmentStatus(appointment.id, "arrived")}>
+                    {booking.status === "confirmed" && (
+                      <MdButton size="sm" variant="outlined" onClick={() => setStatus(booking.id, "arrived")}>
                         {arrivalActionLabel(vertical)}
                       </MdButton>
                     )}
