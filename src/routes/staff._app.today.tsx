@@ -28,8 +28,8 @@ import { useServiceWorkItems } from "@/work-items/use-service-work-items";
 export const Route = createFileRoute("/staff/_app/today")({
   head: () => ({
     meta: [
-      { title: "今日工作台｜Service Frontdesk" },
-      { name: "description", content: "服務業 AI 前台的新對話、排程、改期、安全標記與待人工任務一覽。" },
+      { title: "今日｜Service Frontdesk" },
+      { name: "description", content: "今日的新對話、排程、安全標記與待人工處理事項。" },
     ],
   }),
   component: TodayPage,
@@ -148,7 +148,7 @@ function TodayPage() {
 
   return (
     <PageContainer
-      title="今日工作台"
+      title="今日"
       subtitle={`${vertical.displayName} · ${now.toLocaleDateString("zh-HK", {
         year: "numeric",
         month: "long",
@@ -166,26 +166,26 @@ function TodayPage() {
       {vertical.id !== "dental" && bookings.length === 0 && serviceConversations.length === 0 && workItems.length === 0 && (
         <MdCard className="mb-5 border border-outline-variant bg-surface-container p-3">
           <p className="md-body-s text-on-surface-variant">
-            此行業目前尚未建立排程、對話或工作項。可從「客戶目錄」匯入資料，再到「對話」模擬入站流程。
+            此行業目前尚未建立排程、對話或待辦。可先到「客戶」匯入資料，再從「對話」開始服務流程。
           </p>
         </MdCard>
       )}
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
         <MetricCard icon={<MessageCircle className="size-4" />} label="新對話" value={unread.length} to="/staff/inbox" tone="primary" />
-        <MetricCard icon={<CheckCircle2 className="size-4" />} label={`待確認${vertical.labels.booking}`} value={pending.length} to="/staff/appointments" tone="tertiary" />
+        <MetricCard icon={<CheckCircle2 className="size-4" />} label={`待確認${vertical.labels.booking}`} value={pending.length} to="/staff/bookings" tone="tertiary" />
         <MetricCard icon={<CalendarSync className="size-4" />} label="要求改期" value={rescheduleRequests.length} to="/staff/inbox" tone="secondary" />
         <MetricCard icon={<AlertTriangle className="size-4" />} label={safetyFlagLabel(vertical)} value={safetyConversations.length} to="/staff/inbox" tone="error" />
         <MetricCard icon={<Bot className="size-4" />} label="待人工處理" value={pendingHuman} to="/staff/agent" tone="tertiary" />
       </div>
 
       <section className="mb-6">
-        <SectionHeader title="AI 前台今日概況" />
+        <SectionHeader title="今日概況" />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <MdCard className="p-4">
             <p className="md-label-l text-on-surface-variant">可直接 FAQ 回覆</p>
             <p className="mt-2 text-2xl font-semibold text-on-surface">{faqReady.length}</p>
-            <p className="mt-1 md-body-s text-on-surface-variant">只使用商戶已授權行政答案</p>
+            <p className="mt-1 md-body-s text-on-surface-variant">只使用商戶已授權的答案</p>
           </MdCard>
           <MdCard className="p-4">
             <p className="md-label-l text-on-surface-variant">{vertical.labels.booking}意圖</p>
@@ -200,7 +200,7 @@ function TodayPage() {
           <MdCard className="p-4">
             <p className="md-label-l text-on-surface-variant">今日 Agent 訊息</p>
             <p className="mt-2 text-2xl font-semibold text-on-surface">{agentMessagesToday}</p>
-            <p className="mt-1 md-body-s text-on-surface-variant">只統計實際寫入 Conversation 的 Agent 訊息</p>
+            <p className="mt-1 md-body-s text-on-surface-variant">只統計已實際送出並留下紀錄的 Agent 訊息</p>
           </MdCard>
         </div>
       </section>
@@ -309,12 +309,12 @@ function TodayPage() {
 
           <div>
             <SectionHeader
-              title="待人工批准的 Agent 任務"
+              title="待人工批准"
               count={waitingLegacyApproval.length + waitingWorkItems.length}
               action={<Link to="/staff/agent" className="md-label-l text-primary">全部</Link>}
             />
             {waitingLegacyApproval.length + waitingWorkItems.length === 0 ? (
-              <EmptyState text="沒有待批任務。" />
+              <EmptyState text="沒有待批事項。" />
             ) : (
               <div className="space-y-2">
                 {waitingWorkItems.slice(0, 3).map((item) => (
