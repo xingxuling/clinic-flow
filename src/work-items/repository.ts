@@ -84,6 +84,8 @@ export class BrowserServiceWorkItemRepository {
       ...(input.proposedReplyOptions?.length
         ? { proposedReplyOptions: clone(input.proposedReplyOptions) }
         : {}),
+      ...(input.messagePurpose ? { messagePurpose: input.messagePurpose } : {}),
+      ...(input.whatsappTemplate ? { whatsappTemplate: clone(input.whatsappTemplate) } : {}),
       ...(input.sourceRef ? { sourceRef: input.sourceRef } : {}),
       createdAt: now,
       updatedAt: now,
