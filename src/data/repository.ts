@@ -50,6 +50,7 @@ export interface ClinicRepository {
   listInvites(clinicId: ID): Invite[];
   listAuditEvents(clinicId: ID): AuditEvent[];
 
+  addPatient(patient: Patient): void;
   updatePatient(clinicId: ID, id: ID, patch: Partial<Patient>): void;
   updateAppointment(clinicId: ID, id: ID, patch: Partial<Appointment>): void;
   addAppointment(appointment: Appointment): void;
@@ -157,6 +158,12 @@ export class InMemoryClinicRepository implements ClinicRepository {
     return this.scope(this.store.auditEvents, clinicId).sort((a, b) => b.at.localeCompare(a.at));
   }
 
+  addPatient(patient: Patient) {
+    if (this.store.patients.some((row) => row.id === patient.id && row.clinicId === patient.clinicId)) {
+      throw new Error("DUPLICATE_PATIENT_ID");
+    }
+    this.store.patients.push(patient);
+  }
   updatePatient(clinicId: ID, id: ID, p: Partial<Patient>) {
     this.patch(this.store.patients, clinicId, id, p);
   }
