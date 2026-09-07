@@ -7,8 +7,8 @@ import { useApp } from "@/state/app-store";
 export const Route = createFileRoute("/staff/_app")({
   head: () => ({
     meta: [
-      { title: "工作台｜診所行政 Agent" },
-      { name: "description", content: "診所行政後台工作區。" },
+      { title: "工作台｜Service Frontdesk" },
+      { name: "description", content: "通用服務業 AI 前台工作區。" },
     ],
   }),
   component: AppLayout,
