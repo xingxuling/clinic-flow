@@ -25,6 +25,18 @@ export function getVerticalPack(id: string): ServiceVerticalPack | null {
   return registry.get(id) ?? null;
 }
 
+/**
+ * 通过稳定 service id 找出所属行业包。
+ * 如果未来两个 Vertical Pack 误用了同一个 service id，则 fail closed 返回 null，
+ * 不允许 Repository 随机把 Booking 归到某个行业。
+ */
+export function resolveVerticalIdForService(serviceId: string): string | null {
+  const matches = verticalPacks.filter((pack) =>
+    pack.services.some((service) => service.id === serviceId),
+  );
+  return matches.length === 1 ? matches[0]!.id : null;
+}
+
 export function resolveVerticalPackForClinic(clinic: Pick<Clinic, "kind">): ServiceVerticalPack {
   if (clinic.kind === "dental") return dentalVerticalPack;
   return regulatedHealthVerticalPack;
