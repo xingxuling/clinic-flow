@@ -1,6 +1,7 @@
 import type {
   NewServiceWorkItemInput,
   ServiceWorkItem,
+  ServiceWorkItemDispatchReceipt,
   ServiceWorkItemStatus,
 } from "@/work-items/types";
 
@@ -108,6 +109,29 @@ export class BrowserServiceWorkItemRepository {
       ...(status === "ready_to_send" || status === "rejected"
         ? { decidedAt: now, ...(decidedBy ? { decidedBy } : {}) }
         : {}),
+    };
+    this.writeAll(rows);
+    return clone(rows[index]!);
+  }
+
+  markDispatched(
+    tenantId: string,
+    id: string,
+    dispatchReceipt: ServiceWorkItemDispatchReceipt,
+  ): ServiceWorkItem | null {
+    const rows = this.readAll();
+    const index = rows.findIndex((row) => row.tenantId === tenantId && row.id === id);
+    if (index < 0) return null;
+    const current = rows[index]!;
+    if (current.status !== "ready_to_send" && current.status !== "done") {
+      throw new Error(`WORK_ITEM_NOT_READY_TO_DISPATCH:${current.status}`);
+    }
+    const now = new Date().toISOString();
+    rows[index] = {
+      ...current,
+      status: "done",
+      dispatchReceipt: clone(dispatchReceipt),
+      updatedAt: now,
     };
     this.writeAll(rows);
     return clone(rows[index]!);
