@@ -1,0 +1,120 @@
+# Service Frontdesk Core / RCL semantic authority source
+# 通用服务业前台只拥有已授权行政/服务流程执行权。
+# Vertical Pack 可以提供词汇、FAQ、服务和升级规则，但不能自行扩大专业判断权限。
+reality ServiceFrontdeskCore {
+  facet policy.professional_judgement_allowed : Truth = false
+  facet policy.cross_tenant_access_allowed : Truth = false
+  facet policy.vertical_may_expand_authority : Truth = false
+
+  facet request.tenant_match : Truth = true
+  facet request.vertical_loaded : Truth = true
+  facet request.faq_authorized : Truth = false
+  facet request.booking_intent : Truth = false
+  facet request.escalation_signal : Truth = false
+  facet request.restricted_question : Truth = false
+  facet request.human_approved : Truth = false
+  facet request.risk_low : Truth = false
+  facet request.risk_medium : Truth = false
+  facet request.risk_high : Truth = false
+  facet request.executed : Truth = false
+  facet request.handoff : Truth = false
+
+  subject frontdesk_agent {
+    facet actions : Number = 0
+    warrant service.frontdesk.execute on service_admin
+  }
+
+  subject service_staff {
+    facet approvals : Number = 0
+    warrant service.frontdesk.approve on service_admin
+  }
+
+  knowledge authority {
+    claim tenant_safe : Truth = request.tenant_match
+      confidence 1.0
+      evidence "policy:tenant-boundary"
+      source "service-frontdesk-core"
+      scope "tenant"
+      status observed
+
+    claim vertical_safe : Truth = request.vertical_loaded and not policy.vertical_may_expand_authority
+      confidence 1.0
+      evidence "policy:vertical-is-configuration-not-authority"
+      source "service-frontdesk-core"
+      scope "vertical"
+      status observed
+
+    derive may_auto_faq : Truth =
+      request.faq_authorized and
+      request.risk_low and
+      not request.restricted_question and
+      not request.escalation_signal and
+      knowledge_value(authority.tenant_safe) and
+      knowledge_value(authority.vertical_safe)
+      from authority.tenant_safe, authority.vertical_safe
+      confidence 1.0
+      evidence "policy:authorized-faq-only"
+      source "rcl:inference"
+      scope "frontdesk"
+
+    derive may_auto_booking : Truth =
+      request.booking_intent and
+      request.risk_low and
+      not request.restricted_question and
+      not request.escalation_signal and
+      knowledge_value(authority.tenant_safe) and
+      knowledge_value(authority.vertical_safe)
+      from authority.tenant_safe, authority.vertical_safe
+      confidence 1.0
+      evidence "policy:bounded-booking-flow"
+      source "rcl:inference"
+      scope "frontdesk"
+
+    derive requires_handoff : Truth =
+      request.escalation_signal or
+      request.restricted_question or
+      request.risk_high or
+      not knowledge_value(authority.tenant_safe) or
+      not knowledge_value(authority.vertical_safe)
+      from authority.tenant_safe, authority.vertical_safe
+      confidence 1.0
+      evidence "policy:fail-closed-human-handoff"
+      source "rcl:inference"
+      scope "frontdesk"
+
+    preserve policy.professional_judgement_allowed == false
+    preserve policy.cross_tenant_access_allowed == false
+    preserve policy.vertical_may_expand_authority == false
+  }
+
+  emergence auto_frontdesk_action {
+    cause frontdesk_agent
+    when (
+      supported(authority.may_auto_faq, 1.0) and knowledge_value(authority.may_auto_faq)
+    ) or (
+      supported(authority.may_auto_booking, 1.0) and knowledge_value(authority.may_auto_booking)
+    )
+    needs service.frontdesk.execute on service_admin
+    alter request.executed <- true
+    alter frontdesk_agent.actions <- frontdesk_agent.actions + 1
+    preserve request.tenant_match
+    preserve request.escalation_signal == false
+    preserve request.restricted_question == false
+    witness "service-frontdesk:auto-bounded-action"
+  }
+
+  emergence handoff_frontdesk_action {
+    cause frontdesk_agent
+    when supported(authority.requires_handoff, 1.0) and knowledge_value(authority.requires_handoff)
+    needs service.frontdesk.execute on service_admin
+    alter request.handoff <- true
+    preserve request.executed == false
+    witness "service-frontdesk:human-handoff"
+  }
+
+  learn authority
+  foresee auto_frontdesk_action
+  foresee handoff_frontdesk_action
+  realize auto_frontdesk_action
+  realize handoff_frontdesk_action
+}
