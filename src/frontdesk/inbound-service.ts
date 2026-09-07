@@ -1,4 +1,8 @@
-import { planFrontdeskMessage, type FrontdeskDecision } from "@/frontdesk/frontdesk-agent";
+import {
+  planFrontdeskMessage,
+  planServiceFrontdeskMessage,
+  type FrontdeskDecision,
+} from "@/frontdesk/frontdesk-agent";
 import type { ClinicFaqEntry } from "@/frontdesk/faq-engine";
 import type {
   ChannelSendReceipt,
@@ -6,6 +10,8 @@ import type {
   MessagingAdapter,
 } from "@/integrations/messaging-adapter";
 import type { Clinic } from "@/types/domain";
+import { resolveVerticalPackForClinic } from "@/verticals/registry";
+import type { ServiceVerticalPack } from "@/verticals/types";
 
 export interface FrontdeskInboundReceipt {
   decision: FrontdeskDecision;
@@ -15,25 +21,36 @@ export interface FrontdeskInboundReceipt {
 }
 
 /**
- * 第一阶段入站处理闭环。
+ * 通用服务前台入站闭环。
  *
- * 这里故意不直接写病历、不直接修改预约。预约意图交给预约动作层，
- * FAQ 才允许在诊所授权文本范围内自动回复；紧急与未知问题均转人工。
+ * - 新调用优先传 vertical，或让系统按当前租户解析行业包；
+ * - faqEntries 只作为第一版牙科兼容输入；
+ * - 这里不直接修改业务系统，预约/派单等动作仍交给对应 adapter。
  */
 export async function processFrontdeskInboundMessage(input: {
   clinic: Clinic;
   message: IncomingChannelMessage;
-  faqEntries: readonly ClinicFaqEntry[];
   messagingAdapter: MessagingAdapter;
+  vertical?: ServiceVerticalPack;
+  faqEntries?: readonly ClinicFaqEntry[];
 }): Promise<FrontdeskInboundReceipt> {
-  const decision = planFrontdeskMessage({
-    clinicId: input.clinic.id,
-    patientId: input.message.patientId,
-    channel: input.message.channel,
-    text: input.message.text,
-    urgentKeywords: input.clinic.settings.urgentKeywords,
-    faqEntries: input.faqEntries,
-  });
+  const vertical = input.vertical ?? resolveVerticalPackForClinic(input.clinic);
+  const decision = input.faqEntries
+    ? planFrontdeskMessage({
+        clinicId: input.clinic.id,
+        patientId: input.message.patientId,
+        channel: input.message.channel,
+        text: input.message.text,
+        urgentKeywords: input.clinic.settings.urgentKeywords,
+        faqEntries: input.faqEntries,
+      })
+    : planServiceFrontdeskMessage({
+        tenantId: input.clinic.id,
+        customerId: input.message.patientId,
+        channel: input.message.channel,
+        text: input.message.text,
+        vertical,
+      });
 
   const mayAutoReply =
     decision.autoSendAllowed &&
@@ -58,9 +75,9 @@ export async function processFrontdeskInboundMessage(input: {
     replyOptions:
       decision.kind === "appointment_request"
         ? [
-            { id: "appointment_confirm", label: "確認", payload: "appointment:confirm" },
-            { id: "appointment_reschedule", label: "改期", payload: "appointment:reschedule" },
-            { id: "appointment_cancel", label: "取消", payload: "appointment:cancel" },
+            { id: "booking_confirm", label: "確認", payload: "appointment:confirm" },
+            { id: "booking_reschedule", label: "改期", payload: "appointment:reschedule" },
+            { id: "booking_cancel", label: "取消", payload: "appointment:cancel" },
           ]
         : [],
     correlationId: input.message.providerMessageId,
