@@ -144,6 +144,7 @@ export class LegacyImportService {
     return {
       customer: {
         tenantId: candidate.tenantId,
+        verticalId: candidate.verticalId,
         displayName,
         phone,
         preferredChannel: preferredChannel as ApprovedImportProjection["customer"]["preferredChannel"],
