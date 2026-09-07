@@ -1,73 +1,31 @@
 import type { ClinicFaqEntry } from "@/frontdesk/faq-engine";
+import { dentalVerticalPack } from "@/verticals/dental";
+import { materializeFaqEntries } from "@/verticals/registry";
 
 /**
- * 完全虚构的演示 FAQ。正式环境由每家诊所在后台维护并明确授权。
+ * 完全虚构的演示 FAQ。
+ *
+ * 行业共性来自 dentalVerticalPack；晴和牙科中心的名称、地点和演示营业时间只属于 tenant override。
  */
-export const demoDentalFaq: ClinicFaqEntry[] = [
-  {
-    id: "faq_hours",
-    clinicId: "clinic_cinghe",
-    category: "opening_hours",
-    question: "你哋幾點開門？",
-    answer: "晴和牙科中心星期一至五主要診症時段由上午 9:30 開始；實際可預約時間請以系統顯示為準。",
-    keywords: ["幾點開", "營業時間", "開門", "收幾點", "星期日", "星期六"],
-    channels: ["whatsapp", "web", "phone"],
-    enabled: true,
-    administrativeOnly: true,
-  },
-  {
-    id: "faq_location",
-    clinicId: "clinic_cinghe",
-    category: "location",
-    question: "診所喺邊？",
-    answer: "晴和牙科中心位於香港觀塘。正式接入診所後，這裡會顯示診所核准的完整地址與交通方式。",
-    keywords: ["喺邊", "地址", "點去", "位置", "地鐵", "交通"],
-    channels: ["whatsapp", "web", "phone"],
-    enabled: true,
-    administrativeOnly: true,
-  },
-  {
-    id: "faq_reschedule",
-    clinicId: "clinic_cinghe",
-    category: "booking_policy",
-    question: "點樣改期？",
-    answer: "可以直接在這裡提出改期，我會先查可用時段；如屬接近應診時間的改動，系統會轉交診所職員確認。",
-    keywords: ["改期", "改時間", "轉時間", "換日子", "改預約"],
-    channels: ["whatsapp", "web"],
-    enabled: true,
-    administrativeOnly: true,
-  },
-  {
-    id: "faq_cancel",
-    clinicId: "clinic_cinghe",
-    category: "booking_policy",
-    question: "可以取消預約嗎？",
-    answer: "可以提出取消預約。系統會先確認你要取消的預約，再按診所規則處理；接近應診時間的取消可能需要職員確認。",
-    keywords: ["取消", "唔去", "不去", "取消預約", "取消预约"],
-    channels: ["whatsapp", "web"],
-    enabled: true,
-    administrativeOnly: true,
-  },
-  {
-    id: "faq_voucher",
-    clinicId: "clinic_cinghe",
-    category: "voucher",
-    question: "收唔收醫療券？",
-    answer: "這項資料會以診所核准設定為準。演示版不代表任何真實診所目前接受醫療券。",
-    keywords: ["醫療券", "医疗券", "長者醫療券", "醫券"],
-    channels: ["whatsapp", "web", "phone"],
-    enabled: true,
-    administrativeOnly: true,
-  },
-  {
-    id: "faq_insurance",
-    clinicId: "clinic_cinghe",
-    category: "insurance",
-    question: "可唔可以用保險？",
-    answer: "保險安排視乎診所與個別計劃。你可以留下保險公司或計劃名稱，系統會交給前台確認，不會自行判斷保障範圍。",
-    keywords: ["保險", "保险", "claim", "索償", "索赔"],
-    channels: ["whatsapp", "web", "phone"],
-    enabled: true,
-    administrativeOnly: true,
-  },
-];
+export const demoDentalFaq: ClinicFaqEntry[] = materializeFaqEntries(
+  dentalVerticalPack,
+  "clinic_cinghe",
+).map((entry) => {
+  if (entry.id === "faq_hours") {
+    return {
+      ...entry,
+      question: "你哋幾點開門？",
+      answer: "晴和牙科中心星期一至五主要診症時段由上午 9:30 開始；實際可預約時間請以系統顯示為準。",
+      keywords: ["幾點開", "營業時間", "開門", "收幾點", "星期日", "星期六"],
+    };
+  }
+  if (entry.id === "faq_location") {
+    return {
+      ...entry,
+      question: "診所喺邊？",
+      answer: "晴和牙科中心位於香港觀塘。正式接入診所後，這裡會顯示診所核准的完整地址與交通方式。",
+      keywords: ["喺邊", "地址", "點去", "位置", "地鐵", "交通"],
+    };
+  }
+  return entry;
+});
