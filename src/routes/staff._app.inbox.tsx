@@ -35,8 +35,8 @@ export const Route = createFileRoute("/staff/_app/inbox")({
   }),
   head: () => ({
     meta: [
-      { title: "對話中心｜Service Frontdesk" },
-      { name: "description", content: "WhatsApp、電話與網頁訊息統一收件匣，支援行政摘要、AI 建議與人工接管。" },
+      { title: "對話｜Service Frontdesk" },
+      { name: "description", content: "WhatsApp、電話與網頁訊息統一收件匣，支援 AI 摘要與人工接管。" },
     ],
   }),
   component: InboxPage,
@@ -121,7 +121,7 @@ function InboxPage() {
   const simulateInbound = async () => {
     const customer = customers[0];
     if (!customer) {
-      toast.error("先建立一位客戶", { description: "可先用「客戶目錄 → 拍照匯入舊資料」建立示範客戶。" });
+      toast.error("先建立一位客戶", { description: "可先到「客戶」用拍照匯入建立示範客戶。" });
       return;
     }
     setDemoBusy(true);
@@ -145,9 +145,9 @@ function InboxPage() {
         toast.error("示範訊息未寫入", { description: receipt.errors[0] ?? "未知錯誤" });
         return;
       }
-      toast.success("示範 WhatsApp 已進入 Inbox", {
+      toast.success("示範 WhatsApp 已進入對話", {
         description: receipt.frontdesk?.autoReplyReceipt?.ok
-          ? "Agent 已透過 Mock Adapter 真正回覆，來回訊息均已保存。"
+          ? "AI 已完成模擬回覆，來回訊息均已保存。"
           : receipt.state === "waiting_human"
             ? "此訊息需要人工接管。"
             : "訊息已保存。",
@@ -162,8 +162,8 @@ function InboxPage() {
 
   return (
     <PageContainer
-      title="對話中心"
-      subtitle={`${vertical.displayName} · WhatsApp／電話／網頁統一收件匣`}
+      title="對話"
+      subtitle={`${vertical.displayName} · WhatsApp／電話／網頁`}
       actions={
         vertical.id !== "dental" ? (
           <MdButton
@@ -181,7 +181,7 @@ function InboxPage() {
       {vertical.id !== "dental" && workspace.conversations.length === 0 && (
         <MdCard className="mb-4 border border-outline-variant bg-surface-container p-3">
           <p className="md-body-s text-on-surface-variant">
-            此行業目前尚未建立對話。可用右上角 Demo 按鈕把真實的 Frontdesk Decision → Mock Messaging Adapter → Conversation Repository 鏈跑一次。
+            目前尚未有對話。右上角可用 Demo 訊息快速試一次自動回覆與人工接管流程。
           </p>
         </MdCard>
       )}
@@ -192,7 +192,7 @@ function InboxPage() {
             ["all", "全部"],
             ["unread", "未讀"],
             ["urgent", safetyFlagLabel(vertical)],
-            ["agent", "Agent 處理中"],
+            ["agent", "AI 處理中"],
           ] as const
         ).map(([value, label]) => (
           <MdFilterChip key={value} selected={filter === value} onClick={() => setFilter(value)}>
@@ -239,7 +239,7 @@ function InboxPage() {
                       <MdChip tone="error">{safetyFlagLabel(vertical)}</MdChip>
                     )}
                     {conversation.unread && <MdChip tone="primary">未讀</MdChip>}
-                    {conversation.source === "legacy_conversation_compat" && <MdChip tone="neutral">Dental Legacy</MdChip>}
+                    {conversation.source === "legacy_conversation_compat" && <MdChip tone="neutral">既有牙科對話</MdChip>}
                   </span>
                 </span>
               </button>
@@ -278,11 +278,11 @@ function InboxPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="md-label-l text-on-surface">AI 前台摘要</p>
+                      <p className="md-label-l text-on-surface">AI 摘要</p>
                       <MdChip tone={frontdeskSummary.decision.requiresHuman ? "error" : "primary"}>
                         {frontdeskSummary.decision.requiresHuman ? "需要人手" : "可由流程處理"}
                       </MdChip>
-                      {frontdeskSummary.decision.autoSendAllowed && <MdChip tone="tertiary">允許自動回覆</MdChip>}
+                      {frontdeskSummary.decision.autoSendAllowed && <MdChip tone="tertiary">可自動回覆</MdChip>}
                     </div>
                     <p className="mt-2 md-title-m text-on-surface">{frontdeskSummary.title}</p>
                     <p className="mt-1 md-body-m text-on-surface-variant">{frontdeskSummary.detail}</p>
@@ -293,10 +293,10 @@ function InboxPage() {
                     {frontdeskSummary.decision.suggestedReply && selected.state !== "agent_handling" && (
                       <div className="mt-3 flex flex-wrap gap-2">
                         <MdButton size="sm" variant="tonal" onClick={() => setDraft(frontdeskSummary.decision.suggestedReply ?? "")}>
-                          填入建議回覆
+                          使用建議回覆
                         </MdButton>
                         <span className="self-center md-body-s text-on-surface-variant">
-                          建議文字只處理已授權行政／服務流程；發送前仍可修改。
+                          發送前仍可修改。
                         </span>
                       </div>
                     )}
@@ -376,7 +376,7 @@ function InboxPage() {
               <input
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
-                placeholder={`回覆${vertical.labels.customer}…（發送即代表人工接管）`}
+                placeholder={`回覆${vertical.labels.customer}…`}
                 className="h-12 flex-1 rounded-full border border-outline bg-surface-container-lowest px-4 md-body-m text-on-surface outline-none focus:border-primary"
               />
               <MdButton type="submit" icon={<Send className="size-4" />}>發送</MdButton>
