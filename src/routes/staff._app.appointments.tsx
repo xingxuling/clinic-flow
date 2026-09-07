@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { CalendarPlus, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { useServiceBookings } from "@/bookings/use-service-bookings";
+import type { ServiceBooking } from "@/bookings/types";
 import { PageContainer } from "@/components/layout/StaffShell";
 import {
   EmptyState,
@@ -18,8 +20,6 @@ import {
 import { useServiceCustomers } from "@/customers/use-service-customers";
 import { fmtDate, fmtTime, fmtWeekday, isSameDay } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
-import type { Appointment } from "@/types/domain";
-import { filterByVertical } from "@/verticals/entity-scope";
 import { arrivalActionLabel, bookingStatusFor } from "@/verticals/presentation";
 import { useTenantVertical } from "@/verticals/use-tenant-vertical";
 
@@ -44,6 +44,7 @@ function AppointmentsPage() {
     clinic,
     staff,
     patients,
+    currentStaff,
     staffName,
     setAppointmentStatus,
     rescheduleAppointment,
@@ -51,17 +52,22 @@ function AppointmentsPage() {
   } = useApp();
   const vertical = useTenantVertical(clinic);
   const { customers, customerName } = useServiceCustomers({ clinic, vertical, legacyPatients: patients });
+  const { bookings, setStatus, reschedule, create } = useServiceBookings({
+    clinic,
+    vertical,
+    legacyAppointments: appointments,
+    legacyActions: {
+      setStatus: setAppointmentStatus,
+      reschedule: rescheduleAppointment,
+      create: createAppointment,
+    },
+  });
 
   const [view, setView] = useState<"day" | "week">("day");
   const [offset, setOffset] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
-  const [rescheduleFor, setRescheduleFor] = useState<Appointment | null>(null);
+  const [rescheduleFor, setRescheduleFor] = useState<ServiceBooking | null>(null);
   const [slotsOpen, setSlotsOpen] = useState(false);
-
-  const visibleAppointments = useMemo(
-    () => filterByVertical(appointments, vertical.id),
-    [appointments, vertical.id],
-  );
 
   const assignableStaff = useMemo(() => {
     const practitioners = staff.filter((person) => person.active && person.role === "practitioner");
@@ -97,17 +103,17 @@ function AppointmentsPage() {
       for (const m of [0, 30]) {
         const slot = new Date(day);
         slot.setHours(h, m, 0, 0);
-        const busy = visibleAppointments.some(
-          (appointment) =>
-            appointment.status !== "cancelled" &&
-            new Date(appointment.startAt) <= slot &&
-            slot < new Date(appointment.endAt),
+        const busy = bookings.some(
+          (booking) =>
+            booking.status !== "cancelled" &&
+            new Date(booking.startAt) <= slot &&
+            slot < new Date(booking.endAt),
         );
         if (!busy && slot > new Date()) slots.push(slot.toISOString());
       }
     }
     return slots.slice(0, 12);
-  }, [visibleAppointments, days]);
+  }, [bookings, days]);
 
   return (
     <PageContainer
@@ -149,11 +155,12 @@ function AppointmentsPage() {
         <MdChip tone="secondary">{vertical.labels.subject}</MdChip>
         <MdChip tone="primary">{vertical.labels.booking}</MdChip>
         <MdChip tone="neutral">{vertical.labels.resource}</MdChip>
+        <MdChip tone="tertiary">{vertical.id === "dental" ? "Dental 相容排程" : "持久化 Service Booking"}</MdChip>
       </div>
 
       <div className={view === "week" ? "grid gap-3 md:grid-cols-7" : "space-y-3"}>
         {days.map((day) => {
-          const list = visibleAppointments.filter((appointment) => isSameDay(appointment.startAt, day));
+          const list = bookings.filter((booking) => isSameDay(booking.startAt, day));
           return (
             <div key={day.toISOString()}>
               <SectionHeader title={`${fmtDate(day.toISOString())} ${fmtWeekday(day.toISOString())}`} count={list.length} />
@@ -161,49 +168,49 @@ function AppointmentsPage() {
                 <EmptyState text={`沒有${vertical.labels.booking}`} />
               ) : (
                 <div className="space-y-2">
-                  {list.map((appointment) => {
-                    const status = bookingStatusFor(vertical, appointment.status);
+                  {list.map((booking) => {
+                    const status = bookingStatusFor(vertical, booking.status);
                     return (
-                      <MdCard key={appointment.id} className="p-4">
+                      <MdCard key={booking.id} className="p-4">
                         <div className="flex flex-wrap items-start gap-3">
                           <div className="w-14 shrink-0">
-                            <p className="md-title-m">{fmtTime(appointment.startAt)}</p>
-                            <p className="md-body-s text-on-surface-variant">{fmtTime(appointment.endAt)}</p>
+                            <p className="md-title-m">{fmtTime(booking.startAt)}</p>
+                            <p className="md-body-s text-on-surface-variant">{fmtTime(booking.endAt)}</p>
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="md-title-m truncate">{customerName(appointment.patientId)}</p>
+                            <p className="md-title-m truncate">{customerName(booking.customerId)}</p>
                             <p className="md-body-s text-on-surface-variant">
-                              {serviceLabel(appointment.serviceId)} · {staffName(appointment.practitionerId)} · {appointment.room}
+                              {serviceLabel(booking.serviceId)} · {staffName(booking.resourceId)} · {booking.venue}
                             </p>
-                            {appointment.note && <p className="mt-1 md-body-s text-on-surface-variant">備註：{appointment.note}</p>}
+                            {booking.note && <p className="mt-1 md-body-s text-on-surface-variant">備註：{booking.note}</p>}
                             <p className="mt-1 md-body-s text-on-surface-variant">
-                              建立者：{appointment.createdBy.name}{appointment.createdBy.type === "agent" && "（Agent）"}
+                              來源：{booking.source === "legacy_appointment_compat" ? "Dental 相容資料" : "Service Booking Core"}
                             </p>
                           </div>
                           <MdChip tone={status.tone}>{status.label}</MdChip>
                         </div>
                         <div className="mt-3 flex flex-wrap gap-2">
-                          {appointment.status === "pending" && (
-                            <MdButton size="sm" variant="tonal" onClick={() => setAppointmentStatus(appointment.id, "confirmed")}>確認</MdButton>
+                          {booking.status === "pending" && (
+                            <MdButton size="sm" variant="tonal" onClick={() => setStatus(booking.id, "confirmed")}>確認</MdButton>
                           )}
-                          {appointment.status === "confirmed" && (
+                          {booking.status === "confirmed" && (
                             <>
-                              <MdButton size="sm" variant="tonal" onClick={() => setAppointmentStatus(appointment.id, "arrived")}>
+                              <MdButton size="sm" variant="tonal" onClick={() => setStatus(booking.id, "arrived")}>
                                 {arrivalActionLabel(vertical)}
                               </MdButton>
-                              <MdButton size="sm" variant="outlined" onClick={() => setAppointmentStatus(appointment.id, "no_show")}>
+                              <MdButton size="sm" variant="outlined" onClick={() => setStatus(booking.id, "no_show")}>
                                 未出現
                               </MdButton>
                             </>
                           )}
-                          {appointment.status !== "cancelled" && appointment.status !== "arrived" && (
+                          {booking.status !== "cancelled" && booking.status !== "arrived" && (
                             <>
-                              <MdButton size="sm" variant="text" onClick={() => setRescheduleFor(appointment)}>改期</MdButton>
-                              <MdButton size="sm" variant="text" onClick={() => setAppointmentStatus(appointment.id, "cancelled")}>取消</MdButton>
+                              <MdButton size="sm" variant="text" onClick={() => setRescheduleFor(booking)}>改期</MdButton>
+                              <MdButton size="sm" variant="text" onClick={() => setStatus(booking.id, "cancelled")}>取消</MdButton>
                             </>
                           )}
-                          {appointment.status === "no_show" && (
-                            <MdButton size="sm" variant="tonal" onClick={() => setAppointmentStatus(appointment.id, "pending")}>重新安排</MdButton>
+                          {booking.status === "no_show" && (
+                            <MdButton size="sm" variant="tonal" onClick={() => setStatus(booking.id, "pending")}>重新安排</MdButton>
                           )}
                         </div>
                       </MdCard>
@@ -230,16 +237,21 @@ function AppointmentsPage() {
           onSubmit={(event) => {
             event.preventDefault();
             const form = new FormData(event.currentTarget);
+            const customerId = String(form.get("patientId"));
+            const customer = customers.find((item) => item.id === customerId);
             const serviceId = String(form.get("serviceId"));
             const service = vertical.services.find((item) => item.id === serviceId);
-            createAppointment({
-              patientId: String(form.get("patientId")),
-              practitionerId: String(form.get("practitionerId")),
+            create({
+              customerId,
+              ...(customer?.subjects[0]?.id ? { subjectId: customer.subjects[0].id } : {}),
+              resourceId: String(form.get("practitionerId")),
               serviceId,
               startAt: new Date(String(form.get("startAt"))).toISOString(),
               durationMin: service?.durationMin ?? 60,
-              room: String(form.get("room")),
+              venue: String(form.get("room")),
               note: String(form.get("note")),
+              source: "manual",
+              createdBy: { type: "staff", id: currentStaff.id, name: currentStaff.name },
             });
             setCreateOpen(false);
           }}
@@ -272,7 +284,7 @@ function AppointmentsPage() {
       <MdDialog
         open={!!rescheduleFor}
         onClose={() => setRescheduleFor(null)}
-        title={`改期：${rescheduleFor ? customerName(rescheduleFor.patientId) : ""}`}
+        title={`改期：${rescheduleFor ? customerName(rescheduleFor.customerId) : ""}`}
       >
         {rescheduleFor && (
           <form
@@ -280,7 +292,7 @@ function AppointmentsPage() {
             onSubmit={(event) => {
               event.preventDefault();
               const form = new FormData(event.currentTarget);
-              rescheduleAppointment(rescheduleFor.id, new Date(String(form.get("startAt"))).toISOString());
+              reschedule(rescheduleFor.id, new Date(String(form.get("startAt"))).toISOString());
               setRescheduleFor(null);
             }}
           >
@@ -290,7 +302,7 @@ function AppointmentsPage() {
               name="startAt"
               defaultValue={toLocalInput(new Date(rescheduleFor.startAt))}
             />
-            <p className="mt-3 md-body-s">改期後狀態回到「待確認」，並保留審計紀錄。</p>
+            <p className="mt-3 md-body-s">改期後狀態回到「待確認」，並保留服務排程的更新時間。</p>
           </form>
         )}
         <div className="mt-6 flex justify-end gap-2">
