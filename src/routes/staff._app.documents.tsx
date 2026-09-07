@@ -14,8 +14,8 @@ import { useTenantVertical } from "@/verticals/use-tenant-vertical";
 export const Route = createFileRoute("/staff/_app/documents")({
   head: () => ({
     meta: [
-      { title: "行政資料｜Service Frontdesk" },
-      { name: "description", content: "服務業行政資料、文件分類、缺欄位、異常提示與未來系統整合入口。" },
+      { title: "資料｜Service Frontdesk" },
+      { name: "description", content: "服務業表單、報價、收據、發票與其他行政資料。" },
     ],
   }),
   component: DocumentsPage,
@@ -62,16 +62,16 @@ function DocumentsPage() {
 
   return (
     <PageContainer
-      title="行政資料"
-      subtitle={`${vertical.displayName} · 文件／表單／報價／收據等資料經 Adapter 接入，不綁死單一 CMS。`}
+      title="資料"
+      subtitle={`${vertical.displayName} · 表單、報價、工單、收據與發票`}
     >
       <MdCard className="mb-5 p-4">
-        <p className="md-label-l text-on-surface">{vertical.shortName}建議資料流</p>
+        <p className="md-label-l text-on-surface">常見資料</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {flows.map((flow) => <MdChip key={flow} tone="secondary">{flow}</MdChip>)}
         </div>
         <p className="mt-3 md-body-s text-on-surface-variant">
-          舊 Dental Demo 文件沒有 verticalId，兼容層只會把它們視為 dental；其他行業不會拿醫療文件假裝已完成整合。
+          舊牙科示範文件只會在牙科行業顯示；其他行業不會混入醫療文件。
         </p>
       </MdCard>
 
@@ -92,10 +92,10 @@ function DocumentsPage() {
         </div>
       )}
 
-      <SectionHeader title={vertical.id === "dental" ? "既有行政文件" : "行業資料工作流"} count={list.length} />
+      <SectionHeader title={vertical.id === "dental" ? "既有資料" : "資料列表"} count={list.length} />
       {list.length === 0 ? (
         <EmptyState
-          text={`尚未建立 ${vertical.displayName} 的真實文件資料；目前保留通用資料入口與人工核對邊界。`}
+          text={`目前尚未建立 ${vertical.displayName} 的實際文件資料。`}
         />
       ) : (
         <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
