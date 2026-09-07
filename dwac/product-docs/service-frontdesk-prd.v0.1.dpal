@@ -1,0 +1,84 @@
+artifact service_frontdesk_prd kind=document {
+  goal "定义通用服务业 AI 前台平台的正式产品需求，并锁定易上手、可复制、可人工核对的产品边界"
+  success "需求可追踪到核心、行业包、智能迁移、适配器、安全与验收"
+  constraint "不把产品写成完整替代 CMS/CRM"
+  constraint "不把自训练基础模型写成首版前置条件"
+  invariant "行业包只能配置流程不能扩大 Agent 专业判断权"
+  unit s01 output=documentation {
+    title "产品愿景与定位"
+    goal "形成 产品愿景与定位 的可交付 PRD 内容"
+    accept "new_information,consistent_with_product_boundary"
+  }
+  unit s02 output=documentation {
+    title "目标用户与首批行业"
+    goal "形成 目标用户与首批行业 的可交付 PRD 内容"
+    depends s01
+    accept "new_information,consistent_with_product_boundary"
+  }
+  unit s03 output=documentation {
+    title "核心用户问题与价值主张"
+    goal "形成 核心用户问题与价值主张 的可交付 PRD 内容"
+    depends s02
+    accept "new_information,consistent_with_product_boundary"
+  }
+  unit s04 output=documentation {
+    title "产品架构：Service Frontdesk Core + Vertical Pack"
+    goal "形成 产品架构：Service Frontdesk Core + Vertical Pack 的可交付 PRD 内容"
+    depends s03
+    accept "new_information,consistent_with_product_boundary"
+  }
+  unit s05 output=documentation {
+    title "第一阶段核心功能"
+    goal "形成 第一阶段核心功能 的可交付 PRD 内容"
+    depends s04
+    accept "new_information,consistent_with_product_boundary"
+  }
+  unit s06 output=documentation {
+    title "智能迁移：手机拍照导入旧系统资料"
+    goal "形成 智能迁移：手机拍照导入旧系统资料 的可交付 PRD 内容"
+    depends s05
+    accept "new_information,consistent_with_product_boundary"
+  }
+  unit s07 output=documentation {
+    title "客户沟通、Booking 与提醒闭环"
+    goal "形成 客户沟通、Booking 与提醒闭环 的可交付 PRD 内容"
+    depends s06
+    accept "new_information,consistent_with_product_boundary"
+  }
+  unit s08 output=documentation {
+    title "人工核对与 Agent 权限边界"
+    goal "形成 人工核对与 Agent 权限边界 的可交付 PRD 内容"
+    depends s07
+    accept "new_information,consistent_with_product_boundary"
+  }
+  unit s09 output=documentation {
+    title "外部系统整合与适配器策略"
+    goal "形成 外部系统整合与适配器策略 的可交付 PRD 内容"
+    depends s08
+    accept "new_information,consistent_with_product_boundary"
+  }
+  unit s10 output=documentation {
+    title "数据、隐私、安全与多租户"
+    goal "形成 数据、隐私、安全与多租户 的可交付 PRD 内容"
+    depends s09
+    accept "new_information,consistent_with_product_boundary"
+  }
+  unit s11 output=documentation {
+    title "第二阶段与跨行业复制机制"
+    goal "形成 第二阶段与跨行业复制机制 的可交付 PRD 内容"
+    depends s10
+    accept "new_information,consistent_with_product_boundary"
+  }
+  unit s12 output=documentation {
+    title "关键指标、验收标准与上线门槛"
+    goal "形成 关键指标、验收标准与上线门槛 的可交付 PRD 内容"
+    depends s11
+    accept "new_information,consistent_with_product_boundary"
+  }
+  unit s13 output=documentation {
+    title "非目标、风险与待验证假设"
+    goal "形成 非目标、风险与待验证假设 的可交付 PRD 内容"
+    depends s12
+    accept "new_information,consistent_with_product_boundary"
+  }
+}
