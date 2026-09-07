@@ -26,6 +26,8 @@ export interface IncomingServiceMessage {
   providerMessageId: string;
   tenantId: string;
   customerId: string;
+  /** Real sender number from WhatsApp/webhook when available. */
+  senderPhone?: string;
   channel: ChannelKind;
   text: string;
   receivedAt: string;
@@ -33,8 +35,8 @@ export interface IncomingServiceMessage {
 
 /**
  * 新通用入口。这里已经不依赖 Clinic / Patient 领域类型。
- * MessagingAdapter 暂时仍使用旧 clinicId/patientId 字段作为兼容 wire format，
- * 待外部通道升级时再统一迁移，不影响 Core 语义。
+ * customerId 继续作为内部关联 ID；正式 WhatsApp Provider 只使用 senderPhone
+ * 作为真正的收件号码，不会把内部 ID 当手机号。
  */
 export async function processServiceFrontdeskInboundMessage(input: {
   tenant: ServiceTenant;
@@ -88,6 +90,7 @@ export async function processServiceFrontdeskInboundMessage(input: {
   const receipt = await input.messagingAdapter.send({
     clinicId: input.tenant.id,
     patientId: input.message.customerId,
+    ...(input.message.senderPhone ? { recipientPhone: input.message.senderPhone } : {}),
     channel: input.message.channel,
     text: decision.suggestedReply,
     replyOptions:
@@ -130,6 +133,7 @@ export async function processFrontdeskInboundMessage(input: {
         providerMessageId: input.message.providerMessageId,
         tenantId: input.message.clinicId,
         customerId: input.message.patientId,
+        ...(input.message.senderPhone ? { senderPhone: input.message.senderPhone } : {}),
         channel: input.message.channel,
         text: input.message.text,
         receivedAt: input.message.receivedAt,
@@ -166,6 +170,7 @@ export async function processFrontdeskInboundMessage(input: {
   const receipt = await input.messagingAdapter.send({
     clinicId: input.clinic.id,
     patientId: input.message.patientId,
+    ...(input.message.senderPhone ? { recipientPhone: input.message.senderPhone } : {}),
     channel: input.message.channel,
     text: decision.suggestedReply,
     replyOptions: [],
