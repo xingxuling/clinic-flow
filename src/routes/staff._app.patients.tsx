@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Search, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { useServiceBookings } from "@/bookings/use-service-bookings";
 import { LegacyImportPanel } from "@/components/importing/LegacyImportPanel";
 import { PageContainer } from "@/components/layout/StaffShell";
 import { EmptyState, MdCard, MdChip, MdTextField, SectionHeader } from "@/components/m3";
@@ -30,9 +31,26 @@ function maskPhone(phone: string, mask: boolean) {
 }
 
 function CustomersPage() {
-  const { patients, clinic, appointments } = useApp();
+  const {
+    patients,
+    clinic,
+    appointments,
+    setAppointmentStatus,
+    rescheduleAppointment,
+    createAppointment,
+  } = useApp();
   const vertical = useTenantVertical(clinic);
   const { customers } = useServiceCustomers({ clinic, vertical, legacyPatients: patients });
+  const { bookings } = useServiceBookings({
+    clinic,
+    vertical,
+    legacyAppointments: appointments,
+    legacyActions: {
+      setStatus: setAppointmentStatus,
+      reschedule: rescheduleAppointment,
+      create: createAppointment,
+    },
+  });
   const [q, setQ] = useState("");
   const mask = clinic.settings.privacy.maskPhoneInLists;
 
@@ -43,10 +61,6 @@ function CustomersPage() {
   const legacyById = useMemo(
     () => new Map(patients.map((patient) => [patient.id, patient])),
     [patients],
-  );
-  const verticalServiceIds = useMemo(
-    () => new Set(vertical.services.map((service) => service.id)),
-    [vertical.services],
   );
 
   const list = customers.filter((customer) => {
@@ -98,12 +112,11 @@ function CustomersPage() {
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {list.map((customer) => {
             const legacy = customer.verticalId === "dental" ? legacyById.get(customer.id) : undefined;
-            const upcoming = appointments.filter(
-              (appointment) =>
-                appointment.patientId === customer.id &&
-                new Date(appointment.startAt) > new Date() &&
-                appointment.status !== "cancelled" &&
-                (vertical.id === "dental" || verticalServiceIds.has(appointment.serviceId)),
+            const upcoming = bookings.filter(
+              (booking) =>
+                booking.customerId === customer.id &&
+                new Date(booking.startAt) > new Date() &&
+                booking.status !== "cancelled",
             );
             return (
               <MdCard key={customer.id} className="p-4">
@@ -173,7 +186,7 @@ function CustomersPage() {
       )}
 
       <p className="mt-6 flex items-center gap-2 md-body-s text-on-surface-variant">
-        <Search className="size-4" /> Dental Seed 只屬 Dental Pack；新資料按 Tenant + Vertical 隔離。
+        <Search className="size-4" /> Dental Seed 只屬 Dental Pack；新 Customer / Booking 按 Tenant + Vertical 隔離並持久化。
       </p>
     </PageContainer>
   );
