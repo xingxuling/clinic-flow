@@ -1,17 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Search, ShieldCheck } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { LegacyImportPanel } from "@/components/importing/LegacyImportPanel";
 import { PageContainer } from "@/components/layout/StaffShell";
 import { EmptyState, MdCard, MdChip, MdTextField, SectionHeader } from "@/components/m3";
 import { VerticalSwitcher } from "@/components/verticals/VerticalSwitcher";
-import { serviceCustomerRepository } from "@/customers/repository";
-import { patientToServiceCustomer, type ServiceCustomer } from "@/customers/types";
+import { patientToServiceCustomer } from "@/customers/types";
+import { useServiceCustomers } from "@/customers/use-service-customers";
 import { CHANNEL, fmtDate } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
-import { resolveVerticalPackForClinic } from "@/verticals/registry";
-import { resolveVerticalPackForTenant } from "@/verticals/tenant-selection";
+import { useTenantVertical } from "@/verticals/use-tenant-vertical";
 
 export const Route = createFileRoute("/staff/_app/patients")({
   head: () => ({
@@ -32,37 +31,23 @@ function maskPhone(phone: string, mask: boolean) {
 
 function CustomersPage() {
   const { patients, clinic, appointments } = useApp();
+  const vertical = useTenantVertical(clinic);
+  const { customers } = useServiceCustomers({ clinic, vertical, legacyPatients: patients });
   const [q, setQ] = useState("");
-  const [imported, setImported] = useState<ServiceCustomer[]>([]);
-  const [vertical, setVertical] = useState(() => resolveVerticalPackForClinic(clinic));
   const mask = clinic.settings.privacy.maskPhoneInLists;
 
   const legacyCustomers = useMemo(
     () => (vertical.id === "dental" ? patients.map(patientToServiceCustomer) : []),
     [patients, vertical.id],
   );
-
-  useEffect(() => {
-    setVertical(resolveVerticalPackForTenant(clinic));
-  }, [clinic]);
-
-  useEffect(() => {
-    const refresh = () => setImported(serviceCustomerRepository.list(clinic.id, vertical.id));
-    refresh();
-    window.addEventListener("service-frontdesk:customers-changed", refresh);
-    window.addEventListener("storage", refresh);
-    return () => {
-      window.removeEventListener("service-frontdesk:customers-changed", refresh);
-      window.removeEventListener("storage", refresh);
-    };
-  }, [clinic.id, vertical.id]);
-
-  const customers = useMemo(() => {
-    const byId = new Map<string, ServiceCustomer>();
-    for (const customer of legacyCustomers) byId.set(customer.id, customer);
-    for (const customer of imported) byId.set(customer.id, customer);
-    return [...byId.values()];
-  }, [legacyCustomers, imported]);
+  const legacyById = useMemo(
+    () => new Map(patients.map((patient) => [patient.id, patient])),
+    [patients],
+  );
+  const verticalServiceIds = useMemo(
+    () => new Set(vertical.services.map((service) => service.id)),
+    [vertical.services],
+  );
 
   const list = customers.filter((customer) => {
     const query = q.trim().toLocaleLowerCase();
@@ -74,21 +59,18 @@ function CustomersPage() {
     );
   });
 
-  const legacyById = new Map(patients.map((patient) => [patient.id, patient]));
-
   return (
     <PageContainer
       title={`${vertical.labels.customer}目錄`}
       subtitle={`通用客戶資料庫：${vertical.labels.customer}、${vertical.labels.subject}、跟進資料與舊系統匯入。`}
     >
-      <VerticalSwitcher tenantId={clinic.id} vertical={vertical} onChange={setVertical} />
+      <VerticalSwitcher tenantId={clinic.id} vertical={vertical} />
 
       <LegacyImportPanel
         key={vertical.id}
         tenantId={clinic.id}
         vertical={vertical}
         existingCustomers={legacyCustomers}
-        onSaved={() => setImported(serviceCustomerRepository.list(clinic.id, vertical.id))}
       />
 
       <MdCard className="mb-5 flex items-start gap-3 p-4">
@@ -105,7 +87,7 @@ function CustomersPage() {
         label=""
         placeholder={`搜尋${vertical.labels.customer}姓名、電話或標籤`}
         value={q}
-        onChange={(e) => setQ(e.target.value)}
+        onChange={(event) => setQ(event.target.value)}
         className="mb-4 max-w-sm"
       />
 
@@ -116,14 +98,13 @@ function CustomersPage() {
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {list.map((customer) => {
             const legacy = customer.verticalId === "dental" ? legacyById.get(customer.id) : undefined;
-            const upcoming = legacy
-              ? appointments.filter(
-                  (appointment) =>
-                    appointment.patientId === customer.id &&
-                    new Date(appointment.startAt) > new Date() &&
-                    appointment.status !== "cancelled",
-                )
-              : [];
+            const upcoming = appointments.filter(
+              (appointment) =>
+                appointment.patientId === customer.id &&
+                new Date(appointment.startAt) > new Date() &&
+                appointment.status !== "cancelled" &&
+                (vertical.id === "dental" || verticalServiceIds.has(appointment.serviceId)),
+            );
             return (
               <MdCard key={customer.id} className="p-4">
                 <div className="flex items-start justify-between gap-2">
@@ -131,7 +112,7 @@ function CustomersPage() {
                     <p className="md-title-m truncate text-on-surface">{customer.displayName}</p>
                     <p className="md-body-s text-on-surface-variant">
                       {legacy
-                        ? `舊診所檔案 ${legacy.fileNo}`
+                        ? `Dental 舊檔 ${legacy.fileNo}`
                         : customer.source === "legacy_import"
                           ? "拍照 / 文件匯入"
                           : "客戶資料"}
@@ -192,7 +173,7 @@ function CustomersPage() {
       )}
 
       <p className="mt-6 flex items-center gap-2 md-body-s text-on-surface-variant">
-        <Search className="size-4" /> 既有診所 Seed 只屬 Dental Pack；新匯入資料按 Tenant + Vertical 分區保存在 Demo Customer Repository。
+        <Search className="size-4" /> Dental Seed 只屬 Dental Pack；新資料按 Tenant + Vertical 隔離。
       </p>
     </PageContainer>
   );
