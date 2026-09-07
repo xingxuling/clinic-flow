@@ -14,6 +14,10 @@ export interface CustomerFollowUpSnapshot {
   lastService?: string;
   lastServiceDate?: string;
   followUpHint?: string;
+  ruleId?: string;
+  ruleLabel?: string;
+  dueAt?: string;
+  customerMessage?: string;
 }
 
 export interface ServiceCustomer {
@@ -64,6 +68,7 @@ export function patientToServiceCustomer(patient: Patient): ServiceCustomer {
     followUp: {
       lastServiceDate: patient.lastVisitAt,
       followUpHint: patient.nextRecallAt ? `下次跟進：${patient.nextRecallAt}` : undefined,
+      dueAt: patient.nextRecallAt,
     },
     source: "legacy_patient_compat",
     sourceRef: `patient:${patient.id}`,
