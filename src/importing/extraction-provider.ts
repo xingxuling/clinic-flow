@@ -45,9 +45,8 @@ const DEMO_FIELD_VALUES: Record<string, string> = {
   "subject.property_type": "住宅",
   "subject.access_notes": "大堂向保安登記後上樓。",
   "subject.contact_on_site": "陳先生",
-  "follow_up.last_service": "定期服務",
   "follow_up.last_service_date": "2026-08-17",
-  "follow_up.hint": "6 個月後跟進",
+  "follow_up.hint": "按行業規則計算下次跟進",
 };
 
 /**
@@ -63,30 +62,38 @@ export class DemoLegacyExtractionProvider implements DocumentExtractionProvider 
   async extract(request: DocumentExtractionRequest): Promise<DocumentExtractionResult> {
     const { source, schema } = request;
 
+    const valueFor = (field: VerticalImportSchema["fields"][number]) => {
+      if (field.key === "follow_up.last_service") return field.options?.[0] ?? "";
+      return DEMO_FIELD_VALUES[field.key] ?? field.options?.[0] ?? "";
+    };
+
     return {
       providerId: this.id,
       providerVersion: this.version,
       sourceId: source.id,
-      fields: schema.fields.map((field, index) => ({
-        key: field.key,
-        label: field.label,
-        value: DEMO_FIELD_VALUES[field.key] ?? "",
-        confidence: field.required
-          ? Math.max(0.78, 0.97 - index * 0.03)
-          : Math.max(0.62, 0.9 - index * 0.025),
-        sourceRegion: {
-          x: 0.08,
-          y: Math.min(0.88, 0.08 + index * 0.07),
-          width: 0.52,
-          height: 0.05,
-        },
-        evidenceText: DEMO_FIELD_VALUES[field.key] ?? "",
-      })),
+      fields: schema.fields.map((field, index) => {
+        const value = valueFor(field);
+        return {
+          key: field.key,
+          label: field.label,
+          value,
+          confidence: field.required
+            ? Math.max(0.78, 0.97 - index * 0.03)
+            : Math.max(0.62, 0.9 - index * 0.025),
+          sourceRegion: {
+            x: 0.08,
+            y: Math.min(0.88, 0.08 + index * 0.07),
+            width: 0.52,
+            height: 0.05,
+          },
+          evidenceText: value,
+        };
+      }),
       warnings: [
         "DEMO_PROVIDER_ONLY",
         "真實 OCR/VLM Provider 尚未連接；本結果只用於驗證人工核對與保存流程。",
       ],
-      rawText: "陳大文 9123 4567 2026/08/17 定期服務",
+      rawText: "陳大文 9123 4567 2026/08/17 舊服務記錄",
     };
   }
 }
