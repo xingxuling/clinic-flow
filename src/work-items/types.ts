@@ -2,6 +2,7 @@ import type { RiskLevel } from "@/types/domain";
 
 export type ServiceWorkItemKind =
   | "follow_up_message"
+  | "booking_reminder"
   | "booking_change"
   | "admin_review"
   | "integration_sync";
@@ -11,6 +12,12 @@ export type ServiceWorkItemStatus =
   | "ready_to_send"
   | "done"
   | "rejected";
+
+export interface ServiceWorkItemReplyOption {
+  id: string;
+  label: string;
+  payload: string;
+}
 
 export interface ServiceWorkItemDispatchReceipt {
   providerId: string;
@@ -32,6 +39,7 @@ export interface ServiceWorkItem {
   risk: RiskLevel;
   status: ServiceWorkItemStatus;
   proposedMessage?: string;
+  proposedReplyOptions?: ServiceWorkItemReplyOption[];
   sourceRef?: string;
   dispatchReceipt?: ServiceWorkItemDispatchReceipt;
   createdAt: string;
@@ -52,5 +60,6 @@ export interface NewServiceWorkItemInput {
   effects: string[];
   risk: RiskLevel;
   proposedMessage?: string;
+  proposedReplyOptions?: ServiceWorkItemReplyOption[];
   sourceRef?: string;
 }
