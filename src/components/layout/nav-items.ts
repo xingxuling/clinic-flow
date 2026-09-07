@@ -31,7 +31,7 @@ export const STAFF_NAV_ITEMS: NavItem[] = [
   { to: "/staff/agent", label: "Agent", icon: Bot, badgeKey: "agent", inBottomBar: true },
   { to: "/staff/reminders", label: "提醒召回", icon: ClipboardList },
   { to: "/staff/documents", label: "行政文件", icon: FileText, badgeKey: "documents" },
-  { to: "/staff/patients", label: "病人目錄", icon: Users },
+  { to: "/staff/patients", label: "客戶目錄", icon: Users },
   { to: "/staff/staff", label: "員工權限", icon: UserCog },
   { to: "/staff/audit", label: "審計日誌", icon: ScrollText },
   { to: "/staff/settings", label: "診所設定", icon: Settings },
