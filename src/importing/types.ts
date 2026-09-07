@@ -1,5 +1,6 @@
 import type { ChannelKind } from "@/types/domain";
 import type { CustomerLanguage, NewServiceCustomerInput } from "@/customers/types";
+import type { ServiceSubjectKind } from "@/verticals/types";
 
 export type LegacyImportSourceKind =
   | "camera_photo"
@@ -37,6 +38,7 @@ export interface VerticalImportSchema {
   verticalId: string;
   customerLabel: string;
   subjectLabel: string;
+  subjectKind: ServiceSubjectKind;
   fields: readonly ImportSchemaField[];
 }
 
