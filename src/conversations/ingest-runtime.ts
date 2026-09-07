@@ -10,6 +10,11 @@ import {
   type IncomingServiceMessage,
 } from "@/frontdesk/inbound-service";
 import type { MessagingAdapter } from "@/integrations/messaging-adapter";
+import {
+  detectCustomerControlCommand,
+  messagingAutomationControlRepository,
+  type BrowserMessagingAutomationControlRepository,
+} from "@/messaging/automation-control";
 import type { ServiceVerticalPack } from "@/verticals/types";
 
 export interface ServiceConversationIngestReceipt {
@@ -35,14 +40,16 @@ function requiresHuman(receipt: FrontdeskInboundReceipt): boolean {
 /**
  * 通用消息摄入层：
  * - webhook/provider message id 先做幂等检查，避免重复调用 Agent / 重复发送；
- * - Frontdesk Core 仍只负责决策与通道动作；
+ * - 客户可随时要求转人工或停止 WhatsApp 通讯，控制状态先于 Agent 决策生效；
+ * - 商户全局暂停 Agent 后，所有新消息直接进入 waiting_human；
+ * - production=true 时 WhatsApp 只允许官方 Business Platform provider；
  * - 只有真实发送成功的自动回复才写入 Conversation；
- * - 需要人工、发送失败或缺少匹配 Adapter 时统一进入 waiting_human；
  * - 高优先安全信号保留客户原话、触发关键词和决策原因，刷新后仍可审计。
  */
 export class ServiceConversationIngestRuntime {
   constructor(
     private readonly repository: BrowserServiceConversationRepository = serviceConversationRepository,
+    private readonly controls: BrowserMessagingAutomationControlRepository = messagingAutomationControlRepository,
   ) {}
 
   async ingest(input: {
@@ -51,6 +58,7 @@ export class ServiceConversationIngestRuntime {
     message: IncomingServiceMessage;
     customerName: string;
     messagingAdapter: MessagingAdapter;
+    production?: boolean;
   }): Promise<ServiceConversationIngestReceipt> {
     if (input.message.tenantId !== input.tenant.id) {
       const frontdesk = await processServiceFrontdeskInboundMessage({
@@ -82,6 +90,93 @@ export class ServiceConversationIngestRuntime {
         frontdesk: null,
         state: existing.state,
         errors: [],
+      };
+    }
+
+    this.controls.recordCustomerMessage({
+      tenantId: input.tenant.id,
+      verticalId: input.vertical.id,
+      customerId: input.message.customerId,
+      at: input.message.receivedAt,
+    });
+
+    const command = detectCustomerControlCommand(input.message.text);
+    if (command === "whatsapp_opt_out") {
+      this.controls.optOutWhatsApp({
+        tenantId: input.tenant.id,
+        verticalId: input.vertical.id,
+        customerId: input.message.customerId,
+        at: input.message.receivedAt,
+        updatedBy: "customer",
+      });
+    } else if (command === "human_only") {
+      this.controls.setHumanOnly({
+        tenantId: input.tenant.id,
+        verticalId: input.vertical.id,
+        customerId: input.message.customerId,
+        reason: "CUSTOMER_REQUESTED_HUMAN",
+        updatedBy: "customer",
+      });
+    }
+
+    const tenantControl = this.controls.getTenant(input.tenant.id);
+    const customerControl = this.controls.getCustomer(
+      input.tenant.id,
+      input.vertical.id,
+      input.message.customerId,
+    );
+
+    const productionProviderBlocked =
+      Boolean(input.production) &&
+      input.message.channel === "whatsapp" &&
+      (input.messagingAdapter.providerKind !== "whatsapp_business_platform" ||
+        !input.messagingAdapter.productionEligible);
+
+    const automationBlocked =
+      command !== "none" ||
+      !tenantControl.agentEnabled ||
+      customerControl.automationMode === "human_only" ||
+      productionProviderBlocked;
+
+    if (automationBlocked) {
+      const reason =
+        command === "whatsapp_opt_out"
+          ? "CUSTOMER_WHATSAPP_OPT_OUT"
+          : command === "human_only"
+            ? "CUSTOMER_REQUESTED_HUMAN"
+            : !tenantControl.agentEnabled
+              ? "TENANT_AGENT_PAUSED"
+              : customerControl.automationMode === "human_only"
+                ? "CUSTOMER_HUMAN_ONLY"
+                : "WHATSAPP_BUSINESS_PLATFORM_REQUIRED";
+
+      const conversation = this.repository.appendMessage({
+        tenantId: input.tenant.id,
+        verticalId: input.vertical.id,
+        customerId: input.message.customerId,
+        channel: input.message.channel,
+        from: "customer",
+        authorName: input.customerName,
+        text: input.message.text,
+        at: input.message.receivedAt,
+        providerMessageId: input.message.providerMessageId,
+        subject:
+          command === "whatsapp_opt_out"
+            ? "客戶要求停止 WhatsApp 訊息"
+            : command === "human_only"
+              ? "客戶要求人工處理"
+              : "等待人工處理",
+        state: "waiting_human",
+        unread: true,
+      });
+
+      return {
+        duplicate: false,
+        persisted: true,
+        conversation,
+        frontdesk: null,
+        state: "waiting_human",
+        errors: [reason],
       };
     }
 
