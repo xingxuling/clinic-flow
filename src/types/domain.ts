@@ -1,10 +1,9 @@
 /**
- * 「诊所行政 Agent」领域类型定义
+ * Clinic Flow legacy domain compatibility types.
  *
- * 设计原则：
- * - 多租户：所有实体都带 clinicId，任何查询都必须先按 clinicId 收窄。
- * - 行政边界：本系统只处理行政资料，不储存诊断、病历内容或影像。
- * - 状态显式化：关键对象使用明确的状态机 union，而非布尔散点。
+ * 新 Service Frontdesk Core 已逐步迁到 Tenant / Vertical / Customer / Booking 语义；
+ * 本文件保留旧 Clinic / Patient / Appointment 数据模型，供现有 Demo 与迁移适配层使用。
+ * 早期 seed 没有 verticalId，统一解释为 dental；新建实体应写入 verticalId。
  */
 
 export type ID = string;
@@ -127,6 +126,8 @@ export type AppointmentStatus =
 export interface Appointment {
   id: ID;
   clinicId: ID;
+  /** 早期 seed 未设置时由兼容层解释为 dental。 */
+  verticalId?: string;
   patientId: ID;
   practitionerId: ID;
   serviceId: ID;
@@ -158,6 +159,7 @@ export interface Message {
 export interface Conversation {
   id: ID;
   clinicId: ID;
+  verticalId?: string;
   patientId: ID;
   channel: ChannelKind;
   subject: string;
@@ -169,15 +171,16 @@ export interface Conversation {
   assignedTo?: ID;
 }
 
-/* ------------------------------- 紧急标记 --------------------------------- */
+/* ------------------------------- 安全标记 --------------------------------- */
 
 /**
- * 只做「潜在紧急」关键词/规则标记。
- * 不产生医学诊断、不做自动分诊结论，一律显示病人原话与触发原因。
+ * 兼容旧 UrgentFlag 命名；通用 Core 将其视为 escalation / safety signal。
+ * 不产生专业结论，只保留原话、触发规则与人工处理状态。
  */
 export interface UrgentFlag {
   id: ID;
   clinicId: ID;
+  verticalId?: string;
   conversationId: ID;
   patientId: ID;
   quote: string;
@@ -196,6 +199,7 @@ export type RiskLevel = "low" | "medium" | "high";
 export interface AgentTask {
   id: ID;
   clinicId: ID;
+  verticalId?: string;
   title: string;
   /** 准备做什么 */
   intent: string;
@@ -221,6 +225,7 @@ export type ReminderStatus = "scheduled" | "sent" | "replied" | "overdue" | "can
 export interface Reminder {
   id: ID;
   clinicId: ID;
+  verticalId?: string;
   patientId: ID;
   kind: ReminderKind;
   template: string;
@@ -237,6 +242,7 @@ export type DocumentStatus = "draft" | "needs_fields" | "anomaly" | "ready" | "s
 export interface DocumentCase {
   id: ID;
   clinicId: ID;
+  verticalId?: string;
   patientId: ID;
   kind: DocumentKind;
   title: string;
