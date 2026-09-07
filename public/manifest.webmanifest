@@ -1,7 +1,7 @@
 {
-  "name": "診所行政 Agent",
-  "short_name": "診所行政",
-  "description": "香港小型診所的邀請制行政後台。",
+  "name": "Service Frontdesk",
+  "short_name": "Frontdesk",
+  "description": "通用服務業 AI 前台：對話、排程、舊資料匯入、跟進與行業包。",
   "lang": "zh-Hant-HK",
   "start_url": "/",
   "scope": "/",
