@@ -15,6 +15,7 @@ import {
 import { AGENT_STATUS, RISK, fmtDateTime } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
 import type { AgentTaskStatus } from "@/types/domain";
+import { filterByVertical } from "@/verticals/entity-scope";
 import { safetyBoundaryText } from "@/verticals/presentation";
 import { useTenantVertical } from "@/verticals/use-tenant-vertical";
 
@@ -69,13 +70,17 @@ function AgentPage() {
   const { customers } = useServiceCustomers({ clinic, vertical, legacyPatients: patients });
   const [filter, setFilter] = useState<AgentTaskStatus | "all">("all");
 
-  const list = agentTasks.filter((task) => filter === "all" || task.status === filter);
+  const verticalTasks = filterByVertical(agentTasks, vertical.id);
+  const list = verticalTasks.filter((task) => filter === "all" || task.status === filter);
   const customerName = (id: string) =>
     customers.find((customer) => customer.id === id)?.displayName ?? `客戶 ${id}`;
 
   function approveAndExecute(taskId: string) {
-    const task = agentTasks.find((row) => row.id === taskId);
-    if (!task) return;
+    const task = verticalTasks.find((row) => row.id === taskId);
+    if (!task) {
+      toast.error("任務不屬於目前行業", { description: "已阻止跨 Vertical 執行。" });
+      return;
+    }
 
     const plan = getAgentPlan(taskId);
     if (!plan) {
@@ -183,7 +188,7 @@ function AgentPage() {
 
       <SectionHeader title="任務" count={list.length} />
       {list.length === 0 ? (
-        <EmptyState text="沒有符合條件的任務。" />
+        <EmptyState text={`目前沒有屬於 ${vertical.shortName} 的 Agent 任務。`} />
       ) : (
         <div className="grid gap-3 xl:grid-cols-2">
           {list.map((task) => {
