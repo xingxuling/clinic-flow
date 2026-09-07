@@ -40,16 +40,22 @@ export function createFollowUpWorkItem(input: {
     customerId: input.customer.id,
     ...(input.customer.subjects[0]?.id ? { subjectId: input.customer.subjects[0].id } : {}),
     title: `${input.customer.displayName} · ${followUp.ruleLabel ?? "服務跟進"}`,
-    intent: `為${input.vertical.labels.customer}準備服務後跟進訊息，等待人工批准後交給 Messaging Adapter。`,
+    intent: `為${input.vertical.labels.customer}準備服務後跟進訊息，等待人工批准後交給正式 Messaging Adapter。`,
     basis: [
       `規則：${followUp.ruleLabel ?? followUp.ruleId}`,
       ...(followUp.lastService ? [`上次服務：${followUp.lastService}`] : []),
       ...(followUp.lastServiceDate ? [`上次服務日期：${followUp.lastServiceDate}`] : []),
       `建議跟進時間：${followUp.dueAt}`,
+      "WhatsApp 主動舊客召回預設按 marketing 類別處理，除非後續由 Meta 模板分類證據另行確認。",
     ],
-    effects: ["建立 1 則待人工批准的訊息草稿", "批准後只進入待發送狀態，不自動聲稱已送出"],
+    effects: [
+      "建立 1 則待人工批准的訊息草稿",
+      "批准後仍須通過 WhatsApp opt-in / 24h / template policy gate",
+      "Messaging Adapter 真實成功前不標記已送出",
+    ],
     risk: "low",
     proposedMessage: message,
+    messagePurpose: "marketing",
     sourceRef,
   });
 }
