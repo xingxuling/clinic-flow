@@ -102,9 +102,9 @@ export class BrowserServiceCustomerRepository implements ServiceCustomerReposito
       tags: [...(input.tags ?? [])],
       notesAdmin: input.notesAdmin ?? "",
       subjects: clone(input.subjects ?? []),
-      followUp: input.followUp ? clone(input.followUp) : undefined,
+      ...(input.followUp ? { followUp: clone(input.followUp) } : {}),
       source: input.source,
-      sourceRef: input.sourceRef,
+      ...(input.sourceRef ? { sourceRef: input.sourceRef } : {}),
       createdAt: now,
       updatedAt: now,
     };
