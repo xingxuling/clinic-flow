@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { PageContainer } from "@/components/layout/StaffShell";
 import { EmptyState, MdButton, MdCard, MdChip, MdFilterChip, SectionHeader } from "@/components/m3";
+import { useServiceCustomers } from "@/customers/use-service-customers";
 import { getAgentPlan } from "@/data/agent-plans";
 import { executeAgentPlan } from "@/lib/agent-executor";
 import {
@@ -14,14 +15,16 @@ import {
 import { AGENT_STATUS, RISK, fmtDateTime } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
 import type { AgentTaskStatus } from "@/types/domain";
+import { safetyBoundaryText } from "@/verticals/presentation";
+import { useTenantVertical } from "@/verticals/use-tenant-vertical";
 
 export const Route = createFileRoute("/staff/_app/agent")({
   head: () => ({
     meta: [
-      { title: "Agent 任務台｜診所行政 Agent" },
+      { title: "Agent 任務台｜Service Frontdesk" },
       {
         name: "description",
-        content: "查看 Agent 準備做什麼、依據什麼、會修改什麼；中高風險動作必須人工批准。",
+        content: "查看 Agent 準備做什麼、依據什麼、會修改什麼；高風險或受限專業事項必須人工處理。",
       },
     ],
   }),
@@ -40,7 +43,6 @@ function AgentPage() {
   const app = useApp();
   const {
     agentTasks,
-    patientName,
     decideAgentTask,
     retryAgentTask,
     staffName,
@@ -63,9 +65,13 @@ function AgentPage() {
     escalateUrgentFlag,
     updateReminderStatus,
   } = app;
+  const vertical = useTenantVertical(clinic);
+  const { customers } = useServiceCustomers({ clinic, vertical, legacyPatients: patients });
   const [filter, setFilter] = useState<AgentTaskStatus | "all">("all");
 
-  const list = agentTasks.filter((t) => filter === "all" || t.status === filter);
+  const list = agentTasks.filter((task) => filter === "all" || task.status === filter);
+  const customerName = (id: string) =>
+    customers.find((customer) => customer.id === id)?.displayName ?? `客戶 ${id}`;
 
   function approveAndExecute(taskId: string) {
     const task = agentTasks.find((row) => row.id === taskId);
@@ -73,8 +79,8 @@ function AgentPage() {
 
     const plan = getAgentPlan(taskId);
     if (!plan) {
-      toast.error("未执行", {
-        description: "此任务尚未配置机器可执行计划；系统不会把纯文字说明当成执行指令。",
+      toast.error("未執行", {
+        description: "此任務尚未配置機器可執行計劃；系統不會把純文字說明當成執行指令。",
       });
       return;
     }
@@ -83,7 +89,7 @@ function AgentPage() {
       (permission) => !can(permission),
     );
     if (missingPermissions.length > 0) {
-      toast.error("权限不足，未执行", {
+      toast.error("權限不足，未執行", {
         description: `缺少：${missingPermissions.join("、")}`,
       });
       return;
@@ -122,29 +128,55 @@ function AgentPage() {
     });
 
     if (!receipt.ok) {
-      toast.error("Agent 未执行", {
-        description: receipt.errors[0] ?? "执行前验证失败。",
+      toast.error("Agent 未執行", {
+        description: receipt.errors[0] ?? "執行前驗證失敗。",
       });
       return;
     }
 
-    // 先完成真实副作用，再把现有任务状态机推进至 done。
-    // 真正接数据库后，这两步会合并到同一个服务器事务。
     decideAgentTask(taskId, true);
-    toast.success("行政动作已执行", {
-      description: `完成 ${receipt.operationCount} 个受控动作。`,
+    toast.success("受控動作已執行", {
+      description: `完成 ${receipt.operationCount} 個受控動作。`,
     });
   }
 
   return (
     <PageContainer
       title="Agent 任務台"
-      subtitle="每項任務都會顯示準備做什麼、依據什麼、會修改什麼。中高風險動作一律等待人工批准。"
+      subtitle={`${vertical.displayName} · Agent 只執行可驗證的服務前台動作；受限專業問題與高風險動作轉人工。`}
     >
+      <div className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <MdCard className="p-4">
+          <p className="md-label-l text-on-surface-variant">目前行業</p>
+          <p className="mt-2 md-title-m text-on-surface">{vertical.displayName}</p>
+          <p className="mt-1 md-body-s text-on-surface-variant">{vertical.labels.customer} · {vertical.labels.booking}</p>
+        </MdCard>
+        <MdCard className="p-4">
+          <p className="md-label-l text-on-surface-variant">可受控處理</p>
+          <p className="mt-2 md-title-m text-on-surface">FAQ + {vertical.labels.booking}</p>
+          <p className="mt-1 md-body-s text-on-surface-variant">查詢、確認、改期、取消、提醒與人工轉交</p>
+        </MdCard>
+        <MdCard className="p-4">
+          <p className="md-label-l text-on-surface-variant">受限問題規則</p>
+          <p className="mt-2 text-2xl font-semibold text-on-surface">{vertical.restrictedQuestionPatterns.length}</p>
+          <p className="mt-1 md-body-s text-on-surface-variant">命中後不允許自由回答</p>
+        </MdCard>
+        <MdCard className="p-4">
+          <p className="md-label-l text-on-surface-variant">人工批准門檻</p>
+          <p className="mt-2 md-title-m text-on-surface">{vertical.defaultHumanApprovalLeadHours} 小時</p>
+          <p className="mt-1 md-body-s text-on-surface-variant">接近服務時間的敏感改動優先轉人工</p>
+        </MdCard>
+      </div>
+
+      <MdCard className="mb-5 border border-outline-variant bg-surface-container p-4">
+        <p className="md-label-l text-on-surface">行業安全邊界</p>
+        <p className="mt-1 md-body-s text-on-surface-variant">{safetyBoundaryText(vertical)}</p>
+      </MdCard>
+
       <div className="mb-4 flex flex-wrap gap-2">
-        {FILTERS.map((f) => (
-          <MdFilterChip key={f.value} selected={filter === f.value} onClick={() => setFilter(f.value)}>
-            {f.label}
+        {FILTERS.map((item) => (
+          <MdFilterChip key={item.value} selected={filter === item.value} onClick={() => setFilter(item.value)}>
+            {item.label}
           </MdFilterChip>
         ))}
       </div>
@@ -154,21 +186,21 @@ function AgentPage() {
         <EmptyState text="沒有符合條件的任務。" />
       ) : (
         <div className="grid gap-3 xl:grid-cols-2">
-          {list.map((t) => {
-            const status = AGENT_STATUS[t.status];
-            const risk = RISK[t.risk];
-            const plan = getAgentPlan(t.id);
+          {list.map((task) => {
+            const status = AGENT_STATUS[task.status];
+            const risk = RISK[task.risk];
+            const plan = getAgentPlan(task.id);
             return (
-              <MdCard key={t.id} className="p-5">
+              <MdCard key={task.id} className="p-5">
                 <div className="flex flex-wrap items-start gap-2">
                   <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-container text-on-primary-container">
                     <Bot className="size-5" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="md-title-m text-on-surface">{t.title}</p>
+                    <p className="md-title-m text-on-surface">{task.title}</p>
                     <p className="md-body-s text-on-surface-variant">
-                      建立於 {fmtDateTime(t.createdAt)}
-                      {t.relatedPatientId && `・${patientName(t.relatedPatientId)}`}
+                      建立於 {fmtDateTime(task.createdAt)}
+                      {task.relatedPatientId && ` · ${customerName(task.relatedPatientId)}`}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
@@ -182,7 +214,7 @@ function AgentPage() {
                     <Target className="mt-0.5 size-4 shrink-0 text-on-surface-variant" />
                     <div>
                       <dt className="md-label-m text-on-surface-variant">準備做什麼</dt>
-                      <dd className="md-body-m text-on-surface">{t.intent}</dd>
+                      <dd className="md-body-m text-on-surface">{task.intent}</dd>
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -191,9 +223,7 @@ function AgentPage() {
                       <dt className="md-label-m text-on-surface-variant">依據什麼</dt>
                       <dd className="md-body-m text-on-surface">
                         <ul className="list-disc pl-4">
-                          {t.basis.map((b) => (
-                            <li key={b}>{b}</li>
-                          ))}
+                          {task.basis.map((basis) => <li key={basis}>{basis}</li>)}
                         </ul>
                       </dd>
                     </div>
@@ -204,9 +234,7 @@ function AgentPage() {
                       <dt className="md-label-m text-on-surface-variant">會修改什麼</dt>
                       <dd className="md-body-m text-on-surface">
                         <ul className="list-disc pl-4">
-                          {t.effects.map((b) => (
-                            <li key={b}>{b}</li>
-                          ))}
+                          {task.effects.map((effect) => <li key={effect}>{effect}</li>)}
                         </ul>
                       </dd>
                     </div>
@@ -216,49 +244,41 @@ function AgentPage() {
                 <div className="mt-3 rounded-2xl bg-surface-container p-3 md-body-s text-on-surface-variant">
                   {plan ? (
                     <>
-                      <strong className="text-on-surface">可执行计划：</strong>
-                      {plan.operations.length} 个受控动作；批准前会先完整验证，任何一项不合法则整单不执行。
+                      <strong className="text-on-surface">可執行計劃：</strong>
+                      {plan.operations.length} 個受控動作；批准前先完整驗證，任何一項不合法則整單不執行。
                     </>
                   ) : (
                     <>
-                      <strong className="text-on-surface">仅文字任务：</strong>
-                      尚无机器可执行计划，批准动作会被安全阻止。
+                      <strong className="text-on-surface">僅文字任務：</strong>
+                      尚無機器可執行計劃，批准動作會被安全阻止。
                     </>
                   )}
                 </div>
 
-                {t.failureReason && (
+                {task.failureReason && (
                   <p className="mt-3 flex items-start gap-2 rounded-lg bg-error-container p-3 md-body-s text-on-error-container">
                     <ShieldAlert className="mt-0.5 size-4 shrink-0" />
-                    失敗原因：{t.failureReason}
+                    失敗原因：{task.failureReason}
                   </p>
                 )}
 
-                {t.decidedAt && (
+                {task.decidedAt && (
                   <p className="mt-3 md-body-s text-on-surface-variant">
-                    由 {t.decidedBy ? staffName(t.decidedBy) : "系統"} 於 {fmtDateTime(t.decidedAt)} 處理
+                    由 {task.decidedBy ? staffName(task.decidedBy) : "系統"} 於 {fmtDateTime(task.decidedAt)} 處理
                   </p>
                 )}
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {t.status === "waiting_approval" && (
+                  {task.status === "waiting_approval" && (
                     <>
-                      <MdButton size="sm" onClick={() => approveAndExecute(t.id)} disabled={!plan}>
-                        批准並執行
-                      </MdButton>
-                      <MdButton size="sm" variant="outlined" onClick={() => decideAgentTask(t.id, false)}>
-                        否決
-                      </MdButton>
+                      <MdButton size="sm" onClick={() => approveAndExecute(task.id)} disabled={!plan}>批准並執行</MdButton>
+                      <MdButton size="sm" variant="outlined" onClick={() => decideAgentTask(task.id, false)}>否決</MdButton>
                     </>
                   )}
-                  {t.status === "failed" && (
-                    <MdButton size="sm" variant="tonal" onClick={() => retryAgentTask(t.id)}>
-                      轉為待批重試
-                    </MdButton>
+                  {task.status === "failed" && (
+                    <MdButton size="sm" variant="tonal" onClick={() => retryAgentTask(task.id)}>轉為待批重試</MdButton>
                   )}
-                  {t.status === "auto_running" && (
-                    <MdChip tone="primary">僅低風險任務可按規則自動執行</MdChip>
-                  )}
+                  {task.status === "auto_running" && <MdChip tone="primary">僅低風險任務可按規則自動執行</MdChip>}
                 </div>
               </MdCard>
             );
