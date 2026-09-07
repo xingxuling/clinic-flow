@@ -100,15 +100,18 @@ export function createBookingReminderWorkItem(input: {
       `${input.vertical.labels.booking}：${input.candidate.bookingId}`,
       `提醒提前量：${input.candidate.leadHours} 小時`,
       `預計發送時間：${input.candidate.dueAt}`,
+      "WhatsApp 預約／服務提醒預設按 utility 類別處理。",
     ],
     effects: [
       "建立 1 則待批准提醒訊息",
       "訊息包含確認／改期／取消按鈕",
-      "批准後仍需 Messaging Adapter 真實發送才算完成",
+      "批准後仍須通過 WhatsApp opt-in / 24h / template policy gate",
+      "Messaging Adapter 真實成功前不標記已送出",
     ],
     risk: "low",
     proposedMessage: input.candidate.reminder.text,
     proposedReplyOptions: input.candidate.reminder.replyOptions.map((option) => ({ ...option })),
+    messagePurpose: "utility",
     sourceRef: input.candidate.sourceRef,
   });
 }
