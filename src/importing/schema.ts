@@ -15,6 +15,7 @@ export function createVerticalImportSchema(pack: ServiceVerticalPack): VerticalI
     verticalId: pack.id,
     customerLabel: pack.labels.customer,
     subjectLabel: pack.labels.subject,
+    subjectKind: pack.subjectKind,
     fields: [
       {
         key: "customer.name",
