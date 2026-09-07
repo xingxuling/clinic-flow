@@ -26,7 +26,7 @@ import { useTenantVertical } from "@/verticals/use-tenant-vertical";
 export const Route = createFileRoute("/staff/_app/appointments")({
   head: () => ({
     meta: [
-      { title: "排程中心｜Service Frontdesk" },
+      { title: "排程｜Service Frontdesk" },
       { name: "description", content: "通用服務業排程：新建、確認、改期、取消與空檔查找。" },
     ],
   }),
@@ -117,8 +117,8 @@ function AppointmentsPage() {
 
   return (
     <PageContainer
-      title={`${vertical.labels.booking}中心`}
-      subtitle={`${vertical.displayName} · ${vertical.labels.customer} → 服務 → ${vertical.labels.resource}`}
+      title="排程"
+      subtitle={`${vertical.displayName} · ${vertical.labels.booking} · ${vertical.labels.customer} · ${vertical.labels.resource}`}
       actions={
         <div className="flex flex-wrap items-center gap-2">
           <MdSegmented
@@ -133,7 +133,7 @@ function AppointmentsPage() {
             ]}
           />
           <MdButton variant="outlined" size="sm" icon={<Search className="size-4" />} onClick={() => setSlotsOpen(true)}>
-            空檔查找
+            查找空檔
           </MdButton>
           <div className="flex items-center gap-1">
             <MdButton variant="text" size="sm" onClick={() => setOffset(offset - 1)} icon={<ChevronLeft className="size-4" />}>
@@ -155,7 +155,7 @@ function AppointmentsPage() {
         <MdChip tone="secondary">{vertical.labels.subject}</MdChip>
         <MdChip tone="primary">{vertical.labels.booking}</MdChip>
         <MdChip tone="neutral">{vertical.labels.resource}</MdChip>
-        <MdChip tone="tertiary">{vertical.id === "dental" ? "Dental 相容排程" : "持久化 Service Booking"}</MdChip>
+        <MdChip tone="tertiary">{vertical.shortName}</MdChip>
       </div>
 
       <div className={view === "week" ? "grid gap-3 md:grid-cols-7" : "space-y-3"}>
@@ -165,7 +165,7 @@ function AppointmentsPage() {
             <div key={day.toISOString()}>
               <SectionHeader title={`${fmtDate(day.toISOString())} ${fmtWeekday(day.toISOString())}`} count={list.length} />
               {list.length === 0 ? (
-                <EmptyState text={`沒有${vertical.labels.booking}`} />
+                <EmptyState text={`目前沒有${vertical.labels.booking}。`} />
               ) : (
                 <div className="space-y-2">
                   {list.map((booking) => {
@@ -184,7 +184,7 @@ function AppointmentsPage() {
                             </p>
                             {booking.note && <p className="mt-1 md-body-s text-on-surface-variant">備註：{booking.note}</p>}
                             <p className="mt-1 md-body-s text-on-surface-variant">
-                              來源：{booking.source === "legacy_appointment_compat" ? "Dental 相容資料" : "Service Booking Core"}
+                              資料來源：{booking.source === "legacy_appointment_compat" ? "既有牙科資料" : "新排程"}
                             </p>
                           </div>
                           <MdChip tone={status.tone}>{status.label}</MdChip>
