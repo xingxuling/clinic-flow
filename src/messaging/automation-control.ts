@@ -148,6 +148,11 @@ export class BrowserMessagingAutomationControlRepository {
     });
   }
 
+  /**
+   * Records WhatsApp communication consent only.
+   * It deliberately does NOT change automationMode: recording opt-in must never
+   * resurrect Agent access after a customer has requested human-only handling.
+   */
   optInWhatsApp(input: {
     tenantId: string;
     verticalId: string;
@@ -162,7 +167,6 @@ export class BrowserMessagingAutomationControlRepository {
       whatsappConsent: "opted_in",
       whatsappConsentScopes: scopes,
       optInAt: at,
-      automationMode: "agent_allowed",
       ...(input.updatedBy ? { updatedBy: input.updatedBy } : {}),
       reason: "WHATSAPP_OPT_IN",
     });
