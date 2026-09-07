@@ -37,7 +37,8 @@ function requiresHuman(receipt: FrontdeskInboundReceipt): boolean {
  * - webhook/provider message id 先做幂等检查，避免重复调用 Agent / 重复发送；
  * - Frontdesk Core 仍只负责决策与通道动作；
  * - 只有真实发送成功的自动回复才写入 Conversation；
- * - 需要人工、发送失败或缺少匹配 Adapter 时统一进入 waiting_human。
+ * - 需要人工、发送失败或缺少匹配 Adapter 时统一进入 waiting_human；
+ * - 高优先安全信号保留客户原话、触发关键词和决策原因，刷新后仍可审计。
  */
 export class ServiceConversationIngestRuntime {
   constructor(
@@ -110,6 +111,21 @@ export class ServiceConversationIngestRuntime {
       state,
       unread: humanRequired,
     });
+
+    if (
+      frontdesk.decision.kind === "urgent_handoff" ||
+      frontdesk.decision.matchedUrgentKeywords.length > 0
+    ) {
+      conversation =
+        this.repository.update(input.tenant.id, conversation.id, {
+          safetySignal: {
+            quote: input.message.text,
+            matchedKeywords: [...frontdesk.decision.matchedUrgentKeywords],
+            reasons: [...frontdesk.decision.reasons],
+            raisedAt: input.message.receivedAt,
+          },
+        }) ?? conversation;
+    }
 
     const sent = frontdesk.autoReplyReceipt;
     if (
