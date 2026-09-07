@@ -15,7 +15,7 @@ import {
   UserCog,
 } from "lucide-react";
 
-import { STAFF_ROUTES, type CanonicalStaffRoute } from "@/routes/staff-route-contract";
+import { STAFF_ROUTES, type CanonicalStaffRoute } from "@/navigation/staff-routes";
 import type { ServiceVerticalPack } from "@/verticals/types";
 
 export interface NavItem {
