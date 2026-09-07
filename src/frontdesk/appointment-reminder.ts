@@ -1,6 +1,7 @@
-import { appointmentInteractionPayload } from "@/frontdesk/appointment-interaction";
+import { buildBookingReminder } from "@/frontdesk/booking-reminder";
 import type { MessagingAdapter, ChannelSendReceipt } from "@/integrations/messaging-adapter";
 import type { Appointment, Clinic, Patient, Staff } from "@/types/domain";
+import { dentalVerticalPack } from "@/verticals/dental";
 
 export interface AppointmentReminderView {
   text: string;
@@ -12,20 +13,8 @@ export interface AppointmentReminderView {
   }[];
 }
 
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat("zh-HK", {
-    timeZone: "Asia/Hong_Kong",
-    month: "long",
-    day: "numeric",
-    weekday: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date(value));
-}
-
 /**
- * 只生成预约行政资料，不放病历、诊断、治疗内容。
+ * 牙科兼容包装器。实际提醒文案与按钮由通用 buildBookingReminder 生成。
  */
 export function buildAppointmentReminder(input: {
   clinic: Clinic;
@@ -34,43 +23,20 @@ export function buildAppointmentReminder(input: {
   practitioner: Staff;
   serviceName: string;
 }): AppointmentReminderView {
-  const when = formatDateTime(input.appointment.startAt);
-  const text = [
-    `${input.patient.name}你好，提提你：`,
-    `${when} 有一個「${input.serviceName}」預約。`,
-    `負責：${input.practitioner.name}。`,
-    "你可以直接按下面按鈕確認、改期或取消。接近應診時間的改動可能需要診所職員確認。",
-  ].join("\n");
+  const reminder = buildBookingReminder({
+    vertical: dentalVerticalPack,
+    timezone: input.clinic.timezone,
+    customerName: input.patient.name,
+    bookingId: input.appointment.id,
+    startAt: input.appointment.startAt,
+    serviceName: input.serviceName,
+    resourceName: input.practitioner.name,
+  });
 
   return {
-    text,
-    appointmentId: input.appointment.id,
-    replyOptions: [
-      {
-        id: `confirm_${input.appointment.id}`,
-        label: "確認",
-        payload: appointmentInteractionPayload({
-          kind: "confirm",
-          appointmentId: input.appointment.id,
-        }),
-      },
-      {
-        id: `reschedule_${input.appointment.id}`,
-        label: "改期",
-        payload: appointmentInteractionPayload({
-          kind: "reschedule_request",
-          appointmentId: input.appointment.id,
-        }),
-      },
-      {
-        id: `cancel_${input.appointment.id}`,
-        label: "取消",
-        payload: appointmentInteractionPayload({
-          kind: "cancel",
-          appointmentId: input.appointment.id,
-        }),
-      },
-    ],
+    text: reminder.text,
+    appointmentId: reminder.bookingId,
+    replyOptions: reminder.replyOptions,
   };
 }
 
