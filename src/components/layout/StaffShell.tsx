@@ -16,18 +16,34 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { MdBadge, MdChip, MdIconButton } from "@/components/m3";
 import { staffNavItemsFor } from "@/components/layout/nav-items";
-import { ROLE_LABEL } from "@/lib/permissions";
+import { useServiceConversations } from "@/conversations/use-service-conversations";
+import { roleLabelFor } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/state/app-store";
+import { filterByVertical } from "@/verticals/entity-scope";
 import { useTenantVertical } from "@/verticals/use-tenant-vertical";
 import type { ServiceVerticalPack } from "@/verticals/types";
+import { useServiceWorkItems } from "@/work-items/use-service-work-items";
 
-function useBadges() {
-  const { conversations, agentTasks, documents } = useApp();
+function useBadges(vertical: ServiceVerticalPack) {
+  const { clinic, conversations, agentTasks, documents } = useApp();
+  const serviceConversations = useServiceConversations({
+    tenantId: clinic.id,
+    vertical,
+    legacyConversations: conversations,
+  }).conversations;
+  const workItems = useServiceWorkItems(clinic.id, vertical.id);
+  const legacyAgentTasks = filterByVertical(agentTasks, vertical.id);
+  const visibleDocuments = filterByVertical(documents, vertical.id);
+
   return {
-    inbox: conversations.filter((c) => c.unread).length,
-    agent: agentTasks.filter((t) => t.status === "waiting_approval").length,
-    documents: documents.filter((d) => d.status === "anomaly" || d.status === "needs_fields").length,
+    inbox: serviceConversations.filter((conversation) => conversation.unread).length,
+    agent:
+      workItems.filter((item) => item.status === "waiting_approval").length +
+      legacyAgentTasks.filter((task) => task.status === "waiting_approval").length,
+    documents: visibleDocuments.filter(
+      (document) => document.status === "anomaly" || document.status === "needs_fields",
+    ).length,
   };
 }
 
@@ -67,17 +83,16 @@ function VerticalMark({ vertical }: { vertical: ServiceVerticalPack }) {
 export function StaffShell({ children }: { children: ReactNode }) {
   const { clinic, currentStaff, signOutStaff } = useApp();
   const vertical = useTenantVertical(clinic);
-  const badges = useBadges();
+  const badges = useBadges(vertical);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [dark, setDark] = useDarkMode();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   const navItems = useMemo(() => staffNavItemsFor(vertical), [vertical]);
   const bottomItems = navItems.filter((item) => item.inBottomBar);
 
   return (
     <div className="flex min-h-screen bg-surface text-on-surface">
-      {/* Navigation Rail（桌面） */}
       <nav className="sticky top-0 hidden h-screen w-24 shrink-0 flex-col items-center gap-1 overflow-y-auto bg-surface-container py-4 md:flex">
         <div
           className="mb-1 flex size-12 items-center justify-center rounded-2xl bg-primary-container text-on-primary-container"
@@ -122,7 +137,6 @@ export function StaffShell({ children }: { children: ReactNode }) {
       </nav>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Top app bar */}
         <header className="sticky top-0 z-30 flex min-h-16 items-center gap-2 border-b border-outline-variant bg-surface px-3 py-2 md:px-6">
           <MdIconButton className="md:hidden" onClick={() => setDrawerOpen(true)} aria-label="開啟選單">
             <Menu className="size-5" />
@@ -134,7 +148,7 @@ export function StaffShell({ children }: { children: ReactNode }) {
               <MdChip tone="neutral">AI 前台</MdChip>
             </div>
             <p className="mt-0.5 md-body-s truncate text-on-surface-variant">
-              {vertical.labels.venue} · {clinic.district} · {currentStaff.name}（{ROLE_LABEL[currentStaff.role]}）
+              {vertical.labels.venue} · {clinic.district} · {currentStaff.name}（{roleLabelFor(vertical, currentStaff.role)}）
             </p>
           </div>
           <MdIconButton onClick={() => setDark(!dark)} aria-label="切換深色模式">
@@ -148,7 +162,6 @@ export function StaffShell({ children }: { children: ReactNode }) {
         <main className="flex-1 pb-24 md:pb-8">{children}</main>
       </div>
 
-      {/* Bottom Navigation（手機） */}
       <nav className="fixed inset-x-0 bottom-0 z-30 flex h-20 items-stretch border-t border-outline-variant bg-surface-container px-1 md:hidden">
         {bottomItems.map((item) => {
           const active = pathname.startsWith(item.to);
@@ -178,7 +191,6 @@ export function StaffShell({ children }: { children: ReactNode }) {
         })}
       </nav>
 
-      {/* Modal Navigation Drawer（手機） */}
       {drawerOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-inverse-surface/40" onClick={() => setDrawerOpen(false)} />
