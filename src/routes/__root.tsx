@@ -13,8 +13,8 @@ import { Toaster } from "@/components/ui/sonner";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { canonicalStaffRoute } from "@/navigation/staff-routes";
 import { AppStoreProvider } from "@/state/app-store";
-import { canonicalStaffRoute } from "@/routes/staff-route-contract";
 
 function NotFoundComponent() {
   return (
