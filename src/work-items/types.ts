@@ -1,3 +1,4 @@
+import type { WhatsAppTemplateRef } from "@/integrations/messaging-adapter";
 import type { RiskLevel } from "@/types/domain";
 
 export type ServiceWorkItemKind =
@@ -12,6 +13,8 @@ export type ServiceWorkItemStatus =
   | "ready_to_send"
   | "done"
   | "rejected";
+
+export type ServiceMessagePurpose = "utility" | "marketing";
 
 export interface ServiceWorkItemReplyOption {
   id: string;
@@ -40,6 +43,8 @@ export interface ServiceWorkItem {
   status: ServiceWorkItemStatus;
   proposedMessage?: string;
   proposedReplyOptions?: ServiceWorkItemReplyOption[];
+  messagePurpose?: ServiceMessagePurpose;
+  whatsappTemplate?: WhatsAppTemplateRef;
   sourceRef?: string;
   dispatchReceipt?: ServiceWorkItemDispatchReceipt;
   createdAt: string;
@@ -61,5 +66,7 @@ export interface NewServiceWorkItemInput {
   risk: RiskLevel;
   proposedMessage?: string;
   proposedReplyOptions?: ServiceWorkItemReplyOption[];
+  messagePurpose?: ServiceMessagePurpose;
+  whatsappTemplate?: WhatsAppTemplateRef;
   sourceRef?: string;
 }
