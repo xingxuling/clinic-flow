@@ -1,8 +1,9 @@
+import type { ServiceConversation } from "@/conversations/types";
 import {
   planServiceFrontdeskMessage,
   type FrontdeskDecision,
 } from "@/frontdesk/frontdesk-agent";
-import type { Clinic, Conversation, Message } from "@/types/domain";
+import type { Clinic, Conversation } from "@/types/domain";
 import { resolveVerticalPackForClinic } from "@/verticals/registry";
 import type { ServiceVerticalPack } from "@/verticals/types";
 
@@ -13,26 +14,28 @@ export interface AdministrativeConversationSummary {
   decision: FrontdeskDecision;
 }
 
-function latestCustomerMessage(messages: readonly Message[]): Message | null {
-  // 现有数据库字段仍叫 patient；通用核心把它视为 customer。
+interface SummarizableMessage {
+  from: "customer" | "patient" | "staff" | "agent";
+  text: string;
+}
+
+function latestCustomerMessage(messages: readonly SummarizableMessage[]): SummarizableMessage | null {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index];
-    if (message?.from === "patient") return message;
+    if (message?.from === "customer" || message?.from === "patient") return message;
   }
   return null;
 }
 
-/**
- * 前台摘要只总结行政/服务意图与下一步，不生成未授权专业判断。
- * `vertical` 可由租户当前 Vertical Context 显式注入；未提供时兼容旧 Clinic.kind 解析。
- */
-export function summarizeConversationForFrontdesk(input: {
-  clinic: Clinic;
-  conversation: Conversation;
-  vertical?: ServiceVerticalPack;
+function summarize(input: {
+  tenantId: string;
+  customerId: string;
+  channel: ServiceConversation["channel"];
+  messages: readonly SummarizableMessage[];
+  vertical: ServiceVerticalPack;
 }): AdministrativeConversationSummary {
-  const vertical = input.vertical ?? resolveVerticalPackForClinic(input.clinic);
-  const customerMessage = latestCustomerMessage(input.conversation.messages);
+  const customerMessage = latestCustomerMessage(input.messages);
+  const vertical = input.vertical;
 
   if (!customerMessage) {
     return {
@@ -55,9 +58,9 @@ export function summarizeConversationForFrontdesk(input: {
   }
 
   const decision = planServiceFrontdeskMessage({
-    tenantId: input.clinic.id,
-    customerId: input.conversation.patientId,
-    channel: input.conversation.channel,
+    tenantId: input.tenantId,
+    customerId: input.customerId,
+    channel: input.channel,
     text: customerMessage.text,
     vertical,
   });
@@ -104,4 +107,38 @@ export function summarizeConversationForFrontdesk(input: {
     nextAction: "人工接管，必要時補充成新的商戶授權 FAQ。",
     decision,
   };
+}
+
+/** 通用 Service Conversation 原生摘要入口。 */
+export function summarizeServiceConversationForFrontdesk(input: {
+  tenantId: string;
+  conversation: ServiceConversation;
+  vertical: ServiceVerticalPack;
+}): AdministrativeConversationSummary {
+  return summarize({
+    tenantId: input.tenantId,
+    customerId: input.conversation.customerId,
+    channel: input.conversation.channel,
+    messages: input.conversation.messages,
+    vertical: input.vertical,
+  });
+}
+
+/**
+ * Dental / Clinic 旧数据兼容入口。
+ * 新行业优先使用 summarizeServiceConversationForFrontdesk。
+ */
+export function summarizeConversationForFrontdesk(input: {
+  clinic: Clinic;
+  conversation: Conversation;
+  vertical?: ServiceVerticalPack;
+}): AdministrativeConversationSummary {
+  const vertical = input.vertical ?? resolveVerticalPackForClinic(input.clinic);
+  return summarize({
+    tenantId: input.clinic.id,
+    customerId: input.conversation.patientId,
+    channel: input.conversation.channel,
+    messages: input.conversation.messages,
+    vertical,
+  });
 }
