@@ -4,6 +4,8 @@ export interface IncomingChannelMessage {
   providerMessageId: string;
   clinicId: ID;
   patientId: ID;
+  /** E.164 or provider-normalized sender phone when available. */
+  senderPhone?: string;
   channel: ChannelKind;
   text: string;
   receivedAt: string;
@@ -21,11 +23,18 @@ export interface WhatsAppTemplateRef {
   name: string;
   languageCode: string;
   category: WhatsAppTemplateCategory;
+  /** Positional body parameters for an approved Meta template. */
+  bodyParameters?: string[];
 }
 
 export interface OutgoingChannelMessage {
   clinicId: ID;
   patientId: ID;
+  /**
+   * Production WhatsApp providers require a real recipient number. Internal
+   * customer/patient IDs are never treated as phone numbers.
+   */
+  recipientPhone?: string;
   channel: ChannelKind;
   text: string;
   replyOptions: InteractiveReplyOption[];
@@ -69,6 +78,13 @@ export interface WhatsAppBusinessPlatformAdapter extends MessagingAdapter {
   readonly productionEligible: true;
 }
 
+function cloneTemplate(template: WhatsAppTemplateRef): WhatsAppTemplateRef {
+  return {
+    ...template,
+    ...(template.bodyParameters ? { bodyParameters: [...template.bodyParameters] } : {}),
+  };
+}
+
 /**
  * Demo-only WhatsApp adapter.
  *
@@ -108,7 +124,7 @@ export class MockWhatsAppAdapter implements MessagingAdapter {
     this.sent.push({
       ...message,
       replyOptions: message.replyOptions.map((option) => ({ ...option })),
-      ...(message.whatsappTemplate ? { whatsappTemplate: { ...message.whatsappTemplate } } : {}),
+      ...(message.whatsappTemplate ? { whatsappTemplate: cloneTemplate(message.whatsappTemplate) } : {}),
     });
     const sentAt = new Date().toISOString();
     return {
@@ -124,7 +140,7 @@ export class MockWhatsAppAdapter implements MessagingAdapter {
     return this.sent.map((message) => ({
       ...message,
       replyOptions: message.replyOptions.map((option) => ({ ...option })),
-      ...(message.whatsappTemplate ? { whatsappTemplate: { ...message.whatsappTemplate } } : {}),
+      ...(message.whatsappTemplate ? { whatsappTemplate: cloneTemplate(message.whatsappTemplate) } : {}),
     }));
   }
 }
