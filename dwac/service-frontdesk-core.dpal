@@ -1,0 +1,65 @@
+artifact service_frontdesk_core kind=taowind.software/web-application {
+  goal "把 Clinic Flow 抽象为通用服务业 AI 前台核心，并将牙科变成第一个 vertical pack；后续可复制到宠物美容/寄养、美容、汽车维修、清洁/家居服务、水电"
+  success "核心客户沟通、预约、提醒、改期取消、日历同步、摘要和人工接管不依赖牙科概念"
+  success "新增行业只需行业包，不复制核心代码"
+  constraint "Clinic Flow 继续作为 dental vertical 可运行实例，不破坏现有演示"
+  constraint "行业包不得提升 Agent 到医疗诊断、治疗建议或其他受限专业判断"
+  invariant "所有租户数据继续按 tenant/clinic scope 隔离"
+  invariant "core 不硬编码牙科服务、牙科召回或牙科紧急词"
+  owner "service-frontdesk-core"
+
+  unit core_domain output=taowind/schema {
+    title "通用服务业领域模型"
+    goal "定义 Customer/Subject/Service/Resource/Booking/Conversation/FollowUp 的通用语义"
+    accept "vertical_neutral,tenant_scoped"
+  }
+
+  unit vertical_contract output=taowind/api_contract {
+    title "行业包契约"
+    goal "行业包提供名称、对象类型、服务、FAQ、风险升级规则、召回规则、适配目标"
+    depends "core_domain"
+    accept "plugin_style,no_core_fork"
+  }
+
+  unit dental_pack output=taowind/configuration {
+    title "牙科行业包"
+    goal "把现有牙科 FAQ、服务、紧急词、洗牙召回、CMS 适配目标迁入行业包"
+    depends "vertical_contract"
+    accept "behavior_preserved"
+  }
+
+  unit pet_pack output=taowind/configuration {
+    title "宠物美容/寄养行业包候选"
+    goal "证明新行业可只通过配置包接入，不改核心"
+    depends "vertical_contract"
+    accept "no_core_code_change,candidate_only"
+  }
+
+  unit home_service_pack output=taowind/configuration {
+    title "家居服务行业包候选"
+    goal "覆盖上门地址、时段、服务人员等字段，为 field-service 类行业验证扩展性"
+    depends "vertical_contract"
+    accept "field_service_shape,candidate_only"
+  }
+
+  unit core_frontdesk output=taowind/workflow {
+    title "通用 AI 前台编排"
+    goal "FAQ/预约/风险升级/人工接管只读取 vertical contract，不读取牙科常量"
+    depends "vertical_contract,core_domain"
+    accept "vertical_driven,fail_closed"
+  }
+
+  unit ui_branding output=taowind/ui {
+    title "行业驱动 UI 文案"
+    goal "页面标题、客户/病人称谓、服务对象称谓由行业包驱动；Material Design 3 保持"
+    depends "vertical_contract,core_frontdesk"
+    accept "material_design_3,vertical_labels"
+  }
+
+  unit tests output=taowind/test {
+    title "行业抽象定向测试"
+    goal "只验证牙科行为保持，以及宠物/家居包可在不改 core 的情况下加载"
+    depends "dental_pack,pet_pack,home_service_pack,core_frontdesk"
+    accept "targeted_only"
+  }
+}
