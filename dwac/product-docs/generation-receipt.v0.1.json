@@ -1,0 +1,32 @@
+{
+  "dwac_root": "/mnt/data/dwac_latest/DWAC-main",
+  "prd_dpal_compiled": true,
+  "intro_dpal_compiled": true,
+  "requirements_count": 15,
+  "requirements_sha256": "e5f310d4cc43c2c5faaa46078623a287e42d9287c0c656e53bae5ab130d88a94",
+  "prd_structure_accepted": true,
+  "intro_structure_accepted": true,
+  "markdown_provider": "documentation.markdown.v1",
+  "candidate_only": true,
+  "canonical_promotion_performed": false,
+  "editor_outputs": {
+    "SERVICE_FRONTDESK_PRD_v0.1.md": {
+      "sha256": "9ed2b3174b18a741d906f92663b420f2b0279ca4b7b5d8a97a571aadd868d8b7",
+      "bytes": 20268
+    },
+    "SERVICE_FRONTDESK_PRODUCT_OVERVIEW_v0.1.md": {
+      "sha256": "356099d28e8e0eae54f1a4b835752bd19116b660b2aa7c0b3b4c3d2aa638ec96",
+      "bytes": 6033
+    }
+  },
+  "editor_pass": "assistant_product_edit_v1",
+  "editor_changes": [
+    "candidate requirement-ledger expansion rewritten into cohesive PRD",
+    "smart photo migration promoted to Phase 1 onboarding feature",
+    "public OCR/VLM provider-first strategy made explicit",
+    "general service-industry Core + Vertical Pack terminology normalized",
+    "pilot metrics, non-goals, risk and acceptance gates added",
+    "PRD-012 acceptance tuple corrected before ledger commit"
+  ],
+  "final_documents_status": "EDITOR_REVISED_CANDIDATE"
+}
