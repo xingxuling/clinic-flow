@@ -14,6 +14,13 @@ export interface ServiceConversationMessage {
   draft?: boolean;
 }
 
+export interface ServiceConversationSafetySignal {
+  quote: string;
+  matchedKeywords: string[];
+  reasons: string[];
+  raisedAt: string;
+}
+
 export interface ServiceConversation {
   id: string;
   tenantId: string;
@@ -26,6 +33,8 @@ export interface ServiceConversation {
   lastAt: string;
   messages: ServiceConversationMessage[];
   assignedTo?: string;
+  safetySignal?: ServiceConversationSafetySignal;
+  legacyUrgentFlagId?: string;
   source: "legacy_conversation_compat" | "messaging_adapter" | "manual";
 }
 
@@ -49,6 +58,7 @@ export function conversationToServiceConversation(conversation: Conversation): S
       ...(message.draft === undefined ? {} : { draft: message.draft }),
     })),
     ...(conversation.assignedTo ? { assignedTo: conversation.assignedTo } : {}),
+    ...(conversation.urgentFlagId ? { legacyUrgentFlagId: conversation.urgentFlagId } : {}),
     source: "legacy_conversation_compat",
   };
 }
