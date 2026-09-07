@@ -15,6 +15,14 @@ export interface InteractiveReplyOption {
   payload: string;
 }
 
+export type WhatsAppTemplateCategory = "utility" | "marketing" | "authentication";
+
+export interface WhatsAppTemplateRef {
+  name: string;
+  languageCode: string;
+  category: WhatsAppTemplateCategory;
+}
+
 export interface OutgoingChannelMessage {
   clinicId: ID;
   patientId: ID;
@@ -22,6 +30,11 @@ export interface OutgoingChannelMessage {
   text: string;
   replyOptions: InteractiveReplyOption[];
   correlationId: string;
+  /**
+   * Outside the WhatsApp 24-hour customer service window, production sends must
+   * use an approved template. The policy gate validates this before dispatch.
+   */
+  whatsappTemplate?: WhatsAppTemplateRef;
 }
 
 export interface ChannelSendReceipt {
@@ -32,22 +45,43 @@ export interface ChannelSendReceipt {
   sentAt: string;
 }
 
+export type MessagingProviderKind =
+  | "demo"
+  | "whatsapp_business_platform"
+  | "other_production";
+
 export interface MessagingAdapter {
   readonly providerId: string;
   readonly displayName: string;
   readonly channel: ChannelKind;
+  readonly providerKind: MessagingProviderKind;
+  /**
+   * `true` means this adapter is an approved production integration path.
+   * A normal WhatsApp consumer/business app automation must never set this flag.
+   */
+  readonly productionEligible: boolean;
   send(message: OutgoingChannelMessage): Promise<ChannelSendReceipt>;
 }
 
+export interface WhatsAppBusinessPlatformAdapter extends MessagingAdapter {
+  readonly channel: "whatsapp";
+  readonly providerKind: "whatsapp_business_platform";
+  readonly productionEligible: true;
+}
+
 /**
- * 第一阶段的 WhatsApp 模拟适配器。
- * 正式接 Meta WhatsApp Business / BSP（业务解决方案供应商）时，
- * 只替换这个接口的实现，不改 FAQ、预约与 Agent 编排。
+ * Demo-only WhatsApp adapter.
+ *
+ * Production must use the official WhatsApp Business Platform / Cloud API (or an
+ * authorized BSP built on the Platform). This adapter intentionally cannot be
+ * marked production eligible.
  */
 export class MockWhatsAppAdapter implements MessagingAdapter {
-  readonly providerId = "clinic-flow.whatsapp.mock";
-  readonly displayName = "WhatsApp 演示通道";
+  readonly providerId = "service-frontdesk.whatsapp.mock";
+  readonly displayName = "WhatsApp 模擬通道";
   readonly channel: ChannelKind = "whatsapp";
+  readonly providerKind: MessagingProviderKind = "demo";
+  readonly productionEligible = false;
 
   private readonly sent: OutgoingChannelMessage[] = [];
 
@@ -74,6 +108,7 @@ export class MockWhatsAppAdapter implements MessagingAdapter {
     this.sent.push({
       ...message,
       replyOptions: message.replyOptions.map((option) => ({ ...option })),
+      ...(message.whatsappTemplate ? { whatsappTemplate: { ...message.whatsappTemplate } } : {}),
     });
     const sentAt = new Date().toISOString();
     return {
@@ -89,6 +124,7 @@ export class MockWhatsAppAdapter implements MessagingAdapter {
     return this.sent.map((message) => ({
       ...message,
       replyOptions: message.replyOptions.map((option) => ({ ...option })),
+      ...(message.whatsappTemplate ? { whatsappTemplate: { ...message.whatsappTemplate } } : {}),
     }));
   }
 }
