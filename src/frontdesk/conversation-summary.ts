@@ -4,6 +4,7 @@ import {
 } from "@/frontdesk/frontdesk-agent";
 import type { Clinic, Conversation, Message } from "@/types/domain";
 import { resolveVerticalPackForClinic } from "@/verticals/registry";
+import type { ServiceVerticalPack } from "@/verticals/types";
 
 export interface AdministrativeConversationSummary {
   title: string;
@@ -23,12 +24,14 @@ function latestCustomerMessage(messages: readonly Message[]): Message | null {
 
 /**
  * 前台摘要只总结行政/服务意图与下一步，不生成未授权专业判断。
+ * `vertical` 可由租户当前 Vertical Context 显式注入；未提供时兼容旧 Clinic.kind 解析。
  */
 export function summarizeConversationForFrontdesk(input: {
   clinic: Clinic;
   conversation: Conversation;
+  vertical?: ServiceVerticalPack;
 }): AdministrativeConversationSummary {
-  const vertical = resolveVerticalPackForClinic(input.clinic);
+  const vertical = input.vertical ?? resolveVerticalPackForClinic(input.clinic);
   const customerMessage = latestCustomerMessage(input.conversation.messages);
 
   if (!customerMessage) {
@@ -73,7 +76,7 @@ export function summarizeConversationForFrontdesk(input: {
       confirm: `核對現有${vertical.labels.booking}後確認。`,
       reschedule: `核對現有${vertical.labels.booking}並查詢可用時段。`,
       cancel: `核對要取消的${vertical.labels.booking}；按商戶規則決定是否需要人工批准。`,
-      book: "詢問偏好日期／時段並查詢空檔。",
+      book: `詢問偏好日期／時段並查詢${vertical.labels.booking}空檔。`,
     } as const;
 
     return {
