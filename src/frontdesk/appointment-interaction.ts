@@ -1,3 +1,4 @@
+import { parseBookingInteractionPayload } from "@/frontdesk/booking-interaction";
 import type { ID } from "@/types/domain";
 
 export type AppointmentInteraction =
@@ -8,6 +9,10 @@ export type AppointmentInteraction =
 
 const ID_PATTERN = /^[A-Za-z0-9_.-]{1,128}$/;
 
+/**
+ * 牙科旧协议继续发出 `appointment:*`，避免破坏已存在的 Demo 链接。
+ * 新通用行业使用 `booking:*`。
+ */
 export function appointmentInteractionPayload(
   interaction: AppointmentInteraction,
 ): string {
@@ -30,33 +35,27 @@ export function appointmentInteractionPayload(
   return `appointment:slot:${interaction.appointmentId}:${epochMs}`;
 }
 
+/**
+ * 兼容解析器同时接受旧 `appointment:*` 与新 `booking:*` payload。
+ */
 export function parseAppointmentInteractionPayload(
   payload: string,
 ): AppointmentInteraction | null {
-  const parts = payload.split(":");
-  if (parts[0] !== "appointment") return null;
+  const parsed = parseBookingInteractionPayload(payload);
+  if (!parsed) return null;
 
-  const action = parts[1];
-  const appointmentId = parts[2];
-  if (!appointmentId || !ID_PATTERN.test(appointmentId)) return null;
-
-  if (action === "confirm" && parts.length === 3) {
-    return { kind: "confirm", appointmentId };
+  if (parsed.kind === "confirm") {
+    return { kind: "confirm", appointmentId: parsed.bookingId };
   }
-  if (action === "cancel" && parts.length === 3) {
-    return { kind: "cancel", appointmentId };
+  if (parsed.kind === "cancel") {
+    return { kind: "cancel", appointmentId: parsed.bookingId };
   }
-  if (action === "reschedule" && parts.length === 3) {
-    return { kind: "reschedule_request", appointmentId };
+  if (parsed.kind === "reschedule_request") {
+    return { kind: "reschedule_request", appointmentId: parsed.bookingId };
   }
-  if (action === "slot" && parts.length === 4) {
-    const epochMs = Number(parts[3]);
-    if (!Number.isSafeInteger(epochMs) || epochMs <= 0) return null;
-    return {
-      kind: "reschedule_select",
-      appointmentId,
-      startAt: new Date(epochMs).toISOString(),
-    };
-  }
-  return null;
+  return {
+    kind: "reschedule_select",
+    appointmentId: parsed.bookingId,
+    startAt: parsed.startAt,
+  };
 }
