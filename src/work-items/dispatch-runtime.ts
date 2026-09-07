@@ -159,11 +159,21 @@ export class ServiceWorkItemDispatchRuntime {
     const sendReceipt = await input.adapter.send({
       clinicId: input.tenantId,
       patientId: input.customer.id,
+      recipientPhone: input.customer.phone,
       channel: input.customer.preferredChannel,
       text: item.proposedMessage,
       replyOptions: (item.proposedReplyOptions ?? []).map((option) => ({ ...option })),
       correlationId: item.id,
-      ...(item.whatsappTemplate ? { whatsappTemplate: { ...item.whatsappTemplate } } : {}),
+      ...(item.whatsappTemplate
+        ? {
+            whatsappTemplate: {
+              ...item.whatsappTemplate,
+              ...(item.whatsappTemplate.bodyParameters
+                ? { bodyParameters: [...item.whatsappTemplate.bodyParameters] }
+                : {}),
+            },
+          }
+        : {}),
     });
     if (!sendReceipt.ok) {
       return { ok: false, duplicate: false, workItem: item, sendReceipt, conversation: null, errorCode: sendReceipt.errorCode ?? "SEND_FAILED" };
