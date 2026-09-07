@@ -1,121 +1,360 @@
-# 診所行政 Agent（Clinic Admin Agent）
+# Service Frontdesk Core + Clinic Flow
 
-面向香港小型牙科診所、普通科診所與物理治療中心的**邀請制行政後台**。
-不是公開官網、沒有公開註冊；只有獲診所負責人邀請的團隊成員才能進入。
+**Service Frontdesk Core** 是一个面向服务行业的多租户 AI 前台核心：接在商户现有预约系统、CMS、CRM、日历或人工流程之前，负责客户沟通与重复前台工作，而不是要求商户更换整套后台系统。
 
-目前版本為**高完成度可點擊示範（Demo）**：全部資料為虛構，未連接任何真實醫療、
-保險、WhatsApp 或電話系統。
+**Clinic Flow** 是当前第一个可运行实例：`Dental Vertical Pack（牙科行业包）`。
 
----
+当前同时提供候选行业包，用于验证核心是否可以复制到其他服务行业：
 
-## 一、產品定位
+- 宠物美容／寄养
+- 清洁／家居／水电上门服务
+- 美容／护理
+- 汽车维修／保养
 
-系統只做一件事：**把診所前台與行政工作，變成可審計、可控制的工作流。**
-
-包含模組：
-
-| 模組 | 路徑 | 內容 |
-| --- | --- | --- |
-| 邀請登入 | `/` | 邀請密令、二維碼邀請（佔位）、Passkey／裝置綁定（佔位） |
-| 今日工作台 | `/app/today` | 今日預約、待確認、待回覆、緊急標記、待批 Agent 任務、文件異常 |
-| 對話中心 | `/app/inbox` | WhatsApp／電話／網頁統一收件匣、AI 建議草稿、人工接管 |
-| 預約中心 | `/app/appointments` | 日／週視圖、新建、確認、改期、取消、空檔查找 |
-| 提醒與召回 | `/app/reminders` | 就診前提醒、洗牙 6／12 個月、疫苗／覆診、未回覆跟進 |
-| Agent 任務台 | `/app/agent` | 準備做什麼／依據什麼／會修改什麼；高風險必須人工批准 |
-| 行政文件 | `/app/documents` | 保險表格、轉介信、收據、發票的分類、缺欄位、異常提示 |
-| 病人目錄 | `/app/patients` | 只顯示行政最低必要資料 |
-| 員工與權限 | `/app/staff` | 六種角色、權限矩陣、邀請與撤銷 |
-| 審計日誌 | `/app/audit` | 誰／哪個 Agent、何時、做了什麼、結果如何 |
-| 診所設定 | `/app/settings` | 營業時間、服務、提醒規則、緊急關鍵詞、渠道、隱私 |
-
-示範登入密令：`CINGHE-2026`、`CINGHE-NURSE-77`。
+> 当前仓库仍处于开发 / Demo 阶段。全部演示客户、病人、讯息、预约与文件资料均为虚构；外部供应商能力只有在真实接口或现场验证后才会标记为 verified。
 
 ---
 
-## 二、安全與責任邊界（重要）
+## 1. 产品模型
 
-1. **不作醫學用途。** 系統不提供診斷、分流結論或治療建議。
-   「緊急標記」只是**關鍵詞／規則比對**，永遠附上病人原話與觸發原因，
-   由人手決定如何處理。
-2. **高風險動作不自動執行。** 取消預約、加插緊急時段、對外發出文件等
-   高風險 Agent 任務一律停在「等待人工批准」。
-3. **行政最低必要原則。** 病人資料只保留聯絡與排程所需欄位；
-   預設不儲存臨床病歷、影像或用藥紀錄。
-4. **全部留痕。** 成功、失敗與被權限阻止的操作都會寫入審計日誌。
-5. **多租戶隔離。** 所有實體帶 `clinicId`，Repository 的每個查詢都以
-   `clinicId` 收窄，不同診所的員工、病人、預約、規則、訊息、文件與審計完全獨立。
-6. **示範版限制。** 目前登入為前端示範閘門（`localStorage`），
-   **不構成真實身分驗證**，正式上線前必須改為伺服器端驗證（見下節）。
+核心不以“牙科”建模，而使用一组通用服务语义：
 
----
-
-## 三、技術結構
-
-- TypeScript 嚴格模式、React 19、TanStack Start／Router、Tailwind v4。
-- Material Design 3 設計系統定義於 `src/styles.css`：
-  M3 語義色角色、surface 層級、狀態層、圓角與排版尺度。
-  組件不得硬寫顏色，只用語義 token。
-- `src/components/m3/` 為 M3 基礎組件（Button、Card、Chip、Badge、FAB、
-  Segmented Button、Dialog、TextField、Switch）。
-- `src/components/layout/AppShell.tsx`：桌面 Navigation Rail、手機 Bottom
-  Navigation 與 Modal Drawer。
-- 領域類型：`src/types/domain.ts`
-  （`Clinic` / `Staff` / `Patient` / `Appointment` / `Conversation` /
-  `AgentTask` / `Reminder` / `DocumentCase` / `AuditEvent` / `Invite`）。
-- 資料層：`src/data/repository.ts` 的 `ClinicRepository` 介面 +
-  `InMemoryClinicRepository`（示範資料在 `src/data/seed.ts`）。
-- 狀態機：`src/data/repository.ts`（預約）與 `src/lib/agent-rules.ts`
-  （Agent 任務、緊急關鍵詞）。
-- 權限：`src/lib/permissions.ts` 角色 → 權限矩陣。
-
-### 指令
-
-```bash
-bun run dev        # 開發
-bun run build      # 生產建置
-bunx vitest run    # 狀態轉換與權限測試
+```text
+Customer（客户）
+   +
+Subject（服务对象：本人 / 宠物 / 车辆 / 地址）
+   +
+Service（服务项目）
+   +
+Resource（医生 / 美容师 / 技师 / 师傅 / 房间 / 工位）
+   +
+Booking（预约 / 入厂 / 上门时段）
+   +
+Conversation（客户对话）
+   +
+Follow-up（提醒 / 召回 / 再次服务）
 ```
 
-### 測試覆蓋
+平台结构：
 
-`src/lib/__tests__/state-transitions.test.ts`：預約狀態機、Agent 任務狀態機、
-高風險不可自動執行、緊急關鍵詞比對、角色權限、多租戶隔離。
+```text
+WhatsApp / Web / Phone
+          ↓
+Service Frontdesk Core
+├─ 授权 FAQ
+├─ 预约 / 改期 / 取消
+├─ 提醒
+├─ 高优先级风险升级
+├─ 对话摘要
+├─ 人工接管
+└─ 审计 / 多租户边界
+          ↓
+Adapters
+├─ Calendar
+├─ CMS / CRM
+├─ Booking System
+└─ Manual Bridge
+          ↓
+Vertical Pack
+├─ dental
+├─ pet-care
+├─ home-service
+├─ beauty
+└─ auto-repair
+```
 
-### PWA
-
-`public/manifest.webmanifest` + 應用圖示，可加到手機主畫面以獨立視窗開啟。
-目前**未**啟用 Service Worker，因此沒有離線快取。
+新增行业的默认方式是**增加 Vertical Pack，而不是复制一套 Core**。
 
 ---
 
-## 四、後續真實整合點
+## 2. 当前第一阶段能力
 
-替換 `ClinicRepository` 的實作即可接上真實資料庫，UI 與狀態機不需改動。
+通用预约型服务优先完成：
 
-| 位置 | 現況 | 正式版做法 |
-| --- | --- | --- |
-| `src/data/repository.ts` | 記憶體資料 | PostgreSQL／Supabase，每張表 `clinic_id` + RLS 政策 |
-| 登入（`src/state/app-store.tsx`） | `localStorage` 示範閘門 | 伺服器端 session、邀請碼一次性核銷、WebAuthn Passkey 裝置綁定 |
-| WhatsApp 渠道 | 模擬適配器 | WhatsApp Business Cloud API，webhook 收訊 |
-| 電話渠道 | 模擬語音轉錄 | 電話系統／語音轉文字服務 |
-| Agent 任務執行 | 前端狀態轉換 | 伺服器工作佇列 + 明確權限鏈與逾時重試 |
-| 保險／收據文件 | 模擬檔案 | 診所實際使用的保險表格與會計系統 |
-| 審計日誌 | 記憶體陣列 | Append-only 表，不可修改、可匯出 |
-| 緊急關鍵詞 | 診所設定內的字串 | 可版本化的規則集，並保留每次命中的證據 |
+1. WhatsApp 即时回复商户已授权 FAQ；
+2. 预约提醒；
+3. 一键确认 / 改期 / 取消；
+4. 改期时自动查询可用时段；
+5. 高优先级关键词触发人工升级；
+6. 简单日历同步；
+7. 前台对话摘要；
+8. 未命中授权流程时 fail-closed（失败关闭）转人工。
 
-## 雙端結構（病人前台 / 行政後台）
+上门服务型行业复用同一核心，并由行业包增加：地址、现场联系人、师傅／服务队、上门时段、报价确认等字段。
 
-本系統是兩套互相獨立的產品面，共用同一個 domain / repository：
+---
 
-| | 病人前台 | 行政後台 |
-|---|---|---|
-| 路由 | `/patient/*` | `/staff/*` |
-| 入口 | `/patient/login`：診所專屬連結、病人二維碼、手機一次性驗證碼 | `/staff/login`：邀請密令、員工二維碼、Passkey（佔位） |
-| Session | `PatientSession`（`kind: "patient"`，localStorage key `cinghe.patient-session.v1`） | `StaffSession`（`kind: "staff"`，key `cinghe.staff-session.v1`） |
-| 導航 | 手機 Bottom Navigation／桌面輕量 Rail，只有 5 項 | Navigation Rail／Drawer，10 項工作區 |
-| 可見資料 | 只有自己的預約、訊息、行政文件、提醒與聯絡資料 | 全診所行政資料、Agent 任務、審計日誌、員工權限 |
+## 3. Clinic Flow：牙科行业包
 
-- 兩種 session 在 hydration 時以 `kind` 嚴格校驗，員工 session 無法冒充病人身分，反之亦然。
-- 病人端資料一律經 `src/data/patient-view.ts` 以 `clinicId + patientId` 收窄；改期只回傳 `availableSlots()` 產生的 `{ startAt, practitionerId }`，不暴露診所排程與其他病人。
-- 病人端不顯示 Agent 任務、審計日誌、病人目錄、員工權限等任何後台功能。
-- 根路徑 `/` 只是極簡入口選擇；舊有 `/app/*` 連結會重定向至 `/staff/*`。
+牙科仍是首个真实落地方向，但定位是：
+
+> **接在诊所现有 CMS 前面的 AI 前台，而不是再造一套牙科 CMS。**
+
+当前牙科行业包包含：
+
+- 牙科服务项目；
+- 牙科授权 FAQ 模板；
+- 潜在紧急关键词；
+- 医疗判断 / 用药 / 治疗问题的人工转交规则；
+- 6 / 12 个月洗牙召回规则；
+- HKDA DCMS、DentoEase、ClinicSolution Dental 的候选整合目标。
+
+这些外部系统目前的 `verifiedCapabilities` 保持为空；未取得接口、正式文档或真实客户现场验证前，不声称已完成整合。
+
+---
+
+## 4. Vertical Pack（行业包）
+
+核心契约位于：
+
+```text
+src/verticals/types.ts
+src/verticals/registry.ts
+```
+
+当前行业包：
+
+```text
+src/verticals/dental.ts
+src/verticals/pet-care.ts
+src/verticals/home-service.ts
+src/verticals/beauty.ts
+src/verticals/auto-repair.ts
+src/verticals/regulated-health.ts
+```
+
+每个行业包可以定义：
+
+- 客户 / 服务对象 / 资源 / 预约等界面称谓；
+- 服务项目；
+- 服务对象字段；
+- 商户授权 FAQ；
+- 高优先级升级关键词；
+- 必须转人工的受限问题；
+- 跟进 / 召回规则；
+- 外部系统适配目标；
+- 改期 / 取消需要人工确认的提前时间。
+
+行业包**不能扩大 Agent 权限**。
+
+例如：
+
+- 牙科不做医学诊断、治疗建议或临床分诊；
+- 宠物服务不做宠物疾病诊断或用药建议；
+- 美容不做医疗 / 过敏诊断；
+- 汽车维修前台不自主判断危险车辆是否可继续驾驶；
+- 水电 / 家居服务前台不提供高风险电力、燃气或危险维修步骤。
+
+---
+
+## 5. 通用前台 Core
+
+主要代码：
+
+```text
+src/core/tenant.ts                 ServiceTenant 通用租户模型
+src/core/escalation.ts             通用高优先级升级规则
+src/frontdesk/faq-engine.ts        授权 FAQ 引擎
+src/frontdesk/frontdesk-agent.ts   行业包驱动的前台规划器
+src/frontdesk/inbound-service.ts   WhatsApp / Web 入站闭环
+src/frontdesk/conversation-summary.ts
+src/frontdesk/appointment-reminder.ts
+src/frontdesk/appointment-actions.ts
+src/frontdesk/appointment-interaction-service.ts
+```
+
+新通用 API：
+
+```ts
+planServiceFrontdeskMessage(...)
+processServiceFrontdeskInboundMessage(...)
+```
+
+第一版牙科 API 仍保留作为兼容入口，避免平台化重构一次性破坏现有 Demo。
+
+---
+
+## 6. Adapter（适配器）边界
+
+```text
+src/integrations/messaging-adapter.ts
+src/integrations/appointment-adapter.ts
+src/integrations/calendar-adapter.ts
+src/integrations/provider-registry.ts
+```
+
+Core 不直接知道 DCMS、DentoEase、Google Calendar 或某家 SaaS 的内部 API。
+
+统一原则：
+
+```text
+Frontdesk Core
+      ↓
+Stable Adapter Contract
+      ↓
+具体供应商 Adapter
+```
+
+因此未来一个行业拿下后，复制到下一行业主要是换 Vertical Pack 与供应商 Adapter，不重写前台核心。
+
+---
+
+## 7. UI / 产品面
+
+现有可点击 Demo 仍以牙科 `Clinic Flow` 为主，使用 Material Design 3：
+
+- `/patient/*`：病人前台；
+- `/staff/*`：诊所职员后台；
+- 手机 Bottom Navigation；
+- 桌面 Navigation Rail / Drawer；
+- 今日工作台；
+- 对话中心；
+- 预约中心；
+- 提醒 / 召回；
+- Agent 任务；
+- 审计 / 权限 / 设置。
+
+平台化当前优先抽象语义和工作流，不为了改名而一次性破坏这套牙科 Demo。未来其他 Vertical 可以复用 M3 组件，并由行业包提供界面文案和字段。
+
+---
+
+## 8. 安全与权限
+
+已有 / 正在建设的安全层：
+
+- 病人 / 员工双端路由与身份分离；
+- 短时签名入口 Token；
+- HttpOnly Session 服务器会话骨架；
+- PostgreSQL 多租户 Schema；
+- Row Level Security（RLS，行级安全）骨架；
+- Agent 封闭动作集合；
+- 中 / 高风险动作人工批准；
+- 审计日志；
+- 租户不匹配 fail-closed；
+- Vertical Pack 不得扩大 Agent 专业判断权限。
+
+通用 RCL 权限语义源：
+
+```text
+rcl/service-frontdesk-core.rcl
+```
+
+牙科兼容语义源：
+
+```text
+rcl/clinic-admin-agent.rcl
+```
+
+---
+
+## 9. DWAC 工件目标
+
+平台化预工件目标：
+
+```text
+dwac/service-frontdesk-core.dpal
+```
+
+牙科第一阶段历史目标：
+
+```text
+dwac/clinic-flow-phase1.dpal
+```
+
+本地曾使用用户提供的 DWAC 构建包对平台化 DPAL 做结构编译：CLI 成功生成 8 个 Semantic Work Units、4 个执行波次、critical path depth 4；但参考 worker **没有通过**我们自定义的 `vertical_neutral` / `tenant_scoped` 验收，因此该结果只视为 `CANDIDATE`，不宣称 DWAC 已完成正式验收或 canonical promotion。
+
+---
+
+## 10. 数据层
+
+现阶段为了保持 Clinic Flow Demo 可运行，旧领域模型仍包含：
+
+```text
+Clinic / Patient / Appointment
+clinicId / patientId
+```
+
+通用 Core 已新增：
+
+```text
+ServiceTenant
+Customer / Subject / Service / Resource / Booking 语义
+```
+
+数据库不会为了“名字更漂亮”立即进行破坏式重命名。后续通过兼容层 / 新迁移逐步把持久化模型升级成通用服务模型。
+
+PostgreSQL 迁移：
+
+```text
+db/migrations/0001_clinic_flow_core.sql
+db/migrations/0002_harden_fk_and_patient_writes.sql
+```
+
+---
+
+## 11. 开发与测试策略
+
+技术栈：
+
+- TypeScript strict
+- React 19
+- TanStack Start / Router
+- Tailwind CSS v4
+- Material Design 3
+- Vitest
+- PostgreSQL（目标正式数据层）
+
+常用指令：
+
+```bash
+bun run dev
+bun run build
+bunx vitest run
+```
+
+但日常开发**不要求每次提交都跑完整测试**：
+
+- 小改动：定向测试 / 类型检查；
+- 跨模块改动：相关链路测试；
+- 安全边界：对应安全测试；
+- 里程碑 / 部署 / 大重构：完整回归。
+
+当前新增的行业抽象定向测试：
+
+```text
+src/verticals/__tests__/vertical-packs.test.ts
+```
+
+它验证牙科、宠物、家居、美容、汽车行业包能共享同一个前台 Core，并验证跨租户消息不会进入自动发送流程。
+
+---
+
+## 12. 当前状态
+
+已经成立的方向：
+
+```text
+Service Frontdesk Core
+        +
+Dental Vertical = Clinic Flow
+```
+
+候选复制路径：
+
+```text
+Pet Care Vertical
+Home Service Vertical
+Beauty Vertical
+Auto Repair Vertical
+```
+
+下一阶段优先事项是：
+
+1. 将预约提醒 / Booking 文案进一步 Vertical 化；
+2. 将现有 UI 的牙科字段逐步抽成行业 Presentation Model；
+3. 将 PostgreSQL Repository 接到真实服务器；
+4. 接入一个真实 WhatsApp Business 测试渠道；
+5. 选择第一家真实商户，用现场流程验证一个 Vertical；
+6. 用第二个行业验证“只换行业包即可复制”的假设。
+
+GitHub `main` 是当前唯一源码真相。Lovable 只用于明确需要的 UI 原型 / 视觉调整，不承担日常开发与测试。
