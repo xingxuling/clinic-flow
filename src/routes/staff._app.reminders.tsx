@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { BellRing, MessageCircle } from "lucide-react";
+import { BellRing, MessageCircle, RotateCcw } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { PageContainer } from "@/components/layout/StaffShell";
@@ -12,28 +12,31 @@ import {
   MdFilterChip,
   SectionHeader,
 } from "@/components/m3";
-import { buildAppointmentReminder } from "@/frontdesk/appointment-reminder";
-import { CHANNEL, REMINDER_KIND, REMINDER_STATUS, fmtDateTime } from "@/lib/labels";
+import { useServiceCustomers } from "@/customers/use-service-customers";
+import { buildBookingReminder } from "@/frontdesk/booking-reminder";
+import { CHANNEL, REMINDER_STATUS, fmtDateTime } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
 import type { ReminderKind } from "@/types/domain";
+import { reminderKindFor } from "@/verticals/presentation";
+import { useTenantVertical } from "@/verticals/use-tenant-vertical";
 
 export const Route = createFileRoute("/staff/_app/reminders")({
   head: () => ({
     meta: [
-      { title: "提醒與召回｜診所 AI 前台" },
-      { name: "description", content: "就診前提醒與一鍵確認／改期／取消；洗牙召回等功能保留作第二階段。" },
+      { title: "跟進與召回｜Service Frontdesk" },
+      { name: "description", content: "通用服務業提醒、召回、未回覆跟進與客戶喚醒。" },
     ],
   }),
   component: RemindersPage,
 });
 
-const KINDS: { value: ReminderKind | "all"; label: string }[] = [
-  { value: "all", label: "全部" },
-  { value: "pre_visit", label: "就診前提醒" },
-  { value: "recall_cleaning", label: "洗牙召回" },
-  { value: "vaccine", label: "疫苗／覆診" },
-  { value: "followup", label: "覆診跟進" },
-  { value: "no_reply", label: "未回覆跟進" },
+const KIND_VALUES: (ReminderKind | "all")[] = [
+  "all",
+  "pre_visit",
+  "recall_cleaning",
+  "vaccine",
+  "followup",
+  "no_reply",
 ];
 
 function RemindersPage() {
@@ -43,21 +46,29 @@ function RemindersPage() {
     patients,
     appointments,
     staff,
-    patientName,
-    serviceName,
     updateReminderStatus,
   } = useApp();
+  const vertical = useTenantVertical(clinic);
+  const { customers, customerName } = useServiceCustomers({ clinic, vertical, legacyPatients: patients });
   const [kind, setKind] = useState<ReminderKind | "all">("all");
   const [previewReminderId, setPreviewReminderId] = useState<string | null>(null);
-  const list = reminders.filter((reminder) => kind === "all" || reminder.kind === kind);
-  const overdue = reminders.filter((reminder) => reminder.status === "overdue");
+
+  const visibleReminders = vertical.id === "dental" ? reminders : [];
+  const list = visibleReminders.filter((reminder) => kind === "all" || reminder.kind === kind);
+  const overdue = visibleReminders.filter((reminder) => reminder.status === "overdue");
+
+  const importedFollowUps = useMemo(
+    () =>
+      customers
+        .filter((customer) => customer.verticalId === vertical.id && customer.followUp?.dueAt)
+        .sort((a, b) => (a.followUp?.dueAt ?? "").localeCompare(b.followUp?.dueAt ?? "")),
+    [customers, vertical.id],
+  );
 
   const preview = useMemo(() => {
     if (!previewReminderId) return null;
     const reminder = reminders.find((row) => row.id === previewReminderId);
     if (!reminder || reminder.kind !== "pre_visit") return null;
-    const patient = patients.find((row) => row.id === reminder.patientId);
-    if (!patient) return null;
 
     const appointment = appointments
       .filter(
@@ -68,54 +79,104 @@ function RemindersPage() {
       )
       .sort((a, b) => a.startAt.localeCompare(b.startAt))[0];
     if (!appointment) return null;
-    const practitioner = staff.find((row) => row.id === appointment.practitionerId);
-    if (!practitioner) return null;
+    const resource = staff.find((row) => row.id === appointment.practitionerId);
+    const serviceName =
+      vertical.services.find((service) => service.id === appointment.serviceId)?.name ??
+      clinic.services.find((service) => service.id === appointment.serviceId)?.name ??
+      "服務";
 
-    return buildAppointmentReminder({
-      clinic,
-      patient,
-      appointment,
-      practitioner,
-      serviceName: serviceName(appointment.serviceId),
+    return buildBookingReminder({
+      vertical,
+      timezone: clinic.timezone,
+      customerName: customerName(reminder.patientId),
+      bookingId: appointment.id,
+      startAt: appointment.startAt,
+      serviceName,
+      resourceName: resource?.name,
     });
-  }, [appointments, clinic, patients, previewReminderId, reminders, serviceName, staff]);
+  }, [appointments, clinic, customerName, previewReminderId, reminders, staff, vertical]);
 
   return (
     <PageContainer
-      title="提醒與召回"
-      subtitle={`第一階段：預約提醒 + 一鍵操作；現有規則：就診前 ${clinic.settings.reminderLeadHours.join(" / ")} 小時`}
+      title="跟進與召回"
+      subtitle={`${vertical.displayName} · ${vertical.labels.booking}提醒、服務後跟進與舊客戶自動喚醒`}
     >
       <MdCard className="mb-5 bg-primary-container/45 p-4 text-on-primary-container">
         <div className="flex items-start gap-3">
           <MessageCircle className="mt-0.5 size-5 shrink-0" />
           <div>
-            <p className="md-title-m">WhatsApp 預約提醒</p>
+            <p className="md-title-m">WhatsApp / Web 跟進</p>
             <p className="mt-1 md-body-s">
-              第一階段提醒訊息會直接帶「確認／改期／取消」按鈕。正式上線後由通道適配器發送，
-              目前只預覽文案與按鈕協議，不接真實病人 WhatsApp。
+              {vertical.labels.booking}提醒可帶「確認／改期／取消」按鈕；服務後召回由 Vertical Pack 規則計算。
+              正式發送仍經 Messaging Adapter，不把通道邏輯寫死在 UI。
             </p>
           </div>
         </div>
       </MdCard>
 
+      {importedFollowUps.length > 0 && (
+        <section className="mb-6">
+          <SectionHeader title="舊資料匯入後自動產生的跟進" count={importedFollowUps.length} />
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {importedFollowUps.map((customer) => (
+              <MdCard key={customer.id} className="p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="md-title-m text-on-surface">{customer.displayName}</p>
+                    <p className="md-body-s text-on-surface-variant">
+                      {customer.followUp?.lastService ?? "既有服務"}
+                      {customer.followUp?.lastServiceDate ? ` · ${customer.followUp.lastServiceDate}` : ""}
+                    </p>
+                  </div>
+                  <MdChip tone={customer.followUp?.dueAt && new Date(customer.followUp.dueAt) <= new Date() ? "error" : "tertiary"}>
+                    {customer.followUp?.ruleLabel ?? "跟進"}
+                  </MdChip>
+                </div>
+                <div className="mt-3 rounded-xl bg-surface-container p-3">
+                  <p className="md-label-m text-on-surface-variant">建議時間</p>
+                  <p className="mt-1 md-body-m text-on-surface">
+                    {customer.followUp?.dueAt ? fmtDateTime(customer.followUp.dueAt) : "待確認"}
+                  </p>
+                </div>
+                <p className="mt-3 md-body-s text-on-surface-variant">
+                  {customer.followUp?.customerMessage ?? customer.followUp?.followUpHint ?? "等待商戶確認跟進方式。"}
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <MdButton size="sm" variant="tonal" icon={<MessageCircle className="size-4" />}>
+                    建立訊息草稿
+                  </MdButton>
+                  <MdButton size="sm" variant="text">稍後</MdButton>
+                </div>
+              </MdCard>
+            ))}
+          </div>
+        </section>
+      )}
+
       {overdue.length > 0 && (
         <MdCard className="mb-5 flex items-center gap-3 bg-error-container p-4 text-on-error-container">
           <BellRing className="size-5 shrink-0" />
-          <p className="md-body-m">有 {overdue.length} 項召回已逾期；召回自動化屬第二階段。</p>
+          <p className="md-body-m">有 {overdue.length} 項既有跟進已逾期。</p>
         </MdCard>
       )}
 
       <div className="mb-4 flex flex-wrap gap-2">
-        {KINDS.map((item) => (
-          <MdFilterChip key={item.value} selected={kind === item.value} onClick={() => setKind(item.value)}>
-            {item.label}
+        {KIND_VALUES.map((value) => (
+          <MdFilterChip key={value} selected={kind === value} onClick={() => setKind(value)}>
+            {value === "all" ? "全部" : reminderKindFor(vertical, value)}
           </MdFilterChip>
         ))}
       </div>
 
-      <SectionHeader title="提醒排程" count={list.length} />
+      <SectionHeader title="既有提醒排程" count={list.length} />
       {list.length === 0 ? (
-        <EmptyState text="沒有符合條件的提醒。" />
+        <EmptyState
+          text={
+            vertical.id === "dental"
+              ? "沒有符合條件的提醒。"
+              : `此 Demo 尚未建立 ${vertical.displayName} 的排程提醒；拍照匯入後的跟進建議會顯示在上方。`
+          }
+        />
       ) : (
         <MdCard className="divide-y divide-outline-variant overflow-hidden">
           {list.map((reminder) => {
@@ -123,9 +184,9 @@ function RemindersPage() {
             return (
               <div key={reminder.id} className="flex flex-wrap items-center gap-3 p-4">
                 <div className="min-w-0 flex-1">
-                  <p className="md-title-m text-on-surface">{patientName(reminder.patientId)}</p>
+                  <p className="md-title-m text-on-surface">{customerName(reminder.patientId)}</p>
                   <p className="md-body-s text-on-surface-variant">
-                    {REMINDER_KIND[reminder.kind]}・{reminder.template}・{CHANNEL[reminder.channel]}
+                    {reminderKindFor(vertical, reminder.kind)} · {reminder.template} · {CHANNEL[reminder.channel]}
                   </p>
                 </div>
                 <p className="md-body-s text-on-surface-variant">{fmtDateTime(reminder.dueAt)}</p>
@@ -159,7 +220,7 @@ function RemindersPage() {
       <MdDialog
         open={previewReminderId !== null}
         onClose={() => setPreviewReminderId(null)}
-        title="WhatsApp 預約提醒預覽"
+        title={`${vertical.labels.booking}提醒預覽`}
       >
         {preview ? (
           <div className="space-y-4">
@@ -167,23 +228,23 @@ function RemindersPage() {
               <p className="whitespace-pre-line md-body-m text-on-surface">{preview.text}</p>
             </div>
             <div>
-              <p className="mb-2 md-label-l text-on-surface-variant">病人可直接按：</p>
+              <p className="mb-2 md-label-l text-on-surface-variant">{vertical.labels.customer}可直接按：</p>
               <div className="flex flex-wrap gap-2">
-                {preview.replyOptions.map((option) => (
-                  <MdChip key={option.id} tone="primary">
-                    {option.label}
-                  </MdChip>
-                ))}
+                {preview.replyOptions.map((option) => <MdChip key={option.id} tone="primary">{option.label}</MdChip>)}
               </div>
             </div>
             <p className="md-body-s text-on-surface-variant">
-              按鈕回傳後會進入統一預約適配器；改期會先查空檔，接近應診時間的改動自動轉人工。
+              按鈕回傳後進入統一 Booking Adapter；接近服務時間的改動依行業規則轉人工。
             </p>
           </div>
         ) : (
-          <EmptyState text="目前沒有可預覽的未來預約。" />
+          <EmptyState text={`目前沒有可預覽的未來${vertical.labels.booking}。`} />
         )}
       </MdDialog>
+
+      <div className="mt-5 flex items-center gap-2 md-body-s text-on-surface-variant">
+        <RotateCcw className="size-4" /> Follow-up 規則來自 Vertical Pack，不由 Agent 自行推斷專業週期。
+      </div>
     </PageContainer>
   );
 }
