@@ -37,19 +37,25 @@ function CustomersPage() {
   const [vertical, setVertical] = useState(() => resolveVerticalPackForClinic(clinic));
   const mask = clinic.settings.privacy.maskPhoneInLists;
 
-  const legacyCustomers = useMemo(() => patients.map(patientToServiceCustomer), [patients]);
+  const legacyCustomers = useMemo(
+    () => (vertical.id === "dental" ? patients.map(patientToServiceCustomer) : []),
+    [patients, vertical.id],
+  );
 
   useEffect(() => {
-    const refresh = () => setImported(serviceCustomerRepository.list(clinic.id));
-    refresh();
     setVertical(resolveVerticalPackForTenant(clinic));
+  }, [clinic]);
+
+  useEffect(() => {
+    const refresh = () => setImported(serviceCustomerRepository.list(clinic.id, vertical.id));
+    refresh();
     window.addEventListener("service-frontdesk:customers-changed", refresh);
     window.addEventListener("storage", refresh);
     return () => {
       window.removeEventListener("service-frontdesk:customers-changed", refresh);
       window.removeEventListener("storage", refresh);
     };
-  }, [clinic]);
+  }, [clinic.id, vertical.id]);
 
   const customers = useMemo(() => {
     const byId = new Map<string, ServiceCustomer>();
@@ -82,7 +88,7 @@ function CustomersPage() {
         tenantId={clinic.id}
         vertical={vertical}
         existingCustomers={legacyCustomers}
-        onSaved={() => setImported(serviceCustomerRepository.list(clinic.id))}
+        onSaved={() => setImported(serviceCustomerRepository.list(clinic.id, vertical.id))}
       />
 
       <MdCard className="mb-5 flex items-start gap-3 p-4">
@@ -109,13 +115,15 @@ function CustomersPage() {
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {list.map((customer) => {
-            const legacy = legacyById.get(customer.id);
-            const upcoming = appointments.filter(
-              (appointment) =>
-                appointment.patientId === customer.id &&
-                new Date(appointment.startAt) > new Date() &&
-                appointment.status !== "cancelled",
-            );
+            const legacy = customer.verticalId === "dental" ? legacyById.get(customer.id) : undefined;
+            const upcoming = legacy
+              ? appointments.filter(
+                  (appointment) =>
+                    appointment.patientId === customer.id &&
+                    new Date(appointment.startAt) > new Date() &&
+                    appointment.status !== "cancelled",
+                )
+              : [];
             return (
               <MdCard key={customer.id} className="p-4">
                 <div className="flex items-start justify-between gap-2">
@@ -158,9 +166,7 @@ function CustomersPage() {
                 )}
 
                 <dl className="mt-3 space-y-1 md-body-s text-on-surface-variant">
-                  <div>
-                    上次服務：{customer.followUp?.lastService ?? (legacy?.lastVisitAt ? "到診" : "—")}
-                  </div>
+                  <div>上次服務：{customer.followUp?.lastService ?? (legacy?.lastVisitAt ? "到診" : "—")}</div>
                   <div>
                     上次日期：
                     {customer.followUp?.lastServiceDate
@@ -171,9 +177,11 @@ function CustomersPage() {
                   </div>
                   <div>
                     跟進提示：
-                    {customer.followUp?.followUpHint ??
+                    {customer.followUp?.ruleLabel ??
+                      customer.followUp?.followUpHint ??
                       (legacy?.nextRecallAt ? fmtDate(legacy.nextRecallAt) : "—")}
                   </div>
+                  {customer.followUp?.dueAt && <div>建議跟進日期：{fmtDate(customer.followUp.dueAt)}</div>}
                   <div>{vertical.labels.bookings}：{upcoming.length} 宗</div>
                   <div>行政備註：{customer.notesAdmin || "—"}</div>
                 </dl>
@@ -184,7 +192,7 @@ function CustomersPage() {
       )}
 
       <p className="mt-6 flex items-center gap-2 md-body-s text-on-surface-variant">
-        <Search className="size-4" /> 既有診所 Seed 為虛構示範資料；新匯入資料目前保存在瀏覽器 Demo Customer Repository。
+        <Search className="size-4" /> 既有診所 Seed 只屬 Dental Pack；新匯入資料按 Tenant + Vertical 分區保存在 Demo Customer Repository。
       </p>
     </PageContainer>
   );
