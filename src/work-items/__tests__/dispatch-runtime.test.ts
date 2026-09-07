@@ -4,6 +4,7 @@ import { BrowserServiceConversationRepository } from "@/conversations/repository
 import type { ServiceCustomer } from "@/customers/types";
 import type { MessagingAdapter } from "@/integrations/messaging-adapter";
 import { MockWhatsAppAdapter } from "@/integrations/messaging-adapter";
+import { messagingAutomationControlRepository } from "@/messaging/automation-control";
 import { getVerticalPack } from "@/verticals/registry";
 import { ServiceWorkItemDispatchRuntime } from "@/work-items/dispatch-runtime";
 import { createFollowUpWorkItem } from "@/work-items/follow-up-work-item";
@@ -67,11 +68,27 @@ const customer: ServiceCustomer = {
   updatedAt: "2026-09-01T00:00:00.000Z",
 };
 
+function openMarketingWindow(target: ServiceCustomer = customer) {
+  messagingAutomationControlRepository.optInWhatsApp({
+    tenantId: target.tenantId,
+    verticalId: target.verticalId,
+    customerId: target.id,
+    scopes: ["utility", "marketing"],
+  });
+  messagingAutomationControlRepository.recordCustomerMessage({
+    tenantId: target.tenantId,
+    verticalId: target.verticalId,
+    customerId: target.id,
+    at: new Date().toISOString(),
+  });
+}
+
 beforeEach(() => installBrowserStorage());
 afterEach(() => vi.unstubAllGlobals());
 
 describe("ServiceWorkItemDispatchRuntime", () => {
-  it("批准后的 Follow-up 草稿只有真实 send 成功后才标 done，并写入 Conversation", async () => {
+  it("批准后的 Follow-up 草稿在 opt-in + 24h 窗口内，只有真实 send 成功后才标 done", async () => {
+    openMarketingWindow();
     const vertical = getVerticalPack("pet-care")!;
     const item = createFollowUpWorkItem({ customer, vertical });
     serviceWorkItemRepository.setStatus(customer.tenantId, item.id, "ready_to_send", "staff_01");
@@ -94,6 +111,7 @@ describe("ServiceWorkItemDispatchRuntime", () => {
     expect(result.workItem?.status).toBe("done");
     expect(result.workItem?.dispatchReceipt?.providerMessageId).toBeTruthy();
     expect(adapter.snapshot()).toHaveLength(1);
+    expect(adapter.snapshot()[0]?.recipientPhone).toBe(customer.phone);
 
     const conversation = conversations.list(customer.tenantId, customer.verticalId)[0];
     expect(conversation?.customerId).toBe(customer.id);
@@ -102,7 +120,31 @@ describe("ServiceWorkItemDispatchRuntime", () => {
     expect(conversation?.messages[0]?.text).toContain("6 周");
   });
 
+  it("没有 WhatsApp opt-in 时 fail-closed，连 Adapter send 都不会调用", async () => {
+    const vertical = getVerticalPack("pet-care")!;
+    const item = createFollowUpWorkItem({ customer, vertical });
+    serviceWorkItemRepository.setStatus(customer.tenantId, item.id, "ready_to_send", "staff_01");
+    const adapter = new MockWhatsAppAdapter();
+    const runtime = new ServiceWorkItemDispatchRuntime(
+      new BrowserServiceWorkItemRepository(),
+      new BrowserServiceConversationRepository(),
+    );
+
+    const result = await runtime.dispatch({
+      tenantId: customer.tenantId,
+      verticalId: customer.verticalId,
+      workItemId: item.id,
+      customer,
+      adapter,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errorCode).toBe("WHATSAPP_OPT_IN_REQUIRED");
+    expect(adapter.snapshot()).toHaveLength(0);
+  });
+
   it("相同 done work item 重放时只复用 dispatch receipt，不再次调用 Adapter", async () => {
+    openMarketingWindow();
     const vertical = getVerticalPack("pet-care")!;
     const item = createFollowUpWorkItem({ customer, vertical });
     serviceWorkItemRepository.setStatus(customer.tenantId, item.id, "ready_to_send", "staff_01");
@@ -134,7 +176,8 @@ describe("ServiceWorkItemDispatchRuntime", () => {
     expect(conversations.list(customer.tenantId, customer.verticalId)[0]?.messages).toHaveLength(1);
   });
 
-  it("Adapter 发送失败时保持 ready_to_send，不写 done、不写 Conversation", async () => {
+  it("政策已通过但 Adapter 发送失败时保持 ready_to_send，不写 Conversation", async () => {
+    openMarketingWindow();
     const vertical = getVerticalPack("pet-care")!;
     const item = createFollowUpWorkItem({ customer, vertical });
     serviceWorkItemRepository.setStatus(customer.tenantId, item.id, "ready_to_send", "staff_01");
@@ -144,6 +187,8 @@ describe("ServiceWorkItemDispatchRuntime", () => {
       providerId: "test.whatsapp.fail",
       displayName: "Failing WhatsApp",
       channel: "whatsapp",
+      providerKind: "demo",
+      productionEligible: false,
       async send() {
         calls += 1;
         return {
@@ -173,6 +218,31 @@ describe("ServiceWorkItemDispatchRuntime", () => {
     expect(workItems.get(customer.tenantId, item.id)?.status).toBe("ready_to_send");
     expect(workItems.get(customer.tenantId, item.id)?.dispatchReceipt).toBeUndefined();
     expect(conversations.list(customer.tenantId, customer.verticalId)).toEqual([]);
+  });
+
+  it("production 模式拒绝 Mock WhatsApp，即使 opt-in 与 24h 窗口都满足", async () => {
+    openMarketingWindow();
+    const vertical = getVerticalPack("pet-care")!;
+    const item = createFollowUpWorkItem({ customer, vertical });
+    serviceWorkItemRepository.setStatus(customer.tenantId, item.id, "ready_to_send", "staff_01");
+    const adapter = new MockWhatsAppAdapter();
+    const runtime = new ServiceWorkItemDispatchRuntime(
+      new BrowserServiceWorkItemRepository(),
+      new BrowserServiceConversationRepository(),
+    );
+
+    const result = await runtime.dispatch({
+      tenantId: customer.tenantId,
+      verticalId: customer.verticalId,
+      workItemId: item.id,
+      customer,
+      adapter,
+      production: true,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errorCode).toBe("WHATSAPP_BUSINESS_PLATFORM_REQUIRED");
+    expect(adapter.snapshot()).toHaveLength(0);
   });
 
   it("渠道不匹配时 fail-closed，连 send 都不会调用", async () => {
