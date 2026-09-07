@@ -1,0 +1,65 @@
+artifact service_frontdesk_intro kind=document {
+  goal "向潜在客户、合作伙伴和非技术人员清楚介绍通用服务业 AI 前台平台"
+  success "读者能在数分钟内理解是什么、怎么用、为何易上手、如何跨行业复制"
+  constraint "避免工程堆料和模型名词堆砌"
+  invariant "不得暗示已经接入未验证的第三方系统"
+  unit p01 output=documentation {
+    title "一句话介绍"
+    goal "形成 一句话介绍 的对外介绍内容"
+    accept "clear,concrete,nontechnical"
+  }
+  unit p02 output=documentation {
+    title "为什么服务行业需要它"
+    goal "形成 为什么服务行业需要它 的对外介绍内容"
+    depends p01
+    accept "clear,concrete,nontechnical"
+  }
+  unit p03 output=documentation {
+    title "客户怎么使用"
+    goal "形成 客户怎么使用 的对外介绍内容"
+    depends p02
+    accept "clear,concrete,nontechnical"
+  }
+  unit p04 output=documentation {
+    title "核心能力"
+    goal "形成 核心能力 的对外介绍内容"
+    depends p03
+    accept "clear,concrete,nontechnical"
+  }
+  unit p05 output=documentation {
+    title "智能拍照迁移"
+    goal "形成 智能拍照迁移 的对外介绍内容"
+    depends p04
+    accept "clear,concrete,nontechnical"
+  }
+  unit p06 output=documentation {
+    title "一个核心，多种行业"
+    goal "形成 一个核心，多种行业 的对外介绍内容"
+    depends p05
+    accept "clear,concrete,nontechnical"
+  }
+  unit p07 output=documentation {
+    title "与现有系统的关系"
+    goal "形成 与现有系统的关系 的对外介绍内容"
+    depends p06
+    accept "clear,concrete,nontechnical"
+  }
+  unit p08 output=documentation {
+    title "安全与人工把关"
+    goal "形成 安全与人工把关 的对外介绍内容"
+    depends p07
+    accept "clear,concrete,nontechnical"
+  }
+  unit p09 output=documentation {
+    title "适合的首批行业"
+    goal "形成 适合的首批行业 的对外介绍内容"
+    depends p08
+    accept "clear,concrete,nontechnical"
+  }
+  unit p10 output=documentation {
+    title "部署与合作方式"
+    goal "形成 部署与合作方式 的对外介绍内容"
+    depends p09
+    accept "clear,concrete,nontechnical"
+  }
+}
