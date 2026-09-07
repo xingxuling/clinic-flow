@@ -26,27 +26,29 @@ export interface NavItem {
   inBottomBar?: boolean;
 }
 
+const STAFF_NAV_BASE: NavItem[] = [
+  { to: STAFF_ROUTES.today, label: "今日", icon: LayoutDashboard, inBottomBar: true },
+  { to: STAFF_ROUTES.inbox, label: "對話", icon: MessageSquare, badgeKey: "inbox", inBottomBar: true },
+  { to: STAFF_ROUTES.bookings, label: "排程", icon: CalendarDays, inBottomBar: true },
+  { to: STAFF_ROUTES.agent, label: "Agent", icon: Bot, badgeKey: "agent", inBottomBar: true },
+  { to: STAFF_ROUTES.followUps, label: "跟進", icon: ClipboardList },
+  { to: STAFF_ROUTES.customers, label: "客戶", icon: Users },
+  { to: STAFF_ROUTES.documents, label: "資料", icon: FileText, badgeKey: "documents" },
+  { to: STAFF_ROUTES.staff, label: "員工", icon: UserCog },
+  { to: STAFF_ROUTES.audit, label: "審計", icon: ScrollText },
+  { to: STAFF_ROUTES.settings, label: "設定", icon: Settings },
+];
+
 /**
  * Staff navigation uses short capability labels so every Vertical fits the same shell.
  * Industry-specific wording belongs inside each page, not in the narrow rail / bottom bar.
  */
 export function staffNavItemsFor(_vertical: ServiceVerticalPack): NavItem[] {
-  return [
-    { to: STAFF_ROUTES.today, label: "今日", icon: LayoutDashboard, inBottomBar: true },
-    { to: STAFF_ROUTES.inbox, label: "對話", icon: MessageSquare, badgeKey: "inbox", inBottomBar: true },
-    { to: STAFF_ROUTES.bookings, label: "排程", icon: CalendarDays, inBottomBar: true },
-    { to: STAFF_ROUTES.agent, label: "Agent", icon: Bot, badgeKey: "agent", inBottomBar: true },
-    { to: STAFF_ROUTES.followUps, label: "跟進", icon: ClipboardList },
-    { to: STAFF_ROUTES.customers, label: "客戶", icon: Users },
-    { to: STAFF_ROUTES.documents, label: "資料", icon: FileText, badgeKey: "documents" },
-    { to: STAFF_ROUTES.staff, label: "員工", icon: UserCog },
-    { to: STAFF_ROUTES.audit, label: "審計", icon: ScrollText },
-    { to: STAFF_ROUTES.settings, label: "設定", icon: Settings },
-  ];
+  return STAFF_NAV_BASE;
 }
 
 /** Compatibility export for code that has not yet moved to Vertical Context. */
-export const STAFF_NAV_ITEMS: NavItem[] = staffNavItemsFor({} as ServiceVerticalPack);
+export const STAFF_NAV_ITEMS: NavItem[] = STAFF_NAV_BASE;
 
 export interface PatientNavItem {
   to: string;
