@@ -13,8 +13,8 @@ import { useTenantVertical } from "@/verticals/use-tenant-vertical";
 export const Route = createFileRoute("/staff/_app/settings")({
   head: () => ({
     meta: [
-      { title: "商戶設定｜Service Frontdesk" },
-      { name: "description", content: "商戶資料、行業包、服務、跟進規則、安全邊界、渠道與隱私設定。" },
+      { title: "設定｜Service Frontdesk" },
+      { name: "description", content: "商戶、行業、服務、提醒、安全、渠道、整合與隱私設定。" },
     ],
   }),
   component: SettingsPage,
@@ -32,7 +32,7 @@ function SettingsPage() {
     updateClinicSettings({ settings: { ...settings, ...patch } });
 
   return (
-    <PageContainer title="商戶設定" subtitle={`${clinic.name} · ${vertical.displayName} · ${clinic.district}`}>
+    <PageContainer title="設定" subtitle={`${clinic.name} · ${vertical.displayName} · ${clinic.district}`}>
       <VerticalSwitcher tenantId={clinic.id} vertical={vertical} />
 
       <div className="grid gap-4 xl:grid-cols-2">
@@ -51,12 +51,12 @@ function SettingsPage() {
             ))}
           </div>
           <p className="mt-3 md-body-s text-on-surface-variant">
-            目前沿用舊 Clinic 時間模型；之後可按 Vertical 擴成上門服務區間、工位容量或寄養容量。
+            不同行業可再擴充成上門服務區間、工位容量、寄養容量等排程條件。
           </p>
         </MdCard>
 
         <MdCard className="p-5">
-          <SectionHeader title="行業服務" count={vertical.services.length} />
+          <SectionHeader title="服務" count={vertical.services.length} />
           <div className="flex flex-wrap gap-2">
             {vertical.services.map((service) => (
               <MdChip key={service.id} tone={service.requiresHumanConfirmation ? "tertiary" : "secondary"}>
@@ -67,12 +67,12 @@ function SettingsPage() {
             ))}
           </div>
           <p className="mt-3 md-body-s text-on-surface-variant">
-            這些服務來自 Vertical Pack，不再使用牙科專屬服務清單作為通用 Core 的權威。
+            服務清單由目前行業設定提供；切換行業後會顯示對應服務與規則。
           </p>
         </MdCard>
 
         <MdCard className="p-5">
-          <SectionHeader title={`${vertical.labels.booking}提醒`} />
+          <SectionHeader title="排程提醒" />
           <p className="md-body-m text-on-surface-variant">
             提前提醒：{settings.reminderLeadHours.join(" / ")} 小時
           </p>
@@ -97,9 +97,9 @@ function SettingsPage() {
         </MdCard>
 
         <MdCard className="p-5">
-          <SectionHeader title="服務後跟進規則" count={vertical.followUpRules.length} />
+          <SectionHeader title="服務後跟進" count={vertical.followUpRules.length} />
           {vertical.followUpRules.length === 0 ? (
-            <p className="md-body-m text-on-surface-variant">此行業包暫未設定自動跟進週期。</p>
+            <p className="md-body-m text-on-surface-variant">目前沒有設定自動跟進週期。</p>
           ) : (
             <div className="space-y-3">
               {vertical.followUpRules.map((rule) => (
@@ -131,7 +131,7 @@ function SettingsPage() {
 
           {vertical.id === "dental" && (
             <>
-              <p className="mb-2 mt-4 md-label-l text-on-surface">商戶追加關鍵詞（舊 Dental 設定兼容）</p>
+              <p className="mb-2 mt-4 md-label-l text-on-surface">商戶追加關鍵詞</p>
               <div className="flex flex-wrap gap-2">
                 {settings.urgentKeywords.map((value) => (
                   <MdChip key={value} tone="tertiary">
@@ -162,10 +162,10 @@ function SettingsPage() {
         </MdCard>
 
         <MdCard className="p-5">
-          <SectionHeader title="外部整合目標" count={vertical.integrationTargets.length} />
+          <SectionHeader title="外部整合" count={vertical.integrationTargets.length} />
           {vertical.integrationTargets.length === 0 ? (
             <p className="md-body-m text-on-surface-variant">
-              此行業包暫未聲稱任何專用系統整合；可先使用 Booking / Calendar / Messaging 通用 Adapter。
+              此行業暫無已驗證的專用系統整合；可先使用通用排程、日曆與消息連接。
             </p>
           ) : (
             <div className="space-y-3">
@@ -188,7 +188,7 @@ function SettingsPage() {
         </MdCard>
 
         <MdCard className="p-5">
-          <SectionHeader title="渠道連接" />
+          <SectionHeader title="渠道" />
           <div className="space-y-3">
             {settings.channels.map((channel) => (
               <div key={channel.channel} className="flex items-center gap-3">
@@ -214,13 +214,13 @@ function SettingsPage() {
           />
           {(vertical.id === "dental" || vertical.id === "regulated-health") && (
             <MdSwitch
-              label="允許儲存臨床備註（舊模型兼容，不建議）"
+              label="允許儲存臨床備註（不建議）"
               checked={settings.privacy.storeMedicalNotes}
               onCheckedChange={(value) => setSettings({ privacy: { ...settings.privacy, storeMedicalNotes: value } })}
             />
           )}
           <p className="mt-3 md-body-s text-on-surface-variant">
-            行政／客戶資料保留期：{settings.privacy.retentionDays} 日。通用 Frontdesk Core 只應保留完成溝通、排程與跟進所需資料。
+            行政／客戶資料保留期：{settings.privacy.retentionDays} 日。只應保留完成溝通、排程與跟進所需資料。
           </p>
         </MdCard>
       </div>
