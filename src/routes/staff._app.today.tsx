@@ -13,6 +13,7 @@ import { useServiceCustomers } from "@/customers/use-service-customers";
 import { summarizeConversationForFrontdesk } from "@/frontdesk/conversation-summary";
 import { fmtTime, isSameDay } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
+import { filterByVertical } from "@/verticals/entity-scope";
 import {
   arrivalActionLabel,
   bookingStatusFor,
@@ -78,15 +79,10 @@ function TodayPage() {
   const vertical = useTenantVertical(clinic);
   const { customerName } = useServiceCustomers({ clinic, vertical, legacyPatients: patients });
 
-  const visibleAppointments =
-    vertical.id === "dental"
-      ? appointments
-      : appointments.filter((appointment) =>
-          vertical.services.some((service) => service.id === appointment.serviceId),
-        );
-  const visibleConversations = vertical.id === "dental" ? conversations : [];
-  const visibleAgentTasks = vertical.id === "dental" ? agentTasks : [];
-  const visibleFlags = vertical.id === "dental" ? urgentFlags : [];
+  const visibleAppointments = filterByVertical(appointments, vertical.id);
+  const visibleConversations = filterByVertical(conversations, vertical.id);
+  const visibleAgentTasks = filterByVertical(agentTasks, vertical.id);
+  const visibleFlags = filterByVertical(urgentFlags, vertical.id);
 
   const serviceName = (serviceId: string) =>
     vertical.services.find((service) => service.id === serviceId)?.name ??
@@ -137,10 +133,10 @@ function TodayPage() {
         <MdChip tone="primary">{vertical.labels.booking}</MdChip>
       </div>
 
-      {vertical.id !== "dental" && (
+      {vertical.id !== "dental" && visibleAppointments.length === 0 && visibleConversations.length === 0 && (
         <MdCard className="mb-5 border border-outline-variant bg-surface-container p-3">
           <p className="md-body-s text-on-surface-variant">
-            目前非牙科行業只顯示屬於該 Vertical 的新 Customer / Booking 資料；牙科 Seed 不會跨行業混入工作台。
+            此行業目前尚未建立排程或對話。舊 Dental Seed 會被 vertical scope 隔離，不會跨行業顯示。
           </p>
         </MdCard>
       )}
