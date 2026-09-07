@@ -14,7 +14,7 @@ export function VerticalSwitcher({
 }: {
   tenantId: string;
   vertical: ServiceVerticalPack;
-  onChange: (pack: ServiceVerticalPack) => void;
+  onChange?: (pack: ServiceVerticalPack) => void;
 }) {
   return (
     <MdCard variant="outlined" className="mb-5 p-4">
@@ -35,7 +35,7 @@ export function VerticalSwitcher({
             const next = selectable.find((pack) => pack.id === event.target.value);
             if (!next) return;
             setTenantVertical(tenantId, next.id);
-            onChange(next);
+            onChange?.(next);
           }}
         >
           {selectable.map((pack) => (
