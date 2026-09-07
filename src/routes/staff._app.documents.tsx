@@ -8,6 +8,7 @@ import { useServiceCustomers } from "@/customers/use-service-customers";
 import { DOCUMENT_KIND, DOCUMENT_STATUS, fmtDateTime } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
 import type { DocumentKind } from "@/types/domain";
+import { filterByVertical } from "@/verticals/entity-scope";
 import { useTenantVertical } from "@/verticals/use-tenant-vertical";
 
 export const Route = createFileRoute("/staff/_app/documents")({
@@ -49,7 +50,10 @@ function DocumentsPage() {
   const { customers } = useServiceCustomers({ clinic, vertical, legacyPatients: patients });
   const [kind, setKind] = useState<DocumentKind | "all">("all");
 
-  const visibleDocuments = vertical.id === "dental" ? documents : [];
+  const visibleDocuments = useMemo(
+    () => filterByVertical(documents, vertical.id),
+    [documents, vertical.id],
+  );
   const list = visibleDocuments.filter((document) => kind === "all" || document.kind === kind);
   const issues = visibleDocuments.filter((document) => document.status === "anomaly" || document.status === "needs_fields");
   const flows = useMemo(() => suggestedFlows(vertical.id), [vertical.id]);
@@ -67,7 +71,7 @@ function DocumentsPage() {
           {flows.map((flow) => <MdChip key={flow} tone="secondary">{flow}</MdChip>)}
         </div>
         <p className="mt-3 md-body-s text-on-surface-variant">
-          目前只有舊 Dental Demo 有結構化文件 Seed；其他行業不會拿醫療文件假裝已完成整合。
+          舊 Dental Demo 文件沒有 verticalId，兼容層只會把它們視為 dental；其他行業不會拿醫療文件假裝已完成整合。
         </p>
       </MdCard>
 
@@ -91,11 +95,7 @@ function DocumentsPage() {
       <SectionHeader title={vertical.id === "dental" ? "既有行政文件" : "行業資料工作流"} count={list.length} />
       {list.length === 0 ? (
         <EmptyState
-          text={
-            vertical.id === "dental"
-              ? "沒有符合條件的文件。"
-              : `尚未建立 ${vertical.displayName} 的真實文件 Adapter；目前保留通用資料入口與人工核對邊界。`
-          }
+          text={`尚未建立 ${vertical.displayName} 的真實文件資料；目前保留通用資料入口與人工核對邊界。`}
         />
       ) : (
         <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
