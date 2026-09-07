@@ -81,6 +81,9 @@ export class BrowserServiceWorkItemRepository {
       risk: input.risk,
       status: "waiting_approval",
       ...(input.proposedMessage ? { proposedMessage: input.proposedMessage } : {}),
+      ...(input.proposedReplyOptions?.length
+        ? { proposedReplyOptions: clone(input.proposedReplyOptions) }
+        : {}),
       ...(input.sourceRef ? { sourceRef: input.sourceRef } : {}),
       createdAt: now,
       updatedAt: now,
