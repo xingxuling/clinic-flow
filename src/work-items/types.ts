@@ -12,6 +12,12 @@ export type ServiceWorkItemStatus =
   | "done"
   | "rejected";
 
+export interface ServiceWorkItemDispatchReceipt {
+  providerId: string;
+  sentAt: string;
+  providerMessageId?: string;
+}
+
 export interface ServiceWorkItem {
   id: string;
   tenantId: string;
@@ -27,6 +33,7 @@ export interface ServiceWorkItem {
   status: ServiceWorkItemStatus;
   proposedMessage?: string;
   sourceRef?: string;
+  dispatchReceipt?: ServiceWorkItemDispatchReceipt;
   createdAt: string;
   updatedAt: string;
   decidedAt?: string;
