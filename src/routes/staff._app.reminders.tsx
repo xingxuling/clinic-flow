@@ -35,8 +35,8 @@ import { useServiceWorkItems } from "@/work-items/use-service-work-items";
 export const Route = createFileRoute("/staff/_app/reminders")({
   head: () => ({
     meta: [
-      { title: "跟進與召回｜Service Frontdesk" },
-      { name: "description", content: "通用服務業提醒、召回、未回覆跟進與客戶喚醒。" },
+      { title: "跟進｜Service Frontdesk" },
+      { name: "description", content: "通用服務業排程提醒、服務後跟進、召回與客戶喚醒。" },
     ],
   }),
   component: RemindersPage,
@@ -152,17 +152,17 @@ function RemindersPage() {
 
   return (
     <PageContainer
-      title="跟進與召回"
-      subtitle={`${vertical.displayName} · ${vertical.labels.booking}提醒、服務後跟進與舊客戶自動喚醒`}
+      title="跟進"
+      subtitle={`${vertical.displayName} · ${vertical.labels.booking}提醒 · 服務後跟進 · 舊客戶喚醒`}
     >
       <MdCard className="mb-5 bg-primary-container/45 p-4 text-on-primary-container">
         <div className="flex items-start gap-3">
           <MessageCircle className="mt-0.5 size-5 shrink-0" />
           <div>
-            <p className="md-title-m">Messaging 工作流</p>
+            <p className="md-title-m">訊息與提醒</p>
             <p className="mt-1 md-body-s">
-              {vertical.labels.booking}提醒帶「確認／改期／取消」按鈕；服務後召回由 Vertical Pack 規則計算。
-              所有消息先成為 Work Item，批准後仍需 Messaging Adapter 真實成功才算完成。
+              排程提醒可讓客戶直接確認、改期或取消；服務後跟進按已設定規則計算。
+              待發訊息先經人工批准，只有已連接渠道真正回報成功後才標記完成。
             </p>
           </div>
         </div>
@@ -170,7 +170,7 @@ function RemindersPage() {
 
       {bookingReminderCandidates.length > 0 && (
         <section className="mb-6">
-          <SectionHeader title={`${vertical.labels.booking}提醒候選`} count={bookingReminderCandidates.length} />
+          <SectionHeader title="排程提醒" count={bookingReminderCandidates.length} />
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {bookingReminderCandidates.map((candidate) => {
               const workItem = workItemBySource.get(candidate.sourceRef);
@@ -208,7 +208,7 @@ function RemindersPage() {
                   {workItem && (
                     <div className="mt-3 flex items-center justify-between rounded-xl bg-secondary-container/45 p-3">
                       <span className="md-body-s text-on-secondary-container">
-                        Work Item：{workItemStatusLabel(workItem.status)}
+                        待辦：{workItemStatusLabel(workItem.status)}
                       </span>
                       <Link to="/staff/agent" className="md-label-l text-primary">查看</Link>
                     </div>
@@ -225,17 +225,17 @@ function RemindersPage() {
                             vertical,
                             candidate,
                           });
-                          toast.success(workItem ? "提醒工作項已存在" : "提醒已送到 Agent 任務台", {
+                          toast.success(workItem ? "提醒待辦已存在" : "提醒已加入 Agent 待辦", {
                             description: workItemStatusLabel(item.status),
                           });
                         } catch (error) {
-                          toast.error("無法建立提醒工作項", {
+                          toast.error("無法建立提醒待辦", {
                             description: error instanceof Error ? error.message : String(error),
                           });
                         }
                       }}
                     >
-                      {workItem ? "已建立工作項" : "建立提醒工作項"}
+                      {workItem ? "已建立待辦" : "建立提醒待辦"}
                     </MdButton>
                     {workItem && (
                       <Link to="/staff/agent"><MdButton size="sm" variant="text">前往 Agent</MdButton></Link>
@@ -250,7 +250,7 @@ function RemindersPage() {
 
       {importedFollowUps.length > 0 && (
         <section className="mb-6">
-          <SectionHeader title="舊資料匯入後自動產生的跟進" count={importedFollowUps.length} />
+          <SectionHeader title="舊資料產生的跟進" count={importedFollowUps.length} />
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {importedFollowUps.map((customer) => {
               const sourceRef = followUpWorkItemSourceRef(customer);
@@ -282,7 +282,7 @@ function RemindersPage() {
                   {workItem && (
                     <div className="mt-3 flex items-center justify-between rounded-xl bg-secondary-container/45 p-3">
                       <span className="md-body-s text-on-secondary-container">
-                        Agent 工作項：{workItemStatusLabel(workItem.status)}
+                        待辦：{workItemStatusLabel(workItem.status)}
                       </span>
                       <Link to="/staff/agent" className="md-label-l text-primary">查看</Link>
                     </div>
@@ -296,17 +296,17 @@ function RemindersPage() {
                       onClick={() => {
                         try {
                           const item = createFollowUpWorkItem({ customer, vertical });
-                          toast.success(workItem ? "工作項已存在" : "訊息草稿已送到 Agent 任務台", {
+                          toast.success(workItem ? "跟進待辦已存在" : "跟進草稿已加入 Agent 待辦", {
                             description: workItemStatusLabel(item.status),
                           });
                         } catch (error) {
-                          toast.error("無法建立工作項", {
+                          toast.error("無法建立跟進待辦", {
                             description: error instanceof Error ? error.message : String(error),
                           });
                         }
                       }}
                     >
-                      {workItem ? "已建立草稿" : "建立訊息草稿"}
+                      {workItem ? "已建立草稿" : "建立跟進草稿"}
                     </MdButton>
                     {workItem && (
                       <Link to="/staff/agent"><MdButton size="sm" variant="text">前往 Agent</MdButton></Link>
@@ -322,7 +322,7 @@ function RemindersPage() {
       {overdue.length > 0 && (
         <MdCard className="mb-5 flex items-center gap-3 bg-error-container p-4 text-on-error-container">
           <BellRing className="size-5 shrink-0" />
-          <p className="md-body-m">有 {overdue.length} 項 Dental Legacy 跟進已逾期。</p>
+          <p className="md-body-m">有 {overdue.length} 項既有牙科跟進已逾期。</p>
         </MdCard>
       )}
 
@@ -336,9 +336,9 @@ function RemindersPage() {
             ))}
           </div>
 
-          <SectionHeader title="Dental Legacy 提醒排程" count={list.length} />
+          <SectionHeader title="既有牙科提醒" count={list.length} />
           {list.length === 0 ? (
-            <EmptyState text="沒有符合條件的兼容提醒。" />
+            <EmptyState text="沒有符合條件的既有提醒。" />
           ) : (
             <MdCard className="divide-y divide-outline-variant overflow-hidden">
               {list.map((reminder) => {
@@ -404,7 +404,7 @@ function RemindersPage() {
       </MdDialog>
 
       <div className="mt-5 flex items-center gap-2 md-body-s text-on-surface-variant">
-        <RotateCcw className="size-4" /> Reminder / Follow-up 都由既有規則與 Booking 事實產生，不由 Agent 自行推斷週期。
+        <RotateCcw className="size-4" /> 提醒與跟進依據排程和已確認規則計算；AI 不會自行決定專業週期。
       </div>
     </PageContainer>
   );
