@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Plug, ShieldCheck, X } from "lucide-react";
+import { MessageCircle, Plug, ShieldCheck, X } from "lucide-react";
 import { useState } from "react";
 
 import { PageContainer } from "@/components/layout/StaffShell";
 import { MdButton, MdCard, MdChip, MdSwitch, MdTextField, SectionHeader } from "@/components/m3";
 import { VerticalSwitcher } from "@/components/verticals/VerticalSwitcher";
 import { CHANNEL } from "@/lib/labels";
+import { useMessagingControls } from "@/messaging/use-messaging-controls";
 import { useApp } from "@/state/app-store";
 import { safetyBoundaryText, safetyFlagLabel } from "@/verticals/presentation";
 import { useTenantVertical } from "@/verticals/use-tenant-vertical";
@@ -23,8 +24,9 @@ export const Route = createFileRoute("/staff/_app/settings")({
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 
 function SettingsPage() {
-  const { clinic, updateClinicSettings } = useApp();
+  const { clinic, currentStaff, updateClinicSettings } = useApp();
   const vertical = useTenantVertical(clinic);
+  const messaging = useMessagingControls(clinic.id, vertical.id);
   const [keyword, setKeyword] = useState("");
 
   const settings = clinic.settings;
@@ -34,6 +36,63 @@ function SettingsPage() {
   return (
     <PageContainer title="設定" subtitle={`${clinic.name} · ${vertical.displayName} · ${clinic.district}`}>
       <VerticalSwitcher tenantId={clinic.id} vertical={vertical} />
+
+      <MdCard className="mb-5 p-5">
+        <div className="flex flex-wrap items-start gap-4">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary-container text-on-primary-container">
+            <MessageCircle className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="md-title-l text-on-surface">Agent 與 WhatsApp</h2>
+              <MdChip tone={messaging.tenant.agentEnabled ? "primary" : "error"}>
+                {messaging.tenant.agentEnabled ? "Agent 已啟用" : "Agent 已全局暫停"}
+              </MdChip>
+            </div>
+            <p className="mt-1 md-body-s text-on-surface-variant">
+              這個總開關只控制自動化；人工客服、資料查看與排程仍可繼續使用。
+            </p>
+          </div>
+          <MdSwitch
+            label="允許 Agent 自動處理"
+            checked={messaging.tenant.agentEnabled}
+            onCheckedChange={(enabled) =>
+              messaging.setTenantAgentEnabled(enabled, currentStaff.id)
+            }
+          />
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl bg-surface-container p-3">
+            <p className="md-label-l text-on-surface">正式 API</p>
+            <p className="mt-1 md-body-s text-on-surface-variant">
+              Production 只接受 WhatsApp Business Platform / 正式 BSP；普通 App 自動化不視為可上線 Provider。
+            </p>
+          </div>
+          <div className="rounded-2xl bg-surface-container p-3">
+            <p className="md-label-l text-on-surface">24 小時窗口</p>
+            <p className="mt-1 md-body-s text-on-surface-variant">
+              超過客戶最後一條訊息 24 小時，主動 WhatsApp 必須使用已核准 Message Template。
+            </p>
+          </div>
+          <div className="rounded-2xl bg-surface-container p-3">
+            <p className="md-label-l text-on-surface">Opt-in / Opt-out</p>
+            <p className="mt-1 md-body-s text-on-surface-variant">
+              服務提醒與 Marketing 分開授權；STOP／取消訂閱會立即阻止 Agent 主動訊息。
+            </p>
+          </div>
+          <div className="rounded-2xl bg-surface-container p-3">
+            <p className="md-label-l text-on-surface">隨時轉人工</p>
+            <p className="mt-1 md-body-s text-on-surface-variant">
+              客戶說「人工／真人／不要 AI」後持久切到 human-only，必須明確恢復才重新啟用 Agent。
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-outline-variant p-3 md-body-s text-on-surface-variant">
+          目前專案內的 WhatsApp 模擬通道只供 Demo；即使舊設定顯示「已連接」，也不代表已完成 Meta WhatsApp Business Platform 生產配置。
+        </div>
+      </MdCard>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <MdCard className="p-5">
@@ -197,8 +256,8 @@ function SettingsPage() {
                   <p className="md-body-m text-on-surface">{CHANNEL[channel.channel]}</p>
                   <p className="md-body-s text-on-surface-variant">{channel.note}</p>
                 </div>
-                <MdChip tone={channel.connected ? "primary" : "neutral"}>
-                  {channel.connected ? "模擬已連接" : "未連接"}
+                <MdChip tone={channel.connected ? "tertiary" : "neutral"}>
+                  {channel.connected ? "Demo 已連接" : "未連接"}
                 </MdChip>
               </div>
             ))}
