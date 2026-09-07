@@ -1,0 +1,41 @@
+import type { ServiceVerticalPack } from "@/verticals/types";
+
+export const regulatedHealthVerticalPack: ServiceVerticalPack = {
+  id: "regulated-health",
+  version: "v0.1",
+  displayName: "健康服务",
+  shortName: "健康服务",
+  mode: "appointment",
+  subjectKind: "person",
+  labels: {
+    customer: "客人／病人",
+    customers: "客人／病人",
+    subject: "服务对象",
+    subjects: "服务对象",
+    resource: "专业人员／房间",
+    resources: "专业人员／房间",
+    booking: "预约",
+    bookings: "预约",
+    staff: "机构职员",
+    venue: "机构",
+  },
+  subjectFields: [],
+  services: [],
+  faqTemplates: [],
+  escalationKeywords: ["呼吸困难", "大量流血", "晕倒", "失去反应", "剧痛"],
+  restrictedQuestionPatterns: [
+    /係咪.*病/u,
+    /是不是.*病/u,
+    /要唔要.*食药/u,
+    /要不要.*吃药/u,
+    /应该.*治疗/u,
+    /怎么治/u,
+  ],
+  followUpRules: [],
+  integrationTargets: [],
+  defaultHumanApprovalLeadHours: 24,
+  metadata: {
+    candidate: true,
+    notes: ["只作为现有 clinic / physio 类型的安全兜底，不代表已完成具体行业产品化。"],
+  },
+};
