@@ -17,6 +17,7 @@ import { buildBookingReminder } from "@/frontdesk/booking-reminder";
 import { CHANNEL, REMINDER_STATUS, fmtDateTime } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
 import type { ReminderKind } from "@/types/domain";
+import { filterByVertical } from "@/verticals/entity-scope";
 import { reminderKindFor } from "@/verticals/presentation";
 import { useTenantVertical } from "@/verticals/use-tenant-vertical";
 
@@ -53,7 +54,14 @@ function RemindersPage() {
   const [kind, setKind] = useState<ReminderKind | "all">("all");
   const [previewReminderId, setPreviewReminderId] = useState<string | null>(null);
 
-  const visibleReminders = vertical.id === "dental" ? reminders : [];
+  const visibleReminders = useMemo(
+    () => filterByVertical(reminders, vertical.id),
+    [reminders, vertical.id],
+  );
+  const visibleAppointments = useMemo(
+    () => filterByVertical(appointments, vertical.id),
+    [appointments, vertical.id],
+  );
   const list = visibleReminders.filter((reminder) => kind === "all" || reminder.kind === kind);
   const overdue = visibleReminders.filter((reminder) => reminder.status === "overdue");
 
@@ -67,10 +75,10 @@ function RemindersPage() {
 
   const preview = useMemo(() => {
     if (!previewReminderId) return null;
-    const reminder = reminders.find((row) => row.id === previewReminderId);
+    const reminder = visibleReminders.find((row) => row.id === previewReminderId);
     if (!reminder || reminder.kind !== "pre_visit") return null;
 
-    const appointment = appointments
+    const appointment = visibleAppointments
       .filter(
         (row) =>
           row.patientId === reminder.patientId &&
@@ -94,7 +102,7 @@ function RemindersPage() {
       serviceName,
       ...(resource?.name ? { resourceName: resource.name } : {}),
     });
-  }, [appointments, clinic, customerName, previewReminderId, reminders, staff, vertical]);
+  }, [clinic, customerName, previewReminderId, staff, vertical, visibleAppointments, visibleReminders]);
 
   return (
     <PageContainer
@@ -171,11 +179,7 @@ function RemindersPage() {
       <SectionHeader title="既有提醒排程" count={list.length} />
       {list.length === 0 ? (
         <EmptyState
-          text={
-            vertical.id === "dental"
-              ? "沒有符合條件的提醒。"
-              : `此 Demo 尚未建立 ${vertical.displayName} 的排程提醒；拍照匯入後的跟進建議會顯示在上方。`
-          }
+          text={`目前沒有屬於 ${vertical.shortName} 的提醒排程；拍照匯入後的跟進建議會顯示在上方。`}
         />
       ) : (
         <MdCard className="divide-y divide-outline-variant overflow-hidden">
