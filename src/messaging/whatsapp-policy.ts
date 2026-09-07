@@ -8,6 +8,7 @@ import { whatsAppTemplateRegistry } from "@/messaging/whatsapp-template-registry
 
 export type WhatsAppSendActor = "agent" | "human";
 export type WhatsAppSendInitiation = "response" | "business_initiated";
+export type WhatsAppMessagePurpose = "utility" | "marketing";
 
 export type WhatsAppPolicyBlockCode =
   | "WHATSAPP_BUSINESS_PLATFORM_REQUIRED"
@@ -16,8 +17,8 @@ export type WhatsAppPolicyBlockCode =
   | "WHATSAPP_OPTED_OUT"
   | "WHATSAPP_OPT_IN_REQUIRED"
   | "WHATSAPP_CONSENT_SCOPE_REQUIRED"
-  | "WHATSAPP_24H_WINDOW_CLOSED"
   | "WHATSAPP_TEMPLATE_REQUIRED"
+  | "WHATSAPP_TEMPLATE_CATEGORY_MISMATCH"
   | "WHATSAPP_TEMPLATE_NOT_APPROVED";
 
 export interface WhatsAppPolicyDecision {
@@ -36,15 +37,22 @@ function within24Hours(lastCustomerMessageAt: string | undefined, now: Date): bo
   return delta >= 0 && delta <= 24 * 60 * 60 * 1000;
 }
 
-function scopeForCategory(category: WhatsAppTemplateCategory): WhatsAppTemplateCategory {
-  return category;
+function isPurposeCategory(
+  category: WhatsAppTemplateCategory,
+  purpose: WhatsAppMessagePurpose | undefined,
+): boolean {
+  if (!purpose) return true;
+  return category === purpose;
 }
 
 /**
  * Deterministic WhatsApp Business policy gate.
  *
- * This does not replace Meta policy review. It encodes the minimum product
- * boundaries we can enforce locally so no feature can bypass them casually.
+ * The 24-hour service window and user consent are independent gates:
+ * - the window decides whether a template is required;
+ * - consent decides whether a business-initiated message category may be sent.
+ *
+ * This does not replace Meta review; it encodes minimum local fail-closed rules.
  */
 export function evaluateWhatsAppPolicy(input: {
   tenantId: string;
@@ -54,6 +62,7 @@ export function evaluateWhatsAppPolicy(input: {
   initiation: WhatsAppSendInitiation;
   tenantControl: TenantAutomationControl;
   customerControl: CustomerMessagingControl;
+  purpose?: WhatsAppMessagePurpose;
   template?: WhatsAppTemplateRef;
   now?: Date;
 }): WhatsAppPolicyDecision {
@@ -116,6 +125,19 @@ export function evaluateWhatsAppPolicy(input: {
         reason: "Business-initiated WhatsApp messages require recorded opt-in.",
       };
     }
+
+    if (
+      input.purpose &&
+      !input.customerControl.whatsappConsentScopes.includes(input.purpose)
+    ) {
+      return {
+        allowed: false,
+        within24h,
+        requiresTemplate,
+        blockCode: "WHATSAPP_CONSENT_SCOPE_REQUIRED",
+        reason: `Customer consent does not include ${input.purpose} business-initiated messages.`,
+      };
+    }
   }
 
   if (!requiresTemplate) {
@@ -124,7 +146,7 @@ export function evaluateWhatsAppPolicy(input: {
       within24h: true,
       requiresTemplate: false,
       blockCode: null,
-      reason: "Inside the 24-hour customer service window.",
+      reason: "Inside the 24-hour customer service window and consent checks passed.",
     };
   }
 
@@ -138,14 +160,23 @@ export function evaluateWhatsAppPolicy(input: {
     };
   }
 
-  const requiredScope = scopeForCategory(input.template.category);
-  if (!input.customerControl.whatsappConsentScopes.includes(requiredScope)) {
+  if (!isPurposeCategory(input.template.category, input.purpose)) {
+    return {
+      allowed: false,
+      within24h: false,
+      requiresTemplate: true,
+      blockCode: "WHATSAPP_TEMPLATE_CATEGORY_MISMATCH",
+      reason: "The configured template category does not match the message purpose.",
+    };
+  }
+
+  if (!input.customerControl.whatsappConsentScopes.includes(input.template.category)) {
     return {
       allowed: false,
       within24h: false,
       requiresTemplate: true,
       blockCode: "WHATSAPP_CONSENT_SCOPE_REQUIRED",
-      reason: `Customer consent does not include ${requiredScope} messages.`,
+      reason: `Customer consent does not include ${input.template.category} messages.`,
     };
   }
 
