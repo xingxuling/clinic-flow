@@ -20,14 +20,14 @@ export interface ServiceWorkItemDispatchResult {
   errorCode: string | null;
 }
 
+const DISPATCHABLE_KINDS = new Set<ServiceWorkItem["kind"]>([
+  "follow_up_message",
+  "booking_reminder",
+]);
+
 /**
  * 已批准工作项的通道执行层。
- *
- * 只有 MessagingAdapter 真正返回 ok 才会：
- * 1. 把 provider receipt 固化到 Work Item 并标记 done；
- * 2. 将出站 Agent 消息投影进 Service Conversation。
- *
- * 如果上次已发送但 Conversation 投影失败，重试只修投影，不再二次发送。
+ * 真实 send 成功后先固化 provider receipt，再投影 Conversation；重试不会二次发送。
  */
 export class ServiceWorkItemDispatchRuntime {
   constructor(
@@ -52,7 +52,7 @@ export class ServiceWorkItemDispatchRuntime {
     if (item.customerId && item.customerId !== input.customer.id) {
       return { ok: false, duplicate: false, workItem: item, sendReceipt: null, conversation: null, errorCode: "CUSTOMER_MISMATCH" };
     }
-    if (item.kind !== "follow_up_message" || !item.proposedMessage?.trim()) {
+    if (!DISPATCHABLE_KINDS.has(item.kind) || !item.proposedMessage?.trim()) {
       return { ok: false, duplicate: false, workItem: item, sendReceipt: null, conversation: null, errorCode: "WORK_ITEM_NOT_DISPATCHABLE" };
     }
     if (input.adapter.channel !== input.customer.preferredChannel) {
@@ -110,7 +110,7 @@ export class ServiceWorkItemDispatchRuntime {
       patientId: input.customer.id,
       channel: input.customer.preferredChannel,
       text: item.proposedMessage,
-      replyOptions: [],
+      replyOptions: (item.proposedReplyOptions ?? []).map((option) => ({ ...option })),
       correlationId: item.id,
     });
     if (!sendReceipt.ok) {
