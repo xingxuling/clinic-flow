@@ -5,11 +5,13 @@ import { useEffect, useMemo, useState } from "react";
 import { LegacyImportPanel } from "@/components/importing/LegacyImportPanel";
 import { PageContainer } from "@/components/layout/StaffShell";
 import { EmptyState, MdCard, MdChip, MdTextField, SectionHeader } from "@/components/m3";
+import { VerticalSwitcher } from "@/components/verticals/VerticalSwitcher";
 import { serviceCustomerRepository } from "@/customers/repository";
 import { patientToServiceCustomer, type ServiceCustomer } from "@/customers/types";
 import { CHANNEL, fmtDate } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
 import { resolveVerticalPackForClinic } from "@/verticals/registry";
+import { resolveVerticalPackForTenant } from "@/verticals/tenant-selection";
 
 export const Route = createFileRoute("/staff/_app/patients")({
   head: () => ({
@@ -32,7 +34,7 @@ function CustomersPage() {
   const { patients, clinic, appointments } = useApp();
   const [q, setQ] = useState("");
   const [imported, setImported] = useState<ServiceCustomer[]>([]);
-  const vertical = resolveVerticalPackForClinic(clinic);
+  const [vertical, setVertical] = useState(() => resolveVerticalPackForClinic(clinic));
   const mask = clinic.settings.privacy.maskPhoneInLists;
 
   const legacyCustomers = useMemo(() => patients.map(patientToServiceCustomer), [patients]);
@@ -40,13 +42,14 @@ function CustomersPage() {
   useEffect(() => {
     const refresh = () => setImported(serviceCustomerRepository.list(clinic.id));
     refresh();
+    setVertical(resolveVerticalPackForTenant(clinic));
     window.addEventListener("service-frontdesk:customers-changed", refresh);
     window.addEventListener("storage", refresh);
     return () => {
       window.removeEventListener("service-frontdesk:customers-changed", refresh);
       window.removeEventListener("storage", refresh);
     };
-  }, [clinic.id]);
+  }, [clinic]);
 
   const customers = useMemo(() => {
     const byId = new Map<string, ServiceCustomer>();
@@ -72,7 +75,10 @@ function CustomersPage() {
       title={`${vertical.labels.customer}目錄`}
       subtitle={`通用客戶資料庫：${vertical.labels.customer}、${vertical.labels.subject}、跟進資料與舊系統匯入。`}
     >
+      <VerticalSwitcher tenantId={clinic.id} vertical={vertical} onChange={setVertical} />
+
       <LegacyImportPanel
+        key={vertical.id}
         tenantId={clinic.id}
         vertical={vertical}
         existingCustomers={legacyCustomers}
@@ -116,7 +122,11 @@ function CustomersPage() {
                   <div className="min-w-0">
                     <p className="md-title-m truncate text-on-surface">{customer.displayName}</p>
                     <p className="md-body-s text-on-surface-variant">
-                      {legacy ? `舊診所檔案 ${legacy.fileNo}` : customer.source === "legacy_import" ? "拍照 / 文件匯入" : "客戶資料"}
+                      {legacy
+                        ? `舊診所檔案 ${legacy.fileNo}`
+                        : customer.source === "legacy_import"
+                          ? "拍照 / 文件匯入"
+                          : "客戶資料"}
                     </p>
                   </div>
                   <MdChip tone="secondary">{CHANNEL[customer.preferredChannel]}</MdChip>
@@ -159,7 +169,11 @@ function CustomersPage() {
                         ? fmtDate(legacy.lastVisitAt)
                         : "—"}
                   </div>
-                  <div>跟進提示：{customer.followUp?.followUpHint ?? (legacy?.nextRecallAt ? fmtDate(legacy.nextRecallAt) : "—")}</div>
+                  <div>
+                    跟進提示：
+                    {customer.followUp?.followUpHint ??
+                      (legacy?.nextRecallAt ? fmtDate(legacy.nextRecallAt) : "—")}
+                  </div>
                   <div>{vertical.labels.bookings}：{upcoming.length} 宗</div>
                   <div>行政備註：{customer.notesAdmin || "—"}</div>
                 </dl>
