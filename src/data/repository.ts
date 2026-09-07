@@ -20,6 +20,7 @@ import type {
   Staff,
   UrgentFlag,
 } from "@/types/domain";
+import { resolveVerticalIdForService } from "@/verticals/registry";
 import {
   seedAgentTasks,
   seedAppointments,
@@ -171,7 +172,11 @@ export class InMemoryClinicRepository implements ClinicRepository {
     this.patch(this.store.appointments, clinicId, id, p);
   }
   addAppointment(a: Appointment) {
-    this.store.appointments.push(a);
+    const resolvedVerticalId = a.verticalId ?? resolveVerticalIdForService(a.serviceId);
+    if (!resolvedVerticalId) {
+      throw new Error(`BOOKING_VERTICAL_UNRESOLVED:${a.serviceId}`);
+    }
+    this.store.appointments.push({ ...a, verticalId: resolvedVerticalId });
   }
   updateConversation(clinicId: ID, id: ID, p: Partial<Conversation>) {
     this.patch(this.store.conversations, clinicId, id, p);
