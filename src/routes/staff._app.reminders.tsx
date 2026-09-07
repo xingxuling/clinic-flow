@@ -92,7 +92,7 @@ function RemindersPage() {
       bookingId: appointment.id,
       startAt: appointment.startAt,
       serviceName,
-      resourceName: resource?.name,
+      ...(resource?.name ? { resourceName: resource.name } : {}),
     });
   }, [appointments, clinic, customerName, previewReminderId, reminders, staff, vertical]);
 
