@@ -1,9 +1,12 @@
+import { executeBookingInteractiveAction } from "@/frontdesk/booking-actions";
 import type {
   AppointmentAdapterContext,
   AppointmentMutationResult,
   AppointmentSystemAdapter,
 } from "@/integrations/appointment-adapter";
+import { AppointmentBookingAdapter } from "@/integrations/booking-adapter";
 import type { Appointment, ID } from "@/types/domain";
+import { dentalVerticalPack } from "@/verticals/dental";
 
 export type AppointmentInteractiveAction =
   | { kind: "confirm"; appointmentId: ID }
@@ -23,26 +26,9 @@ export interface AppointmentActionReceipt {
   adapterCode: AppointmentMutationResult["code"] | null;
 }
 
-function hoursUntil(startAt: string, now: Date): number {
-  return (new Date(startAt).getTime() - now.getTime()) / 3_600_000;
-}
-
-function requiresHumanApproval(
-  appointment: Appointment,
-  action: AppointmentInteractiveAction,
-  policy: AppointmentActionPolicy,
-  now: Date,
-): boolean {
-  if (action.kind === "confirm") return false;
-  return hoursUntil(appointment.startAt, now) < policy.humanApprovalLeadHours;
-}
-
 /**
- * WhatsApp 按钮 / 病人网页按钮共用的一键预约动作执行器。
- *
- * - 确认：合法状态下可直接执行；
- * - 改期 / 取消：距离预约过近时转人工；
- * - 真正的读写只通过 AppointmentSystemAdapter，不耦合某个牙科 CMS。
+ * 第一版牙科兼容入口。
+ * 真正动作规则只维护在 executeBookingInteractiveAction；这里负责类型/字段桥接。
  */
 export async function executeAppointmentInteractiveAction(input: {
   adapter: AppointmentSystemAdapter;
@@ -51,74 +37,41 @@ export async function executeAppointmentInteractiveAction(input: {
   policy: AppointmentActionPolicy;
   now?: Date;
 }): Promise<AppointmentActionReceipt> {
-  const now = input.now ?? new Date();
-  const appointment = await input.adapter.getAppointment(
-    input.ctx,
-    input.action.appointmentId,
-  );
-  if (!appointment) {
-    return {
-      ok: false,
-      status: "failed",
-      message: "找不到相關預約，已轉交診所職員確認。",
-      appointment: null,
-      adapterCode: "NOT_FOUND",
-    };
-  }
-
-  if (requiresHumanApproval(appointment, input.action, input.policy, now)) {
-    return {
-      ok: false,
-      status: "needs_human",
-      message: `距離應診不足 ${input.policy.humanApprovalLeadHours} 小時，今次改動需要診所職員確認。`,
-      appointment,
-      adapterCode: null,
-    };
-  }
-
-  let result: AppointmentMutationResult;
-  if (input.action.kind === "confirm") {
-    result = await input.adapter.confirm(input.ctx, appointment.id);
-  } else if (input.action.kind === "cancel") {
-    result = await input.adapter.cancel(input.ctx, appointment.id);
-  } else {
-    result = await input.adapter.reschedule({
-      ctx: input.ctx,
-      appointmentId: appointment.id,
-      startAt: input.action.startAt,
-    });
-  }
-
-  if (!result.ok) {
-    const messages: Record<AppointmentMutationResult["code"], string> = {
-      OK: "已完成。",
-      NOT_FOUND: "找不到相關預約，請由診所職員確認。",
-      TENANT_MISMATCH: "預約不屬於目前診所，操作已阻止。",
-      INVALID_TRANSITION: "目前預約狀態不允許這個操作。",
-      SLOT_CONFLICT: "所選時段剛剛已被使用，請選擇其他時間。",
-      INVALID_SLOT: "所選時間無效，請重新選擇。",
-    };
-    return {
-      ok: false,
-      status: "failed",
-      message: messages[result.code],
-      appointment: result.appointment ?? appointment,
-      adapterCode: result.code,
-    };
-  }
-
-  const successMessage =
+  const bookingAdapter = new AppointmentBookingAdapter(input.adapter);
+  const bookingAction =
     input.action.kind === "confirm"
-      ? "預約已確認。"
+      ? { kind: "confirm" as const, bookingId: input.action.appointmentId }
       : input.action.kind === "cancel"
-        ? "預約已取消。"
-        : "改期要求已完成，新的時段正等待診所確認。";
+        ? { kind: "cancel" as const, bookingId: input.action.appointmentId }
+        : {
+            kind: "reschedule" as const,
+            bookingId: input.action.appointmentId,
+            startAt: input.action.startAt,
+          };
+
+  const result = await executeBookingInteractiveAction({
+    adapter: bookingAdapter,
+    ctx: { tenantId: input.ctx.clinicId, actorId: input.ctx.actorId },
+    action: bookingAction,
+    policy: {
+      humanApprovalLeadHours: input.policy.humanApprovalLeadHours,
+      labels: {
+        booking: dentalVerticalPack.labels.booking,
+        staff: dentalVerticalPack.labels.staff,
+      },
+    },
+    ...(input.now === undefined ? {} : { now: input.now }),
+  });
+
+  const appointment = result.booking
+    ? await input.adapter.getAppointment(input.ctx, result.booking.id)
+    : null;
 
   return {
-    ok: true,
-    status: "executed",
-    message: successMessage,
-    appointment: result.appointment ?? appointment,
-    adapterCode: result.code,
+    ok: result.ok,
+    status: result.status,
+    message: result.message,
+    appointment,
+    adapterCode: result.adapterCode,
   };
 }
