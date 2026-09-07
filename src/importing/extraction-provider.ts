@@ -25,6 +25,31 @@ export interface DocumentExtractionProviderDescriptor {
   notes: string;
 }
 
+const DEMO_FIELD_VALUES: Record<string, string> = {
+  "customer.name": "陳大文",
+  "customer.phone": "91234567",
+  "customer.preferred_channel": "whatsapp",
+  "customer.language": "zh-HK",
+  "customer.notes_admin": "由舊系統資料匯入，待人工確認。",
+  "subject.pet_name": "豆豆",
+  "subject.species": "狗",
+  "subject.breed": "柴犬",
+  "subject.size": "中型",
+  "subject.handling_notes": "到店時較緊張，先由主人陪同。",
+  "subject.plate": "AB 1234",
+  "subject.make_model": "Toyota Corolla",
+  "subject.year": "2021",
+  "subject.mileage": "42800",
+  "subject.customer_description": "定期保養，另請檢查煞車聲。",
+  "subject.address": "九龍旺角示範道 18 號 8 樓 A 室",
+  "subject.property_type": "住宅",
+  "subject.access_notes": "大堂向保安登記後上樓。",
+  "subject.contact_on_site": "陳先生",
+  "follow_up.last_service": "定期服務",
+  "follow_up.last_service_date": "2026-08-17",
+  "follow_up.hint": "6 個月後跟進",
+};
+
 /**
  * 产品 demo 的确定性 Provider：只证明完整流程，不声称 OCR/VLM 真实识别能力。
  * 真正 Provider 接入时必须保持同一输出契约并带 confidence / sourceRegion。
@@ -37,17 +62,6 @@ export class DemoLegacyExtractionProvider implements DocumentExtractionProvider 
 
   async extract(request: DocumentExtractionRequest): Promise<DocumentExtractionResult> {
     const { source, schema } = request;
-    const basename = source.filename.replace(/\.[^.]+$/, "").slice(0, 24) || "舊客戶資料";
-    const defaults: Record<string, string> = {
-      "customer.name": basename.includes("陳") ? "陳大文" : "陳大文",
-      "customer.phone": "91234567",
-      "customer.preferred_channel": "whatsapp",
-      "customer.language": "zh-HK",
-      "customer.notes_admin": "由舊系統資料匯入，待人工確認。",
-      "follow_up.last_service": "定期服務",
-      "follow_up.last_service_date": "2026-08-17",
-      "follow_up.hint": "6 個月後跟進",
-    };
 
     return {
       providerId: this.id,
@@ -56,15 +70,17 @@ export class DemoLegacyExtractionProvider implements DocumentExtractionProvider 
       fields: schema.fields.map((field, index) => ({
         key: field.key,
         label: field.label,
-        value: defaults[field.key] ?? (field.key.startsWith("subject.") ? "" : ""),
-        confidence: field.required ? Math.max(0.78, 0.97 - index * 0.03) : Math.max(0.62, 0.9 - index * 0.025),
+        value: DEMO_FIELD_VALUES[field.key] ?? "",
+        confidence: field.required
+          ? Math.max(0.78, 0.97 - index * 0.03)
+          : Math.max(0.62, 0.9 - index * 0.025),
         sourceRegion: {
           x: 0.08,
           y: Math.min(0.88, 0.08 + index * 0.07),
           width: 0.52,
           height: 0.05,
         },
-        evidenceText: defaults[field.key] ?? "",
+        evidenceText: DEMO_FIELD_VALUES[field.key] ?? "",
       })),
       warnings: [
         "DEMO_PROVIDER_ONLY",
