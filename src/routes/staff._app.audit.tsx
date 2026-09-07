@@ -10,7 +10,7 @@ import { useApp } from "@/state/app-store";
 export const Route = createFileRoute("/staff/_app/audit")({
   head: () => ({
     meta: [
-      { title: "審計日誌｜Service Frontdesk" },
+      { title: "審計｜Service Frontdesk" },
       { name: "description", content: "記錄員工、客戶、系統與 Agent 在服務前台執行過的動作及結果。" },
     ],
   }),
@@ -25,7 +25,7 @@ function AuditPage() {
   const icon = { staff: User, agent: Bot, system: Cpu, patient: UserCircle };
 
   return (
-    <PageContainer title="審計日誌" subtitle="所有行政／服務流程與 Agent 決策皆留痕，包含被拒絕的操作。">
+    <PageContainer title="審計" subtitle="所有服務流程與 Agent 動作皆留痕，包含成功、失敗與被阻止的操作。">
       <div className="mb-4 flex flex-wrap gap-2">
         {(
           [
