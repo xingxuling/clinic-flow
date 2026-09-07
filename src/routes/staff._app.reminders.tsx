@@ -1,8 +1,9 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { BellRing, MessageCircle, RotateCcw } from "lucide-react";
+import { BellRing, CalendarClock, MessageCircle, RotateCcw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { useServiceBookings } from "@/bookings/use-service-bookings";
 import { PageContainer } from "@/components/layout/StaffShell";
 import {
   EmptyState,
@@ -16,6 +17,10 @@ import {
 import { useServiceCustomers } from "@/customers/use-service-customers";
 import { buildBookingReminder } from "@/frontdesk/booking-reminder";
 import { CHANNEL, REMINDER_STATUS, fmtDateTime } from "@/lib/labels";
+import {
+  createBookingReminderWorkItem,
+  planBookingReminderCandidates,
+} from "@/reminders/booking-reminder-planner";
 import { useApp } from "@/state/app-store";
 import type { ReminderKind } from "@/types/domain";
 import { filterByVertical } from "@/verticals/entity-scope";
@@ -62,10 +67,23 @@ function RemindersPage() {
     patients,
     appointments,
     staff,
+    setAppointmentStatus,
+    rescheduleAppointment,
+    createAppointment,
     updateReminderStatus,
   } = useApp();
   const vertical = useTenantVertical(clinic);
   const { customers, customerName } = useServiceCustomers({ clinic, vertical, legacyPatients: patients });
+  const { bookings } = useServiceBookings({
+    clinic,
+    vertical,
+    legacyAppointments: appointments,
+    legacyActions: {
+      setStatus: setAppointmentStatus,
+      reschedule: rescheduleAppointment,
+      create: createAppointment,
+    },
+  });
   const workItems = useServiceWorkItems(clinic.id, vertical.id);
   const [kind, setKind] = useState<ReminderKind | "all">("all");
   const [previewReminderId, setPreviewReminderId] = useState<string | null>(null);
@@ -73,10 +91,6 @@ function RemindersPage() {
   const visibleReminders = useMemo(
     () => filterByVertical(reminders, vertical.id),
     [reminders, vertical.id],
-  );
-  const visibleAppointments = useMemo(
-    () => filterByVertical(appointments, vertical.id),
-    [appointments, vertical.id],
   );
   const list = visibleReminders.filter((reminder) => kind === "all" || reminder.kind === kind);
   const overdue = visibleReminders.filter((reminder) => reminder.status === "overdue");
@@ -94,36 +108,47 @@ function RemindersPage() {
     [workItems],
   );
 
+  const bookingReminderCandidates = useMemo(
+    () =>
+      planBookingReminderCandidates({
+        vertical,
+        timezone: clinic.timezone,
+        reminderLeadHours: clinic.settings.reminderLeadHours,
+        bookings,
+        customers,
+        resourceName: (resourceId) => staff.find((row) => row.id === resourceId)?.name,
+      }),
+    [bookings, clinic.settings.reminderLeadHours, clinic.timezone, customers, staff, vertical],
+  );
+
   const preview = useMemo(() => {
     if (!previewReminderId) return null;
     const reminder = visibleReminders.find((row) => row.id === previewReminderId);
     if (!reminder || reminder.kind !== "pre_visit") return null;
 
-    const appointment = visibleAppointments
+    const booking = bookings
       .filter(
         (row) =>
-          row.patientId === reminder.patientId &&
+          row.customerId === reminder.patientId &&
           row.status !== "cancelled" &&
           new Date(row.startAt).getTime() > Date.now(),
       )
       .sort((a, b) => a.startAt.localeCompare(b.startAt))[0];
-    if (!appointment) return null;
-    const resource = staff.find((row) => row.id === appointment.practitionerId);
+    if (!booking) return null;
+    const resource = staff.find((row) => row.id === booking.resourceId);
     const serviceName =
-      vertical.services.find((service) => service.id === appointment.serviceId)?.name ??
-      clinic.services.find((service) => service.id === appointment.serviceId)?.name ??
-      "服務";
+      vertical.services.find((service) => service.id === booking.serviceId)?.name ?? "服務";
 
     return buildBookingReminder({
       vertical,
       timezone: clinic.timezone,
       customerName: customerName(reminder.patientId),
-      bookingId: appointment.id,
-      startAt: appointment.startAt,
+      bookingId: booking.id,
+      startAt: booking.startAt,
       serviceName,
       ...(resource?.name ? { resourceName: resource.name } : {}),
     });
-  }, [clinic, customerName, previewReminderId, staff, vertical, visibleAppointments, visibleReminders]);
+  }, [bookings, clinic.timezone, customerName, previewReminderId, staff, vertical, visibleReminders]);
 
   return (
     <PageContainer
@@ -134,14 +159,94 @@ function RemindersPage() {
         <div className="flex items-start gap-3">
           <MessageCircle className="mt-0.5 size-5 shrink-0" />
           <div>
-            <p className="md-title-m">WhatsApp / Web 跟進</p>
+            <p className="md-title-m">Messaging 工作流</p>
             <p className="mt-1 md-body-s">
-              {vertical.labels.booking}提醒可帶「確認／改期／取消」按鈕；服務後召回由 Vertical Pack 規則計算。
-              正式發送仍經 Messaging Adapter，不把通道邏輯寫死在 UI。
+              {vertical.labels.booking}提醒帶「確認／改期／取消」按鈕；服務後召回由 Vertical Pack 規則計算。
+              所有消息先成為 Work Item，批准後仍需 Messaging Adapter 真實成功才算完成。
             </p>
           </div>
         </div>
       </MdCard>
+
+      {bookingReminderCandidates.length > 0 && (
+        <section className="mb-6">
+          <SectionHeader title={`${vertical.labels.booking}提醒候選`} count={bookingReminderCandidates.length} />
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {bookingReminderCandidates.map((candidate) => {
+              const workItem = workItemBySource.get(candidate.sourceRef);
+              return (
+                <MdCard key={candidate.sourceRef} className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="md-title-m text-on-surface">{customerName(candidate.customerId)}</p>
+                      <p className="md-body-s text-on-surface-variant">
+                        {candidate.serviceName} · 提前 {candidate.leadHours} 小時
+                      </p>
+                    </div>
+                    <MdChip tone={candidate.overdue ? "error" : "primary"}>
+                      {candidate.overdue ? "已到提醒時間" : "待排程"}
+                    </MdChip>
+                  </div>
+
+                  <div className="mt-3 rounded-xl bg-surface-container p-3">
+                    <div className="flex items-center gap-2">
+                      <CalendarClock className="size-4 text-primary" />
+                      <span className="md-label-m text-on-surface-variant">預計發送</span>
+                    </div>
+                    <p className="mt-1 md-body-m text-on-surface">{fmtDateTime(candidate.dueAt)}</p>
+                  </div>
+
+                  <p className="mt-3 line-clamp-3 whitespace-pre-line md-body-s text-on-surface-variant">
+                    {candidate.reminder.text}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {candidate.reminder.replyOptions.map((option) => (
+                      <MdChip key={option.id} tone="secondary">{option.label}</MdChip>
+                    ))}
+                  </div>
+
+                  {workItem && (
+                    <div className="mt-3 flex items-center justify-between rounded-xl bg-secondary-container/45 p-3">
+                      <span className="md-body-s text-on-secondary-container">
+                        Work Item：{workItemStatusLabel(workItem.status)}
+                      </span>
+                      <Link to="/staff/agent" className="md-label-l text-primary">查看</Link>
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <MdButton
+                      size="sm"
+                      variant={workItem ? "outlined" : "tonal"}
+                      onClick={() => {
+                        try {
+                          const item = createBookingReminderWorkItem({
+                            tenantId: clinic.id,
+                            vertical,
+                            candidate,
+                          });
+                          toast.success(workItem ? "提醒工作項已存在" : "提醒已送到 Agent 任務台", {
+                            description: workItemStatusLabel(item.status),
+                          });
+                        } catch (error) {
+                          toast.error("無法建立提醒工作項", {
+                            description: error instanceof Error ? error.message : String(error),
+                          });
+                        }
+                      }}
+                    >
+                      {workItem ? "已建立工作項" : "建立提醒工作項"}
+                    </MdButton>
+                    {workItem && (
+                      <Link to="/staff/agent"><MdButton size="sm" variant="text">前往 Agent</MdButton></Link>
+                    )}
+                  </div>
+                </MdCard>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {importedFollowUps.length > 0 && (
         <section className="mb-6">
@@ -204,9 +309,7 @@ function RemindersPage() {
                       {workItem ? "已建立草稿" : "建立訊息草稿"}
                     </MdButton>
                     {workItem && (
-                      <Link to="/staff/agent">
-                        <MdButton size="sm" variant="text">前往 Agent</MdButton>
-                      </Link>
+                      <Link to="/staff/agent"><MdButton size="sm" variant="text">前往 Agent</MdButton></Link>
                     )}
                   </div>
                 </MdCard>
@@ -219,61 +322,63 @@ function RemindersPage() {
       {overdue.length > 0 && (
         <MdCard className="mb-5 flex items-center gap-3 bg-error-container p-4 text-on-error-container">
           <BellRing className="size-5 shrink-0" />
-          <p className="md-body-m">有 {overdue.length} 項既有跟進已逾期。</p>
+          <p className="md-body-m">有 {overdue.length} 項 Dental Legacy 跟進已逾期。</p>
         </MdCard>
       )}
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        {KIND_VALUES.map((value) => (
-          <MdFilterChip key={value} selected={kind === value} onClick={() => setKind(value)}>
-            {value === "all" ? "全部" : reminderKindFor(vertical, value)}
-          </MdFilterChip>
-        ))}
-      </div>
+      {visibleReminders.length > 0 && (
+        <section>
+          <div className="mb-4 flex flex-wrap gap-2">
+            {KIND_VALUES.map((value) => (
+              <MdFilterChip key={value} selected={kind === value} onClick={() => setKind(value)}>
+                {value === "all" ? "全部" : reminderKindFor(vertical, value)}
+              </MdFilterChip>
+            ))}
+          </div>
 
-      <SectionHeader title="既有提醒排程" count={list.length} />
-      {list.length === 0 ? (
-        <EmptyState
-          text={`目前沒有屬於 ${vertical.shortName} 的提醒排程；拍照匯入後的跟進建議會顯示在上方。`}
-        />
-      ) : (
-        <MdCard className="divide-y divide-outline-variant overflow-hidden">
-          {list.map((reminder) => {
-            const status = REMINDER_STATUS[reminder.status];
-            return (
-              <div key={reminder.id} className="flex flex-wrap items-center gap-3 p-4">
-                <div className="min-w-0 flex-1">
-                  <p className="md-title-m text-on-surface">{customerName(reminder.patientId)}</p>
-                  <p className="md-body-s text-on-surface-variant">
-                    {reminderKindFor(vertical, reminder.kind)} · {reminder.template} · {CHANNEL[reminder.channel]}
-                  </p>
-                </div>
-                <p className="md-body-s text-on-surface-variant">{fmtDateTime(reminder.dueAt)}</p>
-                <MdChip tone={status.tone}>{status.label}</MdChip>
-                {(reminder.status === "scheduled" || reminder.status === "overdue") && (
-                  <div className="flex flex-wrap gap-2">
-                    {reminder.kind === "pre_visit" && (
-                      <MdButton
-                        size="sm"
-                        variant="outlined"
-                        icon={<MessageCircle className="size-4" />}
-                        onClick={() => setPreviewReminderId(reminder.id)}
-                      >
-                        預覽 WhatsApp
-                      </MdButton>
+          <SectionHeader title="Dental Legacy 提醒排程" count={list.length} />
+          {list.length === 0 ? (
+            <EmptyState text="沒有符合條件的兼容提醒。" />
+          ) : (
+            <MdCard className="divide-y divide-outline-variant overflow-hidden">
+              {list.map((reminder) => {
+                const status = REMINDER_STATUS[reminder.status];
+                return (
+                  <div key={reminder.id} className="flex flex-wrap items-center gap-3 p-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="md-title-m text-on-surface">{customerName(reminder.patientId)}</p>
+                      <p className="md-body-s text-on-surface-variant">
+                        {reminderKindFor(vertical, reminder.kind)} · {reminder.template} · {CHANNEL[reminder.channel]}
+                      </p>
+                    </div>
+                    <p className="md-body-s text-on-surface-variant">{fmtDateTime(reminder.dueAt)}</p>
+                    <MdChip tone={status.tone}>{status.label}</MdChip>
+                    {(reminder.status === "scheduled" || reminder.status === "overdue") && (
+                      <div className="flex flex-wrap gap-2">
+                        {reminder.kind === "pre_visit" && (
+                          <MdButton
+                            size="sm"
+                            variant="outlined"
+                            icon={<MessageCircle className="size-4" />}
+                            onClick={() => setPreviewReminderId(reminder.id)}
+                          >
+                            預覽 WhatsApp
+                          </MdButton>
+                        )}
+                        <MdButton size="sm" variant="tonal" onClick={() => updateReminderStatus(reminder.id, "sent")}>
+                          標記已發送
+                        </MdButton>
+                        <MdButton size="sm" variant="text" onClick={() => updateReminderStatus(reminder.id, "cancelled")}>
+                          取消
+                        </MdButton>
+                      </div>
                     )}
-                    <MdButton size="sm" variant="tonal" onClick={() => updateReminderStatus(reminder.id, "sent")}>
-                      標記已發送
-                    </MdButton>
-                    <MdButton size="sm" variant="text" onClick={() => updateReminderStatus(reminder.id, "cancelled")}>
-                      取消
-                    </MdButton>
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </MdCard>
+                );
+              })}
+            </MdCard>
+          )}
+        </section>
       )}
 
       <MdDialog
@@ -292,9 +397,6 @@ function RemindersPage() {
                 {preview.replyOptions.map((option) => <MdChip key={option.id} tone="primary">{option.label}</MdChip>)}
               </div>
             </div>
-            <p className="md-body-s text-on-surface-variant">
-              按鈕回傳後進入統一 Booking Adapter；接近服務時間的改動依行業規則轉人工。
-            </p>
           </div>
         ) : (
           <EmptyState text={`目前沒有可預覽的未來${vertical.labels.booking}。`} />
@@ -302,7 +404,7 @@ function RemindersPage() {
       </MdDialog>
 
       <div className="mt-5 flex items-center gap-2 md-body-s text-on-surface-variant">
-        <RotateCcw className="size-4" /> Follow-up 規則來自 Vertical Pack，不由 Agent 自行推斷專業週期。
+        <RotateCcw className="size-4" /> Reminder / Follow-up 都由既有規則與 Booking 事實產生，不由 Agent 自行推斷週期。
       </div>
     </PageContainer>
   );
