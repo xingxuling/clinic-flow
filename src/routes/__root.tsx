@@ -28,7 +28,7 @@ function NotFoundComponent() {
             to="/"
             className="state-layer inline-flex h-10 items-center justify-center rounded-full bg-primary px-6 md-label-l text-primary-foreground"
           >
-            返回登入
+            返回入口
           </Link>
         </div>
       </div>
@@ -64,7 +64,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
             href="/"
             className="state-layer inline-flex h-10 items-center justify-center rounded-full border border-outline px-6 md-label-l text-primary"
           >
-            返回登入
+            返回入口
           </a>
         </div>
       </div>
@@ -77,12 +77,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { title: "診所行政 Agent" },
-      { name: "description", content: "香港小型診所的邀請制行政後台。" },
+      { title: "Service Frontdesk" },
+      { name: "description", content: "通用服務業 AI 前台：對話、排程、舊資料匯入、跟進與行業包。" },
       { name: "robots", content: "noindex, nofollow" },
       { name: "theme-color", content: "#0f6c73" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
-      { name: "apple-mobile-web-app-title", content: "診所行政" },
+      { name: "apple-mobile-web-app-title", content: "Service Frontdesk" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -123,7 +123,6 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AppStoreProvider>
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
         <Toaster position="bottom-center" />
       </AppStoreProvider>
