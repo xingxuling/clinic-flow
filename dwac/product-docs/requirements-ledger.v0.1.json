@@ -1,0 +1,180 @@
+{
+  "protocol": "dwac.requirement-traceability.v0.15",
+  "artifact_id": "service-frontdesk-platform",
+  "requirements": [
+    {
+      "requirement_id": "PRD-001",
+      "statement": "平台必须定位为现有业务系统前的 AI 客户端/AI 前台，而不是强迫商户替换原有 CMS/CRM。",
+      "acceptance_criteria": [
+        "商户可在不替换现有系统的情况下启用核心客户沟通和预约流程。",
+        "外部系统通过适配器接入，Core 不直接绑定单一供应商。"
+      ],
+      "source_ref": "conversation:product-positioning",
+      "priority": "must",
+      "metadata": {}
+    },
+    {
+      "requirement_id": "PRD-002",
+      "statement": "核心必须支持 Service Frontdesk Core + Vertical Pack 架构，新行业通过行业包配置而非复制 Core。",
+      "acceptance_criteria": [
+        "牙科、宠物、美容、汽车、家居服务可加载不同术语、FAQ、风险信号、服务和召回规则。",
+        "新增行业不要求 fork 核心前台、消息、Booking、提醒和跟进引擎。"
+      ],
+      "source_ref": "github:architecture",
+      "priority": "must",
+      "metadata": {}
+    },
+    {
+      "requirement_id": "PRD-003",
+      "statement": "第一阶段必须支持 WhatsApp/网页渠道的授权 FAQ 自动回复。",
+      "acceptance_criteria": [
+        "自动回复只来自商户明确授权内容。",
+        "未命中或受限专业问题 fail-closed 转人工。"
+      ],
+      "source_ref": "teacher:phase1",
+      "priority": "must",
+      "metadata": {}
+    },
+    {
+      "requirement_id": "PRD-004",
+      "statement": "第一阶段必须支持预约/服务时段提醒以及确认、改期、取消的一键流程。",
+      "acceptance_criteria": [
+        "提醒消息可提供确认/改期/取消动作。",
+        "改期可查询可用时段并让客户选择。",
+        "接近服务时间的敏感改动可按规则转人工。"
+      ],
+      "source_ref": "teacher:phase1",
+      "priority": "must",
+      "metadata": {}
+    },
+    {
+      "requirement_id": "PRD-005",
+      "statement": "系统必须支持高优先级风险关键词/规则命中后立即转人工。",
+      "acceptance_criteria": [
+        "高优先级信号优先于普通 Booking 和 FAQ。",
+        "系统不因行业包获得专业诊断、危险判断或治疗/维修建议权限。"
+      ],
+      "source_ref": "teacher:phase1",
+      "priority": "must",
+      "metadata": {}
+    },
+    {
+      "requirement_id": "PRD-006",
+      "statement": "第一阶段必须支持简单日历同步，并为更深业务系统整合保留统一适配器。",
+      "acceptance_criteria": [
+        "Booking 成功后可同步到日历。",
+        "同步失败可提示人工检查而不伪造成功。"
+      ],
+      "source_ref": "teacher:phase1",
+      "priority": "must",
+      "metadata": {}
+    },
+    {
+      "requirement_id": "PRD-007",
+      "statement": "系统必须提供面向前台人员的对话摘要与下一步建议。",
+      "acceptance_criteria": [
+        "摘要只压缩客户行政/服务意图和下一步，不生成无依据专业结论。",
+        "需要人工处理的原因可见。"
+      ],
+      "source_ref": "teacher:phase2",
+      "priority": "should",
+      "metadata": {}
+    },
+    {
+      "requirement_id": "PRD-008",
+      "statement": "系统必须提供智能迁移：使用手机拍照或截图导入旧系统、纸张、表格中的关键客户资料。",
+      "acceptance_criteria": [
+        "输入可为手机拍摄屏幕、纸张、客户卡、预约簿或截图。",
+        "OCR/VLM 结果映射为结构化字段而非只返回整段文本。",
+        "字段保留来源区域/来源图像/置信度或解析状态。"
+      ],
+      "source_ref": "teacher:easy-onboarding",
+      "priority": "must",
+      "metadata": {}
+    },
+    {
+      "requirement_id": "PRD-009",
+      "statement": "智能迁移输出必须经过人工核对后才可写入通讯录、客户库或业务系统。",
+      "acceptance_criteria": [
+        "未确认字段不得自动成为正式客户资料。",
+        "人工修改可记录为纠错数据。",
+        "确认前允许查看原图与字段来源。"
+      ],
+      "source_ref": "teacher:human-review",
+      "priority": "must",
+      "metadata": {}
+    },
+    {
+      "requirement_id": "PRD-010",
+      "statement": "文档理解模型策略必须优先复用公开 OCR/VLM Provider，并保留模型池和替换能力。",
+      "acceptance_criteria": [
+        "首版不以从零训练基础模型为前置条件。",
+        "可比较多个 Provider 的字段准确率、速度、资源、中文和屏摄鲁棒性。",
+        "真实业务纠错数据积累后再决定是否微调或训练。"
+      ],
+      "source_ref": "conversation:model-strategy",
+      "priority": "must",
+      "metadata": {}
+    },
+    {
+      "requirement_id": "PRD-011",
+      "statement": "系统必须支持客户/服务对象/服务/资源/Booking/对话/跟进的通用服务业语义。",
+      "acceptance_criteria": [
+        "宠物可拥有主人+宠物服务对象；汽车可拥有车主+车辆；家居可拥有客户+地址/物业。",
+        "Core 不以 Patient/Doctor 等医疗语义作为唯一模型。"
+      ],
+      "source_ref": "conversation:generalization",
+      "priority": "must",
+      "metadata": {}
+    },
+    {
+      "requirement_id": "PRD-012",
+      "statement": "系统必须支持基于行业包的 Follow-up/Recall 规则。",
+      "acceptance_criteria": [
+        "牙科可做洗牙召回，宠物可做美容召回，汽车可做保养提醒，家居可做周期清洁。"
+      ],
+      "source_ref": "teacher:phase2",
+      "priority": "should",
+      "metadata": {}
+    },
+    {
+      "requirement_id": "PRD-013",
+      "statement": "系统必须具备多租户隔离、审计和最小必要数据原则。",
+      "acceptance_criteria": [
+        "不同商户数据不可跨租户读取或执行。",
+        "关键 Agent 与人工操作保留审计记录。",
+        "敏感信息只在完成任务所需范围内暴露。"
+      ],
+      "source_ref": "security:baseline",
+      "priority": "must",
+      "metadata": {}
+    },
+    {
+      "requirement_id": "PRD-014",
+      "statement": "产品必须维持人机协作边界：高风险、未知、受限专业问题和低置信导入结果交由人处理。",
+      "acceptance_criteria": [
+        "行业包只能配置流程，不能提升 Agent 权限。",
+        "受限问题优先级高于普通 Booking 自动化。"
+      ],
+      "source_ref": "rcl:service-frontdesk-core",
+      "priority": "must",
+      "metadata": {}
+    },
+    {
+      "requirement_id": "PRD-015",
+      "statement": "产品首批复制目标包括牙科、宠物美容/寄养、清洁/家居/水电、汽车维修和美容。",
+      "acceptance_criteria": [
+        "至少能通过行业包声明这五类行业。",
+        "首个行业成功后可复用核心能力生成下一行业工件。"
+      ],
+      "source_ref": "teacher:vertical-expansion",
+      "priority": "should",
+      "metadata": {}
+    }
+  ],
+  "links": [],
+  "requirements_sha256": "e5f310d4cc43c2c5faaa46078623a287e42d9287c0c656e53bae5ab130d88a94",
+  "links_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "candidate_only": true,
+  "canonical_promotion_performed": false
+}
