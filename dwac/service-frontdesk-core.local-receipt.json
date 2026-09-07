@@ -1,0 +1,29 @@
+{
+  "schema": "clinic-flow.dwac-local-planning-receipt.v1",
+  "source": "dwac/service-frontdesk-core.dpal",
+  "runtime_source": "user-provided DWAC-main (1).zip",
+  "purpose": "service-frontdesk-core verticalization planning",
+  "result": {
+    "cli_exit_code": 0,
+    "semantic_units": 8,
+    "waves": 4,
+    "critical_path_depth": 4,
+    "status": "CANDIDATE",
+    "mechanics_pass": false,
+    "canonical_promotion_performed": false
+  },
+  "first_failure": {
+    "unit_id": "core_domain",
+    "status": "FAILED_ACCEPTANCE",
+    "failed_acceptance": [
+      "vertical_neutral",
+      "tenant_scoped"
+    ]
+  },
+  "interpretation": {
+    "dependency_decomposition_usable": true,
+    "acceptance_passed": false,
+    "canonical_success_claim_allowed": false,
+    "note": "DWAC produced a usable dependency decomposition, but its reference worker did not satisfy the custom vertical-neutral and tenant-scoped acceptance predicates. This receipt must not be cited as a successful DWAC validation."
+  }
+}
