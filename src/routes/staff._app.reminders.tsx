@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { BellRing, MessageCircle, RotateCcw } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { PageContainer } from "@/components/layout/StaffShell";
 import {
@@ -20,6 +21,11 @@ import type { ReminderKind } from "@/types/domain";
 import { filterByVertical } from "@/verticals/entity-scope";
 import { reminderKindFor } from "@/verticals/presentation";
 import { useTenantVertical } from "@/verticals/use-tenant-vertical";
+import {
+  createFollowUpWorkItem,
+  followUpWorkItemSourceRef,
+} from "@/work-items/follow-up-work-item";
+import { useServiceWorkItems } from "@/work-items/use-service-work-items";
 
 export const Route = createFileRoute("/staff/_app/reminders")({
   head: () => ({
@@ -40,6 +46,15 @@ const KIND_VALUES: (ReminderKind | "all")[] = [
   "no_reply",
 ];
 
+function workItemStatusLabel(status: string): string {
+  return {
+    waiting_approval: "等待批准",
+    ready_to_send: "待發送",
+    done: "已完成",
+    rejected: "已否決",
+  }[status] ?? status;
+}
+
 function RemindersPage() {
   const {
     reminders,
@@ -51,6 +66,7 @@ function RemindersPage() {
   } = useApp();
   const vertical = useTenantVertical(clinic);
   const { customers, customerName } = useServiceCustomers({ clinic, vertical, legacyPatients: patients });
+  const workItems = useServiceWorkItems(clinic.id, vertical.id);
   const [kind, setKind] = useState<ReminderKind | "all">("all");
   const [previewReminderId, setPreviewReminderId] = useState<string | null>(null);
 
@@ -71,6 +87,11 @@ function RemindersPage() {
         .filter((customer) => customer.verticalId === vertical.id && customer.followUp?.dueAt)
         .sort((a, b) => (a.followUp?.dueAt ?? "").localeCompare(b.followUp?.dueAt ?? "")),
     [customers, vertical.id],
+  );
+
+  const workItemBySource = useMemo(
+    () => new Map(workItems.filter((item) => item.sourceRef).map((item) => [item.sourceRef!, item])),
+    [workItems],
   );
 
   const preview = useMemo(() => {
@@ -126,37 +147,71 @@ function RemindersPage() {
         <section className="mb-6">
           <SectionHeader title="舊資料匯入後自動產生的跟進" count={importedFollowUps.length} />
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {importedFollowUps.map((customer) => (
-              <MdCard key={customer.id} className="p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="md-title-m text-on-surface">{customer.displayName}</p>
-                    <p className="md-body-s text-on-surface-variant">
-                      {customer.followUp?.lastService ?? "既有服務"}
-                      {customer.followUp?.lastServiceDate ? ` · ${customer.followUp.lastServiceDate}` : ""}
+            {importedFollowUps.map((customer) => {
+              const sourceRef = followUpWorkItemSourceRef(customer);
+              const workItem = sourceRef ? workItemBySource.get(sourceRef) : undefined;
+              return (
+                <MdCard key={customer.id} className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="md-title-m text-on-surface">{customer.displayName}</p>
+                      <p className="md-body-s text-on-surface-variant">
+                        {customer.followUp?.lastService ?? "既有服務"}
+                        {customer.followUp?.lastServiceDate ? ` · ${customer.followUp.lastServiceDate}` : ""}
+                      </p>
+                    </div>
+                    <MdChip tone={customer.followUp?.dueAt && new Date(customer.followUp.dueAt) <= new Date() ? "error" : "tertiary"}>
+                      {customer.followUp?.ruleLabel ?? "跟進"}
+                    </MdChip>
+                  </div>
+                  <div className="mt-3 rounded-xl bg-surface-container p-3">
+                    <p className="md-label-m text-on-surface-variant">建議時間</p>
+                    <p className="mt-1 md-body-m text-on-surface">
+                      {customer.followUp?.dueAt ? fmtDateTime(customer.followUp.dueAt) : "待確認"}
                     </p>
                   </div>
-                  <MdChip tone={customer.followUp?.dueAt && new Date(customer.followUp.dueAt) <= new Date() ? "error" : "tertiary"}>
-                    {customer.followUp?.ruleLabel ?? "跟進"}
-                  </MdChip>
-                </div>
-                <div className="mt-3 rounded-xl bg-surface-container p-3">
-                  <p className="md-label-m text-on-surface-variant">建議時間</p>
-                  <p className="mt-1 md-body-m text-on-surface">
-                    {customer.followUp?.dueAt ? fmtDateTime(customer.followUp.dueAt) : "待確認"}
+                  <p className="mt-3 md-body-s text-on-surface-variant">
+                    {customer.followUp?.customerMessage ?? customer.followUp?.followUpHint ?? "等待商戶確認跟進方式。"}
                   </p>
-                </div>
-                <p className="mt-3 md-body-s text-on-surface-variant">
-                  {customer.followUp?.customerMessage ?? customer.followUp?.followUpHint ?? "等待商戶確認跟進方式。"}
-                </p>
-                <div className="mt-3 flex gap-2">
-                  <MdButton size="sm" variant="tonal" icon={<MessageCircle className="size-4" />}>
-                    建立訊息草稿
-                  </MdButton>
-                  <MdButton size="sm" variant="text">稍後</MdButton>
-                </div>
-              </MdCard>
-            ))}
+
+                  {workItem && (
+                    <div className="mt-3 flex items-center justify-between rounded-xl bg-secondary-container/45 p-3">
+                      <span className="md-body-s text-on-secondary-container">
+                        Agent 工作項：{workItemStatusLabel(workItem.status)}
+                      </span>
+                      <Link to="/staff/agent" className="md-label-l text-primary">查看</Link>
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <MdButton
+                      size="sm"
+                      variant={workItem ? "outlined" : "tonal"}
+                      icon={<MessageCircle className="size-4" />}
+                      onClick={() => {
+                        try {
+                          const item = createFollowUpWorkItem({ customer, vertical });
+                          toast.success(workItem ? "工作項已存在" : "訊息草稿已送到 Agent 任務台", {
+                            description: workItemStatusLabel(item.status),
+                          });
+                        } catch (error) {
+                          toast.error("無法建立工作項", {
+                            description: error instanceof Error ? error.message : String(error),
+                          });
+                        }
+                      }}
+                    >
+                      {workItem ? "已建立草稿" : "建立訊息草稿"}
+                    </MdButton>
+                    {workItem && (
+                      <Link to="/staff/agent">
+                        <MdButton size="sm" variant="text">前往 Agent</MdButton>
+                      </Link>
+                    )}
+                  </div>
+                </MdCard>
+              );
+            })}
           </div>
         </section>
       )}
