@@ -10,7 +10,7 @@ import {
   Send,
   Sparkles,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { PageContainer } from "@/components/layout/StaffShell";
 import { EmptyState, MdButton, MdCard, MdChip, MdFilterChip } from "@/components/m3";
@@ -20,6 +20,7 @@ import { CHANNEL, CONVERSATION_STATE, fmtTime } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/state/app-store";
 import type { ChannelKind } from "@/types/domain";
+import { filterByVertical } from "@/verticals/entity-scope";
 import { safetyBoundaryText, safetyFlagLabel } from "@/verticals/presentation";
 import { useTenantVertical } from "@/verticals/use-tenant-vertical";
 
@@ -64,17 +65,27 @@ function InboxPage() {
   const customerName = (id: string) =>
     customers.find((customer) => customer.id === id)?.displayName ?? patientName(id);
 
-  const filtered = conversations.filter((conversation) => {
+  const visibleConversations = useMemo(
+    () => filterByVertical(conversations, vertical.id),
+    [conversations, vertical.id],
+  );
+  const visibleFlags = useMemo(
+    () => filterByVertical(urgentFlags, vertical.id),
+    [urgentFlags, vertical.id],
+  );
+
+  const filtered = visibleConversations.filter((conversation) => {
     if (filter === "unread") return conversation.unread;
     if (filter === "urgent") return !!conversation.urgentFlagId;
     if (filter === "agent") return conversation.state === "agent_handling";
     return true;
   });
 
-  const selectedId = c ?? filtered[0]?.id ?? conversations[0]?.id;
-  const selected = conversations.find((conversation) => conversation.id === selectedId);
+  const requested = c ? visibleConversations.find((conversation) => conversation.id === c) : undefined;
+  const selected = requested ?? filtered[0] ?? visibleConversations[0];
+  const selectedId = selected?.id;
   const flag = selected?.urgentFlagId
-    ? urgentFlags.find((item) => item.id === selected.urgentFlagId)
+    ? visibleFlags.find((item) => item.id === selected.urgentFlagId)
     : undefined;
   const frontdeskSummary = selected
     ? summarizeConversationForFrontdesk({ clinic, conversation: selected, vertical })
@@ -85,10 +96,10 @@ function InboxPage() {
       title="對話中心"
       subtitle={`${vertical.displayName} · WhatsApp／電話／網頁統一收件匣`}
     >
-      {vertical.id !== "dental" && (
+      {vertical.id !== "dental" && visibleConversations.length === 0 && (
         <MdCard className="mb-4 border border-outline-variant bg-surface-container p-3">
           <p className="md-body-s text-on-surface-variant">
-            目前內建對話仍使用牙科 Seed 作互動示範；正式新行業對話會由 Messaging Adapter 按目前「{vertical.shortName}」語義進入同一 Inbox。
+            此行業目前尚未建立對話；舊 Dental Seed 已由 vertical scope 隔離。正式訊息會由 Messaging Adapter 帶上目前行業身份後進入同一 Inbox。
           </p>
         </MdCard>
       )}
@@ -265,7 +276,7 @@ function InboxPage() {
             </form>
           </MdCard>
         ) : (
-          <EmptyState text="請選擇一個對話。" />
+          <EmptyState text={`目前沒有屬於 ${vertical.shortName} 的對話。`} />
         )}
       </div>
     </PageContainer>
