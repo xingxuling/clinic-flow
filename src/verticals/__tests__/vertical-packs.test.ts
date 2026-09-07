@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import type { ServiceTenant } from "@/core/tenant";
 import { planServiceFrontdeskMessage } from "@/frontdesk/frontdesk-agent";
+import { processServiceFrontdeskInboundMessage } from "@/frontdesk/inbound-service";
+import { MockWhatsAppAdapter } from "@/integrations/messaging-adapter";
 import {
   getVerticalPack,
   materializeFaqEntries,
@@ -10,6 +13,18 @@ import {
 
 const tenantId = "tenant_demo";
 const customerId = "customer_demo";
+
+const tenant: ServiceTenant = {
+  id: tenantId,
+  verticalId: "pet-care",
+  displayName: "毛孩屋 Demo",
+  district: "香港",
+  phone: "+852 3000 0000",
+  timezone: "Asia/Hong_Kong",
+  reminderLeadHours: [24],
+  channels: [{ channel: "whatsapp", connected: true, note: "demo" }],
+  privacy: { retentionDays: 180, maskCustomerPhoneInLists: true },
+};
 
 describe("Service Vertical Pack 契约", () => {
   it("所有已注册行业包都通过结构级契约校验", () => {
@@ -126,5 +141,53 @@ describe("同一前台 Core 的跨行业行为", () => {
 
     expect(decision.kind).toBe("human_handoff");
     expect(decision.autoSendAllowed).toBe(false);
+  });
+});
+
+describe("通用入站链", () => {
+  it("宠物行业 FAQ 复用同一 WhatsApp Adapter 自动发送", async () => {
+    const adapter = new MockWhatsAppAdapter();
+    const pet = getVerticalPack("pet-care")!;
+    const result = await processServiceFrontdeskInboundMessage({
+      tenant,
+      vertical: pet,
+      messagingAdapter: adapter,
+      message: {
+        providerMessageId: "pet_wa_001",
+        tenantId,
+        customerId,
+        channel: "whatsapp",
+        text: "点样预约美容？",
+        receivedAt: new Date().toISOString(),
+      },
+    });
+
+    expect(result.decision.kind).toBe("appointment_request");
+    expect(result.autoReplyAttempted).toBe(true);
+    expect(result.autoReplyReceipt?.ok).toBe(true);
+    expect(adapter.snapshot()).toHaveLength(1);
+  });
+
+  it("消息 tenantId 不匹配时不调用通道且直接转人工", async () => {
+    const adapter = new MockWhatsAppAdapter();
+    const pet = getVerticalPack("pet-care")!;
+    const result = await processServiceFrontdeskInboundMessage({
+      tenant,
+      vertical: pet,
+      messagingAdapter: adapter,
+      message: {
+        providerMessageId: "pet_wa_cross_tenant",
+        tenantId: "other_tenant",
+        customerId,
+        channel: "whatsapp",
+        text: "几点开门？",
+        receivedAt: new Date().toISOString(),
+      },
+    });
+
+    expect(result.decision.kind).toBe("human_handoff");
+    expect(result.decision.reasons).toContain("TENANT_MISMATCH");
+    expect(result.autoReplyAttempted).toBe(false);
+    expect(adapter.snapshot()).toHaveLength(0);
   });
 });
