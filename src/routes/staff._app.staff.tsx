@@ -21,8 +21,8 @@ import { useTenantVertical } from "@/verticals/use-tenant-vertical";
 export const Route = createFileRoute("/staff/_app/staff")({
   head: () => ({
     meta: [
-      { title: "員工與權限｜Service Frontdesk" },
-      { name: "description", content: "服務業角色權限矩陣、員工狀態與邀請管理。" },
+      { title: "員工｜Service Frontdesk" },
+      { name: "description", content: "服務業員工、角色、權限與邀請管理。" },
     ],
   }),
   component: StaffPage,
@@ -38,8 +38,8 @@ function StaffPage() {
 
   return (
     <PageContainer
-      title="員工與權限"
-      subtitle={`${vertical.displayName} · 你目前的角色：${roleLabelFor(vertical, currentStaff.role)}`}
+      title="員工"
+      subtitle={`${vertical.displayName} · 角色、權限與邀請 · 你目前是 ${roleLabelFor(vertical, currentStaff.role)}`}
       actions={
         <MdButton icon={<UserPlus className="size-4" />} onClick={() => setOpen(true)}>
           邀請員工
@@ -48,7 +48,7 @@ function StaffPage() {
     >
       <div className="grid gap-6 xl:grid-cols-2">
         <section>
-          <SectionHeader title="員工" count={staff.length} />
+          <SectionHeader title="員工列表" count={staff.length} />
           <MdCard className="divide-y divide-outline-variant overflow-hidden">
             {staff.map((person) => (
               <div key={person.id} className="flex flex-wrap items-center gap-3 p-4">
@@ -94,7 +94,7 @@ function StaffPage() {
       </div>
 
       <section className="mt-6">
-        <SectionHeader title="權限矩陣" />
+        <SectionHeader title="權限" />
         <MdCard className="overflow-x-auto">
           <table className="w-full min-w-[720px] border-collapse">
             <thead>
@@ -125,9 +125,6 @@ function StaffPage() {
             </tbody>
           </table>
         </MdCard>
-        <p className="mt-2 md-body-s text-on-surface-variant">
-          底層兼容 key 仍沿用早期 patient / appointment 命名；可見權限語義已統一為客戶、排程與行政資料。
-        </p>
       </section>
 
       <MdDialog open={open} onClose={() => setOpen(false)} title="邀請員工">
