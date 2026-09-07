@@ -77,6 +77,21 @@ export class BrowserServiceConversationRepository {
     return row ? clone(row) : null;
   }
 
+  findByProviderMessageId(
+    tenantId: string,
+    verticalId: string,
+    providerMessageId: string,
+  ): ServiceConversation | null {
+    if (!providerMessageId.trim()) return null;
+    const row = this.readAll().find(
+      (conversation) =>
+        conversation.tenantId === tenantId &&
+        conversation.verticalId === verticalId &&
+        conversation.messages.some((message) => message.providerMessageId === providerMessageId),
+    );
+    return row ? clone(row) : null;
+  }
+
   appendMessage(input: AppendServiceMessageInput): ServiceConversation {
     if (!input.tenantId.trim()) throw new Error("CONVERSATION_TENANT_REQUIRED");
     if (!input.verticalId.trim()) throw new Error("CONVERSATION_VERTICAL_REQUIRED");
@@ -86,15 +101,13 @@ export class BrowserServiceConversationRepository {
 
     const rows = this.readAll();
     if (input.providerMessageId) {
-      const duplicate = rows.some((conversation) =>
-        conversation.messages.some((message) => message.providerMessageId === input.providerMessageId),
-      );
-      if (duplicate) {
-        const existing = rows.find((conversation) =>
+      const existing = rows.find(
+        (conversation) =>
+          conversation.tenantId === input.tenantId &&
+          conversation.verticalId === input.verticalId &&
           conversation.messages.some((message) => message.providerMessageId === input.providerMessageId),
-        );
-        if (existing) return clone(existing);
-      }
+      );
+      if (existing) return clone(existing);
     }
 
     const index = rows.findIndex(
