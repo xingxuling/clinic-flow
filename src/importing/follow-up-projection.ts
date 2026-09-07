@@ -23,12 +23,12 @@ export function enrichImportedFollowUp(input: {
       {
         tenantId: input.customer.tenantId,
         customerId: input.customer.id,
-        subjectId,
+        ...(subjectId ? { subjectId } : {}),
         serviceId: service.id,
         completedAt: snapshot.lastServiceDate,
       },
     ],
-    now: input.now,
+    ...(input.now ? { now: input.now } : {}),
   });
 
   if (!candidate) return snapshot;
