@@ -19,6 +19,7 @@ import { useServiceCustomers } from "@/customers/use-service-customers";
 import { fmtDate, fmtTime, fmtWeekday, isSameDay } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
 import type { Appointment } from "@/types/domain";
+import { filterByVertical } from "@/verticals/entity-scope";
 import { arrivalActionLabel, bookingStatusFor } from "@/verticals/presentation";
 import { useTenantVertical } from "@/verticals/use-tenant-vertical";
 
@@ -58,13 +59,8 @@ function AppointmentsPage() {
   const [slotsOpen, setSlotsOpen] = useState(false);
 
   const visibleAppointments = useMemo(
-    () =>
-      vertical.id === "dental"
-        ? appointments
-        : appointments.filter((appointment) =>
-            vertical.services.some((service) => service.id === appointment.serviceId),
-          ),
-    [appointments, vertical],
+    () => filterByVertical(appointments, vertical.id),
+    [appointments, vertical.id],
   );
 
   const assignableStaff = useMemo(() => {
