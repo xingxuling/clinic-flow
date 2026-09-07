@@ -15,6 +15,8 @@ import {
   UserCog,
 } from "lucide-react";
 
+import type { ServiceVerticalPack } from "@/verticals/types";
+
 export interface NavItem {
   to: string;
   label: string;
@@ -23,18 +25,37 @@ export interface NavItem {
   inBottomBar?: boolean;
 }
 
-/** 行政後台導航（僅員工端可見） */
+/**
+ * 员工后台导航由行业包提供称谓，但路由和 Core 能力保持稳定。
+ * 新行业不应复制一份 Navigation Shell。
+ */
+export function staffNavItemsFor(vertical: ServiceVerticalPack): NavItem[] {
+  return [
+    { to: "/staff/today", label: "今日", icon: LayoutDashboard, inBottomBar: true },
+    { to: "/staff/inbox", label: "對話", icon: MessageSquare, badgeKey: "inbox", inBottomBar: true },
+    { to: "/staff/appointments", label: vertical.labels.booking, icon: CalendarDays, inBottomBar: true },
+    { to: "/staff/agent", label: "Agent", icon: Bot, badgeKey: "agent", inBottomBar: true },
+    { to: "/staff/reminders", label: "跟進召回", icon: ClipboardList },
+    { to: "/staff/documents", label: "行政資料", icon: FileText, badgeKey: "documents" },
+    { to: "/staff/patients", label: `${vertical.labels.customer}目錄`, icon: Users },
+    { to: "/staff/staff", label: "員工權限", icon: UserCog },
+    { to: "/staff/audit", label: "審計日誌", icon: ScrollText },
+    { to: "/staff/settings", label: "商戶設定", icon: Settings },
+  ];
+}
+
+/** 兼容仍未迁移到 Vertical Context 的旧调用。 */
 export const STAFF_NAV_ITEMS: NavItem[] = [
   { to: "/staff/today", label: "今日", icon: LayoutDashboard, inBottomBar: true },
   { to: "/staff/inbox", label: "對話", icon: MessageSquare, badgeKey: "inbox", inBottomBar: true },
   { to: "/staff/appointments", label: "預約", icon: CalendarDays, inBottomBar: true },
   { to: "/staff/agent", label: "Agent", icon: Bot, badgeKey: "agent", inBottomBar: true },
-  { to: "/staff/reminders", label: "提醒召回", icon: ClipboardList },
-  { to: "/staff/documents", label: "行政文件", icon: FileText, badgeKey: "documents" },
+  { to: "/staff/reminders", label: "跟進召回", icon: ClipboardList },
+  { to: "/staff/documents", label: "行政資料", icon: FileText, badgeKey: "documents" },
   { to: "/staff/patients", label: "客戶目錄", icon: Users },
   { to: "/staff/staff", label: "員工權限", icon: UserCog },
   { to: "/staff/audit", label: "審計日誌", icon: ScrollText },
-  { to: "/staff/settings", label: "診所設定", icon: Settings },
+  { to: "/staff/settings", label: "商戶設定", icon: Settings },
 ];
 
 export interface PatientNavItem {
@@ -43,7 +64,7 @@ export interface PatientNavItem {
   icon: typeof Home;
 }
 
-/** 病人前台導航：只有五項，全部指向自己的資料 */
+/** 旧牙科病人 Portal 暂时维持兼容，后续再迁成通用 Customer Portal。 */
 export const PATIENT_NAV_ITEMS: PatientNavItem[] = [
   { to: "/patient/home", label: "首頁", icon: Home },
   { to: "/patient/appointments", label: "預約", icon: CalendarCheck },
