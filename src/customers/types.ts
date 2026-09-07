@@ -10,6 +10,12 @@ export interface ServiceSubjectRecord {
   fields: Record<string, string>;
 }
 
+export interface CustomerFollowUpSnapshot {
+  lastService?: string;
+  lastServiceDate?: string;
+  followUpHint?: string;
+}
+
 export interface ServiceCustomer {
   id: string;
   tenantId: string;
@@ -20,6 +26,7 @@ export interface ServiceCustomer {
   tags: string[];
   notesAdmin: string;
   subjects: ServiceSubjectRecord[];
+  followUp?: CustomerFollowUpSnapshot;
   source: "legacy_patient_compat" | "legacy_import" | "manual" | "integration";
   sourceRef?: string;
   createdAt: string;
@@ -35,6 +42,7 @@ export interface NewServiceCustomerInput {
   tags?: string[];
   notesAdmin?: string;
   subjects?: ServiceSubjectRecord[];
+  followUp?: CustomerFollowUpSnapshot;
   source: ServiceCustomer["source"];
   sourceRef?: string;
 }
@@ -53,6 +61,10 @@ export function patientToServiceCustomer(patient: Patient): ServiceCustomer {
     tags: [...patient.tags],
     notesAdmin: patient.notesAdmin,
     subjects: [],
+    followUp: {
+      lastServiceDate: patient.lastVisitAt,
+      followUpHint: patient.nextRecallAt ? `下次跟進：${patient.nextRecallAt}` : undefined,
+    },
     source: "legacy_patient_compat",
     sourceRef: `patient:${patient.id}`,
     createdAt: patient.lastVisitAt ?? new Date(0).toISOString(),
