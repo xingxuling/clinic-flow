@@ -9,6 +9,7 @@ import {
 
 import { PageContainer } from "@/components/layout/StaffShell";
 import { EmptyState, MdButton, MdCard, MdChip, SectionHeader } from "@/components/m3";
+import { useServiceCustomers } from "@/customers/use-service-customers";
 import { summarizeConversationForFrontdesk } from "@/frontdesk/conversation-summary";
 import { fmtTime, isSameDay } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
@@ -65,27 +66,42 @@ function MetricCard({
 function TodayPage() {
   const {
     clinic,
+    patients,
     appointments,
     conversations,
     agentTasks,
     urgentFlags,
-    patientName,
-    serviceName,
     staffName,
     setAppointmentStatus,
     escalateUrgentFlag,
   } = useApp();
   const vertical = useTenantVertical(clinic);
+  const { customerName } = useServiceCustomers({ clinic, vertical, legacyPatients: patients });
+
+  const visibleAppointments =
+    vertical.id === "dental"
+      ? appointments
+      : appointments.filter((appointment) =>
+          vertical.services.some((service) => service.id === appointment.serviceId),
+        );
+  const visibleConversations = vertical.id === "dental" ? conversations : [];
+  const visibleAgentTasks = vertical.id === "dental" ? agentTasks : [];
+  const visibleFlags = vertical.id === "dental" ? urgentFlags : [];
+
+  const serviceName = (serviceId: string) =>
+    vertical.services.find((service) => service.id === serviceId)?.name ??
+    clinic.services.find((service) => service.id === serviceId)?.name ??
+    "服務";
 
   const now = new Date();
-  const todayAppointments = appointments.filter((appointment) => isSameDay(appointment.startAt, now));
+  const todayAppointments = visibleAppointments.filter((appointment) => isSameDay(appointment.startAt, now));
   const pending = todayAppointments.filter((appointment) => appointment.status === "pending");
-  const unread = conversations.filter((conversation) => conversation.unread);
-  const waitingReply = conversations.filter((conversation) => conversation.state === "waiting_human");
-  const waitingApproval = agentTasks.filter((task) => task.status === "waiting_approval");
-  const openFlags = urgentFlags.filter((flag) => !flag.handledAt);
+  const unread = visibleConversations.filter((conversation) => conversation.unread);
+  const waitingReply = visibleConversations.filter((conversation) => conversation.state === "waiting_human");
+  const waitingApproval = visibleAgentTasks.filter((task) => task.status === "waiting_approval");
+  const openFlags = visibleFlags.filter((flag) => !flag.handledAt);
 
-  const frontdeskViews = conversations.map((conversation) => ({
+  const frontdeskViews = visibleConversations.map((conversation) => ({
     conversation,
     summary: summarizeConversationForFrontdesk({ clinic, conversation, vertical }),
   }));
@@ -93,11 +109,9 @@ function TodayPage() {
     (row) => row.summary.decision.appointmentIntent === "reschedule",
   );
   const faqReady = frontdeskViews.filter((row) => row.summary.decision.kind === "faq_reply");
-  const bookingRequests = frontdeskViews.filter(
-    (row) => row.summary.decision.kind === "appointment_request",
-  );
+  const bookingRequests = frontdeskViews.filter((row) => row.summary.decision.kind === "appointment_request");
   const handoffs = frontdeskViews.filter((row) => row.summary.decision.requiresHuman);
-  const agentMessagesToday = conversations.reduce(
+  const agentMessagesToday = visibleConversations.reduce(
     (count, conversation) =>
       count +
       conversation.messages.filter(
@@ -123,42 +137,20 @@ function TodayPage() {
         <MdChip tone="primary">{vertical.labels.booking}</MdChip>
       </div>
 
+      {vertical.id !== "dental" && (
+        <MdCard className="mb-5 border border-outline-variant bg-surface-container p-3">
+          <p className="md-body-s text-on-surface-variant">
+            目前非牙科行業只顯示屬於該 Vertical 的新 Customer / Booking 資料；牙科 Seed 不會跨行業混入工作台。
+          </p>
+        </MdCard>
+      )}
+
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <MetricCard
-          icon={<MessageCircle className="size-4" />}
-          label="新對話"
-          value={unread.length}
-          to="/staff/inbox"
-          tone="primary"
-        />
-        <MetricCard
-          icon={<CheckCircle2 className="size-4" />}
-          label={`待確認${vertical.labels.booking}`}
-          value={pending.length}
-          to="/staff/appointments"
-          tone="tertiary"
-        />
-        <MetricCard
-          icon={<CalendarSync className="size-4" />}
-          label="要求改期"
-          value={rescheduleRequests.length}
-          to="/staff/inbox"
-          tone="secondary"
-        />
-        <MetricCard
-          icon={<AlertTriangle className="size-4" />}
-          label={safetyFlagLabel(vertical)}
-          value={openFlags.length}
-          to="/staff/inbox"
-          tone="error"
-        />
-        <MetricCard
-          icon={<Bot className="size-4" />}
-          label="待人工處理"
-          value={waitingApproval.length + waitingReply.length}
-          to="/staff/agent"
-          tone="tertiary"
-        />
+        <MetricCard icon={<MessageCircle className="size-4" />} label="新對話" value={unread.length} to="/staff/inbox" tone="primary" />
+        <MetricCard icon={<CheckCircle2 className="size-4" />} label={`待確認${vertical.labels.booking}`} value={pending.length} to="/staff/appointments" tone="tertiary" />
+        <MetricCard icon={<CalendarSync className="size-4" />} label="要求改期" value={rescheduleRequests.length} to="/staff/inbox" tone="secondary" />
+        <MetricCard icon={<AlertTriangle className="size-4" />} label={safetyFlagLabel(vertical)} value={openFlags.length} to="/staff/inbox" tone="error" />
+        <MetricCard icon={<Bot className="size-4" />} label="待人工處理" value={waitingApproval.length + waitingReply.length} to="/staff/agent" tone="tertiary" />
       </div>
 
       <section className="mb-6">
@@ -196,24 +188,16 @@ function TodayPage() {
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="mt-0.5 size-5 shrink-0 text-error" />
                   <div className="min-w-0 flex-1">
-                    <p className="md-title-m text-on-surface">{patientName(flag.patientId)}</p>
-                    <p className="mt-1 rounded-lg bg-surface-container-lowest p-3 md-body-m text-on-surface">
-                      「{flag.quote}」
-                    </p>
+                    <p className="md-title-m text-on-surface">{customerName(flag.patientId)}</p>
+                    <p className="mt-1 rounded-lg bg-surface-container-lowest p-3 md-body-m text-on-surface">「{flag.quote}」</p>
                     <p className="mt-2 md-body-s text-on-surface-variant">觸發原因：{flag.rule}</p>
                     <div className="mt-2 flex flex-wrap gap-1">
-                      {flag.matchedKeywords.map((keyword) => (
-                        <MdChip key={keyword} tone="error">{keyword}</MdChip>
-                      ))}
+                      {flag.matchedKeywords.map((keyword) => <MdChip key={keyword} tone="error">{keyword}</MdChip>)}
                     </div>
                     <p className="mt-2 md-body-s text-on-surface-variant">{safetyBoundaryText(vertical)}</p>
                     <div className="mt-3 flex gap-2">
-                      <MdButton size="sm" variant="danger" onClick={() => escalateUrgentFlag(flag.id)}>
-                        立即轉人工
-                      </MdButton>
-                      <Link to="/staff/inbox" search={{ c: flag.conversationId }}>
-                        <MdButton size="sm" variant="text">查看對話</MdButton>
-                      </Link>
+                      <MdButton size="sm" variant="danger" onClick={() => escalateUrgentFlag(flag.id)}>立即轉人工</MdButton>
+                      <Link to="/staff/inbox" search={{ c: flag.conversationId }}><MdButton size="sm" variant="text">查看對話</MdButton></Link>
                     </div>
                   </div>
                 </div>
@@ -239,16 +223,14 @@ function TodayPage() {
                       <p className="md-body-s text-on-surface-variant">{fmtTime(appointment.endAt)}</p>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="md-title-m truncate text-on-surface">{patientName(appointment.patientId)}</p>
+                      <p className="md-title-m truncate text-on-surface">{customerName(appointment.patientId)}</p>
                       <p className="md-body-s truncate text-on-surface-variant">
                         {serviceName(appointment.serviceId)} · {staffName(appointment.practitionerId)} · {appointment.room}
                       </p>
                     </div>
                     <MdChip tone={status.tone}>{status.label}</MdChip>
                     {appointment.status === "pending" && (
-                      <MdButton size="sm" variant="tonal" onClick={() => setAppointmentStatus(appointment.id, "confirmed")}>
-                        確認
-                      </MdButton>
+                      <MdButton size="sm" variant="tonal" onClick={() => setAppointmentStatus(appointment.id, "confirmed")}>確認</MdButton>
                     )}
                     {appointment.status === "confirmed" && (
                       <MdButton size="sm" variant="outlined" onClick={() => setAppointmentStatus(appointment.id, "arrived")}>
@@ -264,11 +246,7 @@ function TodayPage() {
 
         <section className="space-y-6">
           <div>
-            <SectionHeader
-              title="等待人手回覆"
-              count={waitingReply.length}
-              action={<Link to="/staff/inbox" search={{ c: undefined }} className="md-label-l text-primary">全部</Link>}
-            />
+            <SectionHeader title="等待人手回覆" count={waitingReply.length} action={<Link to="/staff/inbox" search={{ c: undefined }} className="md-label-l text-primary">全部</Link>} />
             {waitingReply.length === 0 ? (
               <EmptyState text="沒有待回覆訊息。" />
             ) : (
@@ -279,7 +257,7 @@ function TodayPage() {
                     <Link key={conversation.id} to="/staff/inbox" search={{ c: conversation.id }} className="block">
                       <MdCard className="state-layer p-4">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="md-title-m truncate text-on-surface">{patientName(conversation.patientId)}</p>
+                          <p className="md-title-m truncate text-on-surface">{customerName(conversation.patientId)}</p>
                           {conversation.urgentFlagId && <MdChip tone="error">{safetyFlagLabel(vertical)}</MdChip>}
                         </div>
                         <p className="mt-1 md-label-l text-primary">{summary.title}</p>
@@ -293,11 +271,7 @@ function TodayPage() {
           </div>
 
           <div>
-            <SectionHeader
-              title="待人工批准的 Agent 任務"
-              count={waitingApproval.length}
-              action={<Link to="/staff/agent" className="md-label-l text-primary">全部</Link>}
-            />
+            <SectionHeader title="待人工批准的 Agent 任務" count={waitingApproval.length} action={<Link to="/staff/agent" className="md-label-l text-primary">全部</Link>} />
             {waitingApproval.length === 0 ? (
               <EmptyState text="沒有待批任務。" />
             ) : (
