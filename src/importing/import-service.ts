@@ -110,14 +110,16 @@ export class LegacyImportService {
     const missing = candidate.schema.fields
       .filter((schemaField) => schemaField.required)
       .filter((schemaField) => !fieldValue(candidate, schemaField.key));
-    if (missing.length) throw new Error(`IMPORT_REQUIRED_FIELDS_MISSING:${missing.map((field) => field.key).join(",")}`);
+    if (missing.length) {
+      throw new Error(`IMPORT_REQUIRED_FIELDS_MISSING:${missing.map((field) => field.key).join(",")}`);
+    }
 
-    const unreviewedRequired = candidate.schema.fields
-      .filter((schemaField) => schemaField.required)
-      .filter((schemaField) => !candidate.fields.find((field) => field.key === schemaField.key)?.accepted);
-    if (unreviewedRequired.length) {
+    const unreviewedPopulated = candidate.fields.filter(
+      (field) => field.reviewedValue.trim() && !field.accepted,
+    );
+    if (unreviewedPopulated.length) {
       throw new Error(
-        `IMPORT_REQUIRED_FIELDS_NOT_REVIEWED:${unreviewedRequired.map((field) => field.key).join(",")}`,
+        `IMPORT_POPULATED_FIELDS_NOT_REVIEWED:${unreviewedPopulated.map((field) => field.key).join(",")}`,
       );
     }
 
@@ -154,7 +156,7 @@ export class LegacyImportService {
                 {
                   id: id("sub"),
                   kind: candidate.schema.subjectKind,
-                  displayName: subject.name ?? candidate.schema.subjectLabel,
+                  displayName: subject.pet_name ?? subject.plate ?? subject.address ?? candidate.schema.subjectLabel,
                   fields: subject,
                 },
               ]
