@@ -23,6 +23,7 @@ export interface CustomerFollowUpSnapshot {
 export interface ServiceCustomer {
   id: string;
   tenantId: string;
+  verticalId: string;
   displayName: string;
   phone: string;
   preferredChannel: ChannelKind;
@@ -39,6 +40,7 @@ export interface ServiceCustomer {
 
 export interface NewServiceCustomerInput {
   tenantId: string;
+  verticalId: string;
   displayName: string;
   phone: string;
   preferredChannel?: ChannelKind;
@@ -58,6 +60,7 @@ export function patientToServiceCustomer(patient: Patient): ServiceCustomer {
   return {
     id: patient.id,
     tenantId: patient.clinicId,
+    verticalId: "dental",
     displayName: patient.name,
     phone: patient.phone,
     preferredChannel: patient.preferredChannel,
