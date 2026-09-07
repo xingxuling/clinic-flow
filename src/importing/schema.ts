@@ -58,8 +58,9 @@ export function createVerticalImportSchema(pack: ServiceVerticalPack): VerticalI
       {
         key: "follow_up.last_service",
         label: "上次服務",
-        kind: "text",
+        kind: "select",
         required: false,
+        options: pack.services.map((service) => service.name),
         target: "follow_up",
       },
       {
