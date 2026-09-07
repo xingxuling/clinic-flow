@@ -1,4 +1,4 @@
-import { appointmentInteractionPayload } from "@/frontdesk/appointment-interaction";
+import { bookingInteractionPayload } from "@/frontdesk/booking-interaction";
 import type { InteractiveReplyOption } from "@/integrations/messaging-adapter";
 import type { ServiceVerticalPack } from "@/verticals/types";
 
@@ -55,25 +55,25 @@ export function buildBookingReminder(input: {
       {
         id: `confirm_${input.bookingId}`,
         label: "確認",
-        payload: appointmentInteractionPayload({
+        payload: bookingInteractionPayload({
           kind: "confirm",
-          appointmentId: input.bookingId,
+          bookingId: input.bookingId,
         }),
       },
       {
         id: `reschedule_${input.bookingId}`,
         label: "改期",
-        payload: appointmentInteractionPayload({
+        payload: bookingInteractionPayload({
           kind: "reschedule_request",
-          appointmentId: input.bookingId,
+          bookingId: input.bookingId,
         }),
       },
       {
         id: `cancel_${input.bookingId}`,
         label: "取消",
-        payload: appointmentInteractionPayload({
+        payload: bookingInteractionPayload({
           kind: "cancel",
-          appointmentId: input.bookingId,
+          bookingId: input.bookingId,
         }),
       },
     ],
