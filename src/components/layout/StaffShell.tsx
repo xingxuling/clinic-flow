@@ -1,12 +1,26 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LogOut, Menu, Moon, Stethoscope, Sun, X } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  Building2,
+  Car,
+  Home,
+  LogOut,
+  Menu,
+  Moon,
+  PawPrint,
+  Sparkles,
+  Stethoscope,
+  Sun,
+  X,
+} from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { MdBadge, MdIconButton } from "@/components/m3";
-import { STAFF_NAV_ITEMS } from "@/components/layout/nav-items";
+import { MdBadge, MdChip, MdIconButton } from "@/components/m3";
+import { staffNavItemsFor } from "@/components/layout/nav-items";
 import { ROLE_LABEL } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/state/app-store";
+import { useTenantVertical } from "@/verticals/use-tenant-vertical";
+import type { ServiceVerticalPack } from "@/verticals/types";
 
 function useBadges() {
   const { conversations, agentTasks, documents } = useApp();
@@ -31,23 +45,50 @@ function useDarkMode() {
   return [dark, setDark] as const;
 }
 
+function VerticalMark({ vertical }: { vertical: ServiceVerticalPack }) {
+  const className = "size-6";
+  switch (vertical.id) {
+    case "dental":
+    case "regulated-health":
+      return <Stethoscope className={className} />;
+    case "pet-care":
+      return <PawPrint className={className} />;
+    case "auto-repair":
+      return <Car className={className} />;
+    case "home-service":
+      return <Home className={className} />;
+    case "beauty":
+      return <Sparkles className={className} />;
+    default:
+      return <Building2 className={className} />;
+  }
+}
+
 export function StaffShell({ children }: { children: ReactNode }) {
   const { clinic, currentStaff, signOutStaff } = useApp();
+  const vertical = useTenantVertical(clinic);
   const badges = useBadges();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [dark, setDark] = useDarkMode();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  const bottomItems = STAFF_NAV_ITEMS.filter((i) => i.inBottomBar);
+  const navItems = useMemo(() => staffNavItemsFor(vertical), [vertical]);
+  const bottomItems = navItems.filter((item) => item.inBottomBar);
 
   return (
     <div className="flex min-h-screen bg-surface text-on-surface">
       {/* Navigation Rail（桌面） */}
       <nav className="sticky top-0 hidden h-screen w-24 shrink-0 flex-col items-center gap-1 overflow-y-auto bg-surface-container py-4 md:flex">
-        <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-primary-container text-on-primary-container">
-          <Stethoscope className="size-6" />
+        <div
+          className="mb-1 flex size-12 items-center justify-center rounded-2xl bg-primary-container text-on-primary-container"
+          title={vertical.displayName}
+        >
+          <VerticalMark vertical={vertical} />
         </div>
-        {STAFF_NAV_ITEMS.map((item) => {
+        <span className="mb-3 max-w-[82px] truncate text-center md-label-m text-on-surface-variant">
+          {vertical.shortName}
+        </span>
+        {navItems.map((item) => {
           const active = pathname.startsWith(item.to);
           const badge = item.badgeKey ? badges[item.badgeKey] : 0;
           return (
@@ -82,19 +123,18 @@ export function StaffShell({ children }: { children: ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top app bar */}
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-outline-variant bg-surface px-3 md:px-6">
+        <header className="sticky top-0 z-30 flex min-h-16 items-center gap-2 border-b border-outline-variant bg-surface px-3 py-2 md:px-6">
           <MdIconButton className="md:hidden" onClick={() => setDrawerOpen(true)} aria-label="開啟選單">
             <Menu className="size-5" />
           </MdIconButton>
           <div className="min-w-0 flex-1">
-            <p className="md-title-m truncate text-on-surface">
-              {clinic.name}
-              <span className="ml-2 rounded-full bg-secondary-container px-2 py-0.5 md-label-m text-on-secondary-container">
-                行政後台
-              </span>
-            </p>
-            <p className="md-body-s truncate text-on-surface-variant">
-              {clinic.district}・{currentStaff.name}（{ROLE_LABEL[currentStaff.role]}）
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <p className="md-title-m truncate text-on-surface">{clinic.name}</p>
+              <MdChip tone="secondary">{vertical.shortName}</MdChip>
+              <MdChip tone="neutral">AI 前台</MdChip>
+            </div>
+            <p className="mt-0.5 md-body-s truncate text-on-surface-variant">
+              {vertical.labels.venue} · {clinic.district} · {currentStaff.name}（{ROLE_LABEL[currentStaff.role]}）
             </p>
           </div>
           <MdIconButton onClick={() => setDark(!dark)} aria-label="切換深色模式">
@@ -143,13 +183,19 @@ export function StaffShell({ children }: { children: ReactNode }) {
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-inverse-surface/40" onClick={() => setDrawerOpen(false)} />
           <div className="relative h-full w-80 max-w-[85vw] overflow-y-auto rounded-r-3xl bg-surface-container-low p-3">
-            <div className="flex items-center justify-between px-3 py-2">
-              <span className="md-title-m">全部功能</span>
+            <div className="mb-2 flex items-center gap-3 rounded-2xl bg-primary-container p-3 text-on-primary-container">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-surface/50">
+                <VerticalMark vertical={vertical} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="md-title-m truncate">{vertical.displayName}</p>
+                <p className="md-body-s opacity-80">Service Frontdesk · AI 前台</p>
+              </div>
               <MdIconButton onClick={() => setDrawerOpen(false)} aria-label="關閉選單">
                 <X className="size-5" />
               </MdIconButton>
             </div>
-            {STAFF_NAV_ITEMS.map((item) => {
+            {navItems.map((item) => {
               const active = pathname.startsWith(item.to);
               const badge = item.badgeKey ? badges[item.badgeKey] : 0;
               return (
