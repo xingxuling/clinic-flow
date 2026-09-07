@@ -1,17 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Plug, X } from "lucide-react";
+import { Plug, ShieldCheck, X } from "lucide-react";
 import { useState } from "react";
 
 import { PageContainer } from "@/components/layout/StaffShell";
 import { MdButton, MdCard, MdChip, MdSwitch, MdTextField, SectionHeader } from "@/components/m3";
+import { VerticalSwitcher } from "@/components/verticals/VerticalSwitcher";
 import { CHANNEL } from "@/lib/labels";
 import { useApp } from "@/state/app-store";
+import { safetyBoundaryText, safetyFlagLabel } from "@/verticals/presentation";
+import { useTenantVertical } from "@/verticals/use-tenant-vertical";
 
 export const Route = createFileRoute("/staff/_app/settings")({
   head: () => ({
     meta: [
-      { title: "診所設定｜診所行政 Agent" },
-      { name: "description", content: "營業時間、服務類型、提醒規則、緊急關鍵詞、渠道連接與隱私設定。" },
+      { title: "商戶設定｜Service Frontdesk" },
+      { name: "description", content: "商戶資料、行業包、服務、跟進規則、安全邊界、渠道與隱私設定。" },
     ],
   }),
   component: SettingsPage,
@@ -21,124 +24,181 @@ const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 
 function SettingsPage() {
   const { clinic, updateClinicSettings } = useApp();
+  const vertical = useTenantVertical(clinic);
   const [keyword, setKeyword] = useState("");
 
-  const s = clinic.settings;
-
-  const setSettings = (patch: Partial<typeof s>) =>
-    updateClinicSettings({ settings: { ...s, ...patch } });
+  const settings = clinic.settings;
+  const setSettings = (patch: Partial<typeof settings>) =>
+    updateClinicSettings({ settings: { ...settings, ...patch } });
 
   return (
-    <PageContainer title="診所設定" subtitle={`${clinic.name}・${clinic.district}`}>
+    <PageContainer title="商戶設定" subtitle={`${clinic.name} · ${vertical.displayName} · ${clinic.district}`}>
+      <VerticalSwitcher tenantId={clinic.id} vertical={vertical} />
+
       <div className="grid gap-4 xl:grid-cols-2">
         <MdCard className="p-5">
-          <SectionHeader title="營業時間" />
+          <SectionHeader title={`${vertical.labels.venue}營業 / 服務時間`} />
           <div className="space-y-2">
-            {clinic.businessHours.map((h) => (
-              <div key={h.weekday} className="flex items-center gap-3 md-body-m">
-                <span className="w-10 text-on-surface-variant">週{WEEKDAYS[h.weekday]}</span>
-                {h.closed ? (
+            {clinic.businessHours.map((hour) => (
+              <div key={hour.weekday} className="flex items-center gap-3 md-body-m">
+                <span className="w-10 text-on-surface-variant">週{WEEKDAYS[hour.weekday]}</span>
+                {hour.closed ? (
                   <MdChip tone="neutral">休息</MdChip>
                 ) : (
-                  <span className="text-on-surface">
-                    {h.open} – {h.close}
-                  </span>
+                  <span className="text-on-surface">{hour.open} – {hour.close}</span>
                 )}
               </div>
             ))}
           </div>
+          <p className="mt-3 md-body-s text-on-surface-variant">
+            目前沿用舊 Clinic 時間模型；之後可按 Vertical 擴成上門服務區間、工位容量或寄養容量。
+          </p>
         </MdCard>
 
         <MdCard className="p-5">
-          <SectionHeader title="服務類型" count={clinic.services.length} />
+          <SectionHeader title="行業服務" count={vertical.services.length} />
           <div className="flex flex-wrap gap-2">
-            {clinic.services.map((svc) => (
-              <MdChip key={svc.id} tone="secondary">
-                {svc.name}・{svc.durationMin} 分鐘
+            {vertical.services.map((service) => (
+              <MdChip key={service.id} tone={service.requiresHumanConfirmation ? "tertiary" : "secondary"}>
+                {service.name}
+                {service.durationMin ? ` · ${service.durationMin} 分鐘` : ""}
+                {service.requiresQuote ? " · 需報價" : ""}
               </MdChip>
             ))}
           </div>
+          <p className="mt-3 md-body-s text-on-surface-variant">
+            這些服務來自 Vertical Pack，不再使用牙科專屬服務清單作為通用 Core 的權威。
+          </p>
         </MdCard>
 
         <MdCard className="p-5">
-          <SectionHeader title="提醒規則" />
+          <SectionHeader title={`${vertical.labels.booking}提醒`} />
           <p className="md-body-m text-on-surface-variant">
-            就診前提醒：{s.reminderLeadHours.join(" / ")} 小時
-          </p>
-          <p className="mt-1 md-body-m text-on-surface-variant">
-            定期召回：{s.recallMonths.join(" / ")} 個月
+            提前提醒：{settings.reminderLeadHours.join(" / ")} 小時
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {[24, 48, 72].map((h) => (
+            {[24, 48, 72].map((hours) => (
               <MdButton
-                key={h}
+                key={hours}
                 size="sm"
-                variant={s.reminderLeadHours.includes(h) ? "tonal" : "outlined"}
+                variant={settings.reminderLeadHours.includes(hours) ? "tonal" : "outlined"}
                 onClick={() =>
                   setSettings({
-                    reminderLeadHours: s.reminderLeadHours.includes(h)
-                      ? s.reminderLeadHours.filter((x) => x !== h)
-                      : [...s.reminderLeadHours, h].sort((a, b) => b - a),
+                    reminderLeadHours: settings.reminderLeadHours.includes(hours)
+                      ? settings.reminderLeadHours.filter((value) => value !== hours)
+                      : [...settings.reminderLeadHours, hours].sort((a, b) => b - a),
                   })
                 }
               >
-                {h} 小時
+                {hours} 小時
               </MdButton>
             ))}
           </div>
         </MdCard>
 
         <MdCard className="p-5">
-          <SectionHeader title="緊急關鍵詞" count={s.urgentKeywords.length} />
-          <p className="mb-3 md-body-s text-on-surface-variant">
-            只用於標記可能需要優先處理的訊息，不會產生任何醫學判斷。
-          </p>
+          <SectionHeader title="服務後跟進規則" count={vertical.followUpRules.length} />
+          {vertical.followUpRules.length === 0 ? (
+            <p className="md-body-m text-on-surface-variant">此行業包暫未設定自動跟進週期。</p>
+          ) : (
+            <div className="space-y-3">
+              {vertical.followUpRules.map((rule) => (
+                <div key={rule.id} className="rounded-xl bg-surface-container p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="md-label-l text-on-surface">{rule.label}</p>
+                    <MdChip tone="primary">
+                      {rule.afterDays !== undefined ? `${rule.afterDays} 日` : rule.afterMonths !== undefined ? `${rule.afterMonths} 個月` : rule.trigger}
+                    </MdChip>
+                  </div>
+                  <p className="mt-1 md-body-s text-on-surface-variant">{rule.customerMessage}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </MdCard>
+
+        <MdCard className="p-5">
+          <SectionHeader title={safetyFlagLabel(vertical)} count={vertical.escalationKeywords.length} />
+          <div className="mb-3 flex items-start gap-2 rounded-xl bg-error-container/35 p-3">
+            <ShieldCheck className="mt-0.5 size-4 shrink-0 text-error" />
+            <p className="md-body-s text-on-surface-variant">{safetyBoundaryText(vertical)}</p>
+          </div>
           <div className="flex flex-wrap gap-2">
-            {s.urgentKeywords.map((k) => (
-              <MdChip key={k} tone="error">
-                {k}
-                <button
-                  aria-label={`移除 ${k}`}
-                  onClick={() => setSettings({ urgentKeywords: s.urgentKeywords.filter((x) => x !== k) })}
-                >
-                  <X className="size-3" />
-                </button>
-              </MdChip>
+            {vertical.escalationKeywords.map((value) => (
+              <MdChip key={value} tone="error">{value}</MdChip>
             ))}
           </div>
-          <form
-            className="mt-3 flex items-end gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!keyword.trim()) return;
-              setSettings({ urgentKeywords: [...s.urgentKeywords, keyword.trim()] });
-              setKeyword("");
-            }}
-          >
-            <MdTextField
-              label="新增關鍵詞"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              className="flex-1"
-            />
-            <MdButton type="submit" variant="tonal">
-              新增
-            </MdButton>
-          </form>
+
+          {vertical.id === "dental" && (
+            <>
+              <p className="mb-2 mt-4 md-label-l text-on-surface">商戶追加關鍵詞（舊 Dental 設定兼容）</p>
+              <div className="flex flex-wrap gap-2">
+                {settings.urgentKeywords.map((value) => (
+                  <MdChip key={value} tone="tertiary">
+                    {value}
+                    <button
+                      aria-label={`移除 ${value}`}
+                      onClick={() => setSettings({ urgentKeywords: settings.urgentKeywords.filter((item) => item !== value) })}
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </MdChip>
+                ))}
+              </div>
+              <form
+                className="mt-3 flex items-end gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!keyword.trim()) return;
+                  setSettings({ urgentKeywords: [...settings.urgentKeywords, keyword.trim()] });
+                  setKeyword("");
+                }}
+              >
+                <MdTextField label="新增關鍵詞" value={keyword} onChange={(event) => setKeyword(event.target.value)} className="flex-1" />
+                <MdButton type="submit" variant="tonal">新增</MdButton>
+              </form>
+            </>
+          )}
+        </MdCard>
+
+        <MdCard className="p-5">
+          <SectionHeader title="外部整合目標" count={vertical.integrationTargets.length} />
+          {vertical.integrationTargets.length === 0 ? (
+            <p className="md-body-m text-on-surface-variant">
+              此行業包暫未聲稱任何專用系統整合；可先使用 Booking / Calendar / Messaging 通用 Adapter。
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {vertical.integrationTargets.map((target) => (
+                <div key={target.id} className="flex items-start gap-3 rounded-xl bg-surface-container p-3">
+                  <Plug className="mt-0.5 size-4 shrink-0 text-primary" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="md-label-l text-on-surface">{target.displayName}</p>
+                      <MdChip tone={target.status === "verified" ? "primary" : "neutral"}>
+                        {target.status === "verified" ? "已驗證" : "候選"}
+                      </MdChip>
+                    </div>
+                    <p className="mt-1 md-body-s text-on-surface-variant">{target.noteZhHk}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </MdCard>
 
         <MdCard className="p-5">
           <SectionHeader title="渠道連接" />
           <div className="space-y-3">
-            {s.channels.map((c) => (
-              <div key={c.channel} className="flex items-center gap-3">
+            {settings.channels.map((channel) => (
+              <div key={channel.channel} className="flex items-center gap-3">
                 <Plug className="size-4 text-on-surface-variant" />
                 <div className="flex-1">
-                  <p className="md-body-m text-on-surface">{CHANNEL[c.channel]}</p>
-                  <p className="md-body-s text-on-surface-variant">{c.note}</p>
+                  <p className="md-body-m text-on-surface">{CHANNEL[channel.channel]}</p>
+                  <p className="md-body-s text-on-surface-variant">{channel.note}</p>
                 </div>
-                <MdChip tone={c.connected ? "primary" : "neutral"}>
-                  {c.connected ? "模擬已連接" : "未連接"}
+                <MdChip tone={channel.connected ? "primary" : "neutral"}>
+                  {channel.connected ? "模擬已連接" : "未連接"}
                 </MdChip>
               </div>
             ))}
@@ -146,19 +206,21 @@ function SettingsPage() {
         </MdCard>
 
         <MdCard className="p-5">
-          <SectionHeader title="隱私設定" />
+          <SectionHeader title="資料與隱私" />
           <MdSwitch
             label="列表遮蔽電話號碼"
-            checked={s.privacy.maskPhoneInLists}
-            onCheckedChange={(v) => setSettings({ privacy: { ...s.privacy, maskPhoneInLists: v } })}
+            checked={settings.privacy.maskPhoneInLists}
+            onCheckedChange={(value) => setSettings({ privacy: { ...settings.privacy, maskPhoneInLists: value } })}
           />
-          <MdSwitch
-            label="允許儲存臨床備註（不建議）"
-            checked={s.privacy.storeMedicalNotes}
-            onCheckedChange={(v) => setSettings({ privacy: { ...s.privacy, storeMedicalNotes: v } })}
-          />
+          {(vertical.id === "dental" || vertical.id === "regulated-health") && (
+            <MdSwitch
+              label="允許儲存臨床備註（舊模型兼容，不建議）"
+              checked={settings.privacy.storeMedicalNotes}
+              onCheckedChange={(value) => setSettings({ privacy: { ...settings.privacy, storeMedicalNotes: value } })}
+            />
+          )}
           <p className="mt-3 md-body-s text-on-surface-variant">
-            行政資料保留期：{s.privacy.retentionDays} 日。本系統定位為行政工具，預設不儲存臨床病歷。
+            行政／客戶資料保留期：{settings.privacy.retentionDays} 日。通用 Frontdesk Core 只應保留完成溝通、排程與跟進所需資料。
           </p>
         </MdCard>
       </div>
