@@ -25,6 +25,15 @@ export interface VerticalSubjectField {
   administrativeOnly: true;
 }
 
+export interface VerticalServiceScheduling {
+  defaultDurationMin: number;
+  minDurationMin: number;
+  maxDurationMin: number;
+  travelBufferMin: number;
+  preparationBufferMin: number;
+  cleanupBufferMin: number;
+}
+
 export interface VerticalServiceDefinition {
   id: string;
   name: string;
@@ -32,6 +41,7 @@ export interface VerticalServiceDefinition {
   category: string;
   requiresQuote?: boolean;
   requiresHumanConfirmation?: boolean;
+  scheduling?: Partial<VerticalServiceScheduling>;
 }
 
 export interface VerticalFollowUpRule {
@@ -85,6 +95,15 @@ export interface ServiceVerticalPack {
   followUpRules: readonly VerticalFollowUpRule[];
   integrationTargets: readonly VerticalIntegrationTarget[];
   defaultHumanApprovalLeadHours: number;
+  scheduling?: {
+    holdDurationMin?: number;
+    defaultBuffers?: Partial<
+      Pick<
+        VerticalServiceScheduling,
+        "travelBufferMin" | "preparationBufferMin" | "cleanupBufferMin"
+      >
+    >;
+  };
   metadata: {
     candidate: boolean;
     notes: readonly string[];

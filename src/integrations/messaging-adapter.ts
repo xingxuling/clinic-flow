@@ -46,6 +46,36 @@ export interface OutgoingChannelMessage {
   whatsappTemplate?: WhatsAppTemplateRef;
 }
 
+/**
+ * Job-scoped channel payload. The scheduling core only carries an opaque
+ * endpoint reference; resolving that reference to a real recipient remains a
+ * channel/provider concern and must pass the existing policy gates.
+ */
+export interface JobChannelMessage {
+  tenantId: ID;
+  verticalId: string;
+  jobId: ID;
+  audience: "customer" | "worker";
+  endpointRef: string;
+  channel: ChannelKind;
+  text: string;
+  replyOptions: InteractiveReplyOption[];
+  correlationId: string;
+}
+
+/**
+ * Unified channel boundary for job notifications. Implementations are allowed
+ * to enqueue only; they do not gain permission to disclose private contacts or
+ * bypass the WhatsApp policy gate.
+ */
+export interface JobChannelAdapter {
+  readonly providerId: string;
+  readonly channel: ChannelKind;
+  readonly providerKind: MessagingProviderKind;
+  readonly productionEligible: boolean;
+  sendJob(message: JobChannelMessage): Promise<ChannelSendReceipt>;
+}
+
 export interface ChannelSendReceipt {
   ok: boolean;
   providerMessageId: string | null;
@@ -54,10 +84,7 @@ export interface ChannelSendReceipt {
   sentAt: string;
 }
 
-export type MessagingProviderKind =
-  | "demo"
-  | "whatsapp_business_platform"
-  | "other_production";
+export type MessagingProviderKind = "demo" | "whatsapp_business_platform" | "other_production";
 
 export interface MessagingAdapter {
   readonly providerId: string;
@@ -124,7 +151,9 @@ export class MockWhatsAppAdapter implements MessagingAdapter {
     this.sent.push({
       ...message,
       replyOptions: message.replyOptions.map((option) => ({ ...option })),
-      ...(message.whatsappTemplate ? { whatsappTemplate: cloneTemplate(message.whatsappTemplate) } : {}),
+      ...(message.whatsappTemplate
+        ? { whatsappTemplate: cloneTemplate(message.whatsappTemplate) }
+        : {}),
     });
     const sentAt = new Date().toISOString();
     return {
@@ -140,7 +169,9 @@ export class MockWhatsAppAdapter implements MessagingAdapter {
     return this.sent.map((message) => ({
       ...message,
       replyOptions: message.replyOptions.map((option) => ({ ...option })),
-      ...(message.whatsappTemplate ? { whatsappTemplate: cloneTemplate(message.whatsappTemplate) } : {}),
+      ...(message.whatsappTemplate
+        ? { whatsappTemplate: cloneTemplate(message.whatsappTemplate) }
+        : {}),
     }));
   }
 }
