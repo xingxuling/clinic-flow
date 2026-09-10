@@ -1,8 +1,8 @@
 # CURRENT_STATE_AUDIT
 
-审计日期：2026-09-10  
-审计来源：`xingxuling/clinic-flow` `main@14baebb1aded6a6a81a11f8f21c58b7bf7c1b3d0`  
-远端：`https://github.com/xingxuling/clinic-flow.git`  
+审计日期：2026-09-10
+审计来源：`xingxuling/clinic-flow` `main@14baebb1aded6a6a81a11f8f21c58b7bf7c1b3d0`
+远端：`https://github.com/xingxuling/clinic-flow.git`
 审计分支：`codex/smart-scheduling-privacy-v1`
 
 ## 结论
