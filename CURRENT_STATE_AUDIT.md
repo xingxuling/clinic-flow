@@ -142,3 +142,19 @@ Git history 显示 2026-09-07 已连续落地并测试：官方 Meta Cloud API a
 ## 基线验证状态
 
 审计时尚未把本地依赖安装和完整测试结果写成通过证据；后续必须在此分支本地执行可用的 install、lint、typecheck、unit/integration test、build，并将实际输出摘要写入 `EVIDENCE_LEDGER.md`。远程 CI、真实 Meta 账号发送、生产数据库并发和人工视觉验收均不能由本地结果替代。
+
+## 后续主线复核（2026-09-10）
+
+初始候选开发期间，远端 `main` 已前进到
+`1e40062474d3fa56adcad387a055a2f8138dd918`，并已包含同一领域的
+`src/scheduling/`、`src/privacy/`、`src/conversations/` canonical owner。为遵守
+REUSE-OVER-REBUILD 和单一语义 Owner，已保留此前候选分支但没有将其合并；当前
+加固分支直接基于最新 `main`，没有创建第二套排程或隐私系统。
+
+本轮只补充主线加固：可重复的 `test` / `typecheck` 脚本、现有模块的严格
+TypeScript 修复、排程迁移的 `vertical_id` RLS 隔离，以及 FAILED booking replay
+不得转化为重复成功的回归测试。最终证据见 `EVIDENCE_LEDGER.md`：本地测试、类型检查、
+构建和 `/staff/bookings` SSR 路由冒烟通过；全量 lint 仍被既有格式/换行债务阻断。
+
+生产 PostgreSQL 迁移、真实并发/多实例锁、secure vault、WhatsApp/BSP 投递、
+外部日历、移动设备和人工视觉验收仍是开放门，不由本地候选证据代替。

@@ -258,6 +258,43 @@ describe("Smart Scheduling runtime", () => {
     expect(repository.listBookings(TEST_TENANT, TEST_VERTICAL)).toHaveLength(0);
   });
 
+  it("does not turn a failed booking replay into duplicate success", async () => {
+    const { runtime, repository } = createRuntime();
+    const request = runtime.createRequest(testCreateRequestInput());
+    const candidate = runtime.findCandidates(TEST_TENANT, TEST_VERTICAL, request.requestId)!
+      .candidates[0]!;
+    const hold = await runtime.holdCandidate({
+      tenantId: TEST_TENANT,
+      verticalId: TEST_VERTICAL,
+      requestId: request.requestId,
+      candidateId: candidate.candidateId,
+      idempotencyKey: "hold-failed-replay",
+    });
+    const first = await runtime.confirmHold({
+      tenantId: TEST_TENANT,
+      verticalId: TEST_VERTICAL,
+      holdId: hold.hold!.holdId,
+      customerId: "customer_01",
+      idempotencyKey: "booking-failed-replay",
+      customerDisplayName: "Customer One",
+    });
+    repository.saveBooking({ ...first.booking!, state: "FAILED" });
+
+    const replay = await runtime.confirmHold({
+      tenantId: TEST_TENANT,
+      verticalId: TEST_VERTICAL,
+      holdId: hold.hold!.holdId,
+      customerId: "customer_01",
+      idempotencyKey: "booking-failed-replay",
+      customerDisplayName: "Customer One",
+    });
+
+    expect(first.ok).toBe(true);
+    expect(replay.ok).toBe(false);
+    expect(replay.duplicate).toBe(true);
+    expect(replay.code).toBe("CONFIRM_FAILED");
+  });
+
   it("rolls back the scheduling repository when downstream work-item creation fails", async () => {
     const repository = new InMemorySchedulingRepository();
     const vault = new InMemoryPrivateDataVault();

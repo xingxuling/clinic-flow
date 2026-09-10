@@ -12,6 +12,14 @@ begin;
 -- constraint with a check performed only in application code.
 create extension if not exists btree_gist;
 
+create or replace function app_private.current_vertical_id()
+returns text
+language sql
+stable
+as $$
+  select nullif(current_setting('app.vertical_id', true), '')
+$$;
+
 create table if not exists service_workers (
   clinic_id text not null references clinics(id) on delete cascade,
   vertical_id text not null,
@@ -289,7 +297,7 @@ begin
     execute format('alter table %I enable row level security', tbl);
     execute format('alter table %I force row level security', tbl);
     execute format(
-      'create policy %I on %I for all using (clinic_id = app_private.current_clinic_id() and app_private.is_staff_or_service()) with check (clinic_id = app_private.current_clinic_id() and app_private.is_staff_or_service())',
+      'create policy %I on %I for all using (clinic_id = app_private.current_clinic_id() and vertical_id = app_private.current_vertical_id() and app_private.is_staff_or_service()) with check (clinic_id = app_private.current_clinic_id() and vertical_id = app_private.current_vertical_id() and app_private.is_staff_or_service())',
       tbl || '_staff_tenant', tbl
     );
   end loop;
@@ -299,12 +307,13 @@ alter table service_requests enable row level security;
 alter table service_requests force row level security;
 create policy service_requests_staff_tenant on service_requests
   for all
-  using (clinic_id = app_private.current_clinic_id() and app_private.is_staff_or_service())
-  with check (clinic_id = app_private.current_clinic_id() and app_private.is_staff_or_service());
+  using (clinic_id = app_private.current_clinic_id() and vertical_id = app_private.current_vertical_id() and app_private.is_staff_or_service())
+  with check (clinic_id = app_private.current_clinic_id() and vertical_id = app_private.current_vertical_id() and app_private.is_staff_or_service());
 create policy service_requests_patient_self_select on service_requests
   for select
   using (
     clinic_id = app_private.current_clinic_id()
+    and vertical_id = app_private.current_vertical_id()
     and app_private.is_patient()
     and customer_id = app_private.current_subject_id()
   );
@@ -313,12 +322,13 @@ alter table service_bookings enable row level security;
 alter table service_bookings force row level security;
 create policy service_bookings_staff_tenant on service_bookings
   for all
-  using (clinic_id = app_private.current_clinic_id() and app_private.is_staff_or_service())
-  with check (clinic_id = app_private.current_clinic_id() and app_private.is_staff_or_service());
+  using (clinic_id = app_private.current_clinic_id() and vertical_id = app_private.current_vertical_id() and app_private.is_staff_or_service())
+  with check (clinic_id = app_private.current_clinic_id() and vertical_id = app_private.current_vertical_id() and app_private.is_staff_or_service());
 create policy service_bookings_patient_self_select on service_bookings
   for select
   using (
     clinic_id = app_private.current_clinic_id()
+    and vertical_id = app_private.current_vertical_id()
     and app_private.is_patient()
     and customer_id = app_private.current_subject_id()
   );

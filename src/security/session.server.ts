@@ -22,12 +22,15 @@ export interface ClinicSessionData {
 const PATIENT_SESSION_SECONDS = 30 * 60;
 const STAFF_SESSION_SECONDS = 8 * 60 * 60;
 
-function useClinicSession() {
+function getClinicSession() {
+  // TanStack Start's server session helper is named useSession but is not a
+  // React component hook; this function is intentionally server-only.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   return useSession<ClinicSessionData>({
     name: "clinic-flow-session",
     password: getSessionSecret(),
     cookie: {
-      secure: env.NODE_ENV === "production",
+      secure: env["NODE_ENV"] === "production",
       sameSite: "lax",
       httpOnly: true,
       maxAge: STAFF_SESSION_SECONDS,
@@ -58,7 +61,7 @@ export const exchangePatientPortalTokenServer = createServerFn({ method: "POST" 
     });
     if (!verified.ok) return verified;
 
-    const session = await useClinicSession();
+    const session = await getClinicSession();
     const now = Math.floor(Date.now() / 1000);
     const expiresAt = sessionExpiry(PATIENT_SESSION_SECONDS);
     await session.update({
@@ -91,7 +94,7 @@ export async function establishStaffSessionServer(input: {
   role: StaffRole;
   deviceBound: boolean;
 }) {
-  const session = await useClinicSession();
+  const session = await getClinicSession();
   const now = Math.floor(Date.now() / 1000);
   const expiresAt = sessionExpiry(STAFF_SESSION_SECONDS);
   await session.update({
@@ -108,7 +111,7 @@ export async function establishStaffSessionServer(input: {
 
 /** 返回最小身份，不返回病人资料、电话、病历或文件。 */
 export const getCurrentClinicSessionServer = createServerFn({ method: "GET" }).handler(async () => {
-  const session = await useClinicSession();
+  const session = await getClinicSession();
   const data = session.data;
   const now = Math.floor(Date.now() / 1000);
 
@@ -143,7 +146,7 @@ export const getCurrentClinicSessionServer = createServerFn({ method: "GET" }).h
 });
 
 export const clearClinicSessionServer = createServerFn({ method: "POST" }).handler(async () => {
-  const session = await useClinicSession();
+  const session = await getClinicSession();
   await session.clear();
   return { ok: true as const };
 });
