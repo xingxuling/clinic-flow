@@ -92,3 +92,17 @@ The added hardening includes repository `test`/`typecheck` scripts, strict
 TypeScript fixes in existing modules, vertical scoping in the scheduling
 migration RLS policies, and a regression test that keeps a failed booking
 replay failed instead of turning it into a duplicate success.
+
+## Landing UI refresh verification (2026-09-10)
+
+The screenshot-reported stale surface was the root route `/`, not the staff
+route `/staff/bookings`. The root route now presents the Smart Scheduling
+workflow directly and keeps both staff and Dental Demo customer entry points.
+
+| Check | Result | Evidence |
+|---|---|---|
+| Root page title and route | PASS | `GET /` on local Vite server; title `Smart Scheduling｜Service Frontdesk` |
+| Desktop visual check | PASS candidate | Playwright headed screenshot reviewed: new hero, workflow preview, vertical pack strip and entry cards are visible |
+| Narrow viewport check | PASS candidate | Playwright viewport `390x844`; content wraps, remains scrollable, and both primary entry links remain reachable |
+| Stale landing markers | PASS | old two-card-only layout was replaced in `src/routes/index.tsx` |
+| Human visual acceptance | OPEN | local screenshot review is not production/browser-device acceptance |

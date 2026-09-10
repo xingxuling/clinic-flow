@@ -158,3 +158,10 @@ TypeScript 修复、排程迁移的 `vertical_id` RLS 隔离，以及 FAILED boo
 
 生产 PostgreSQL 迁移、真实并发/多实例锁、secure vault、WhatsApp/BSP 投递、
 外部日历、移动设备和人工视觉验收仍是开放门，不由本地候选证据代替。
+
+## 根路径 UI 复核（2026-09-10）
+
+用户提供的画面对应根路径 `/`；此前排程 UI 只接在 `/staff/bookings`，因此根页仍呈现旧版两张入口卡。现已在既有
+`src/routes/index.tsx` 直接更新首页：加入 Smart Scheduling 主叙事、Request → Match → Hold/Confirm 示意、Worker 候选与 Privacy Broker 边界、Vertical Pack 展示，以及 Staff / Dental Demo 入口。
+
+已用真实本地浏览器检查桌面与 `390x844` 窄屏：新页面标题、主要 CTA、排程示意和滚动均可见；这是本地 candidate visual evidence，仍不等同真机、远端部署或人工产品验收。
