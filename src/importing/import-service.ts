@@ -10,7 +10,8 @@ import type {
 import type { ServiceVerticalPack } from "@/verticals/types";
 
 function id(prefix: string) {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return `${prefix}_${crypto.randomUUID()}`;
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto)
+    return `${prefix}_${crypto.randomUUID()}`;
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
@@ -69,7 +70,11 @@ export class LegacyImportService {
     };
   }
 
-  updateField(candidate: LegacyImportCandidate, key: string, reviewedValue: string): LegacyImportCandidate {
+  updateField(
+    candidate: LegacyImportCandidate,
+    key: string,
+    reviewedValue: string,
+  ): LegacyImportCandidate {
     if (candidate.status !== "needs_review") throw new Error("IMPORT_NOT_REVIEWABLE");
     const fields = candidate.fields.map((field) =>
       field.key === key
@@ -111,7 +116,9 @@ export class LegacyImportService {
       .filter((schemaField) => schemaField.required)
       .filter((schemaField) => !fieldValue(candidate, schemaField.key));
     if (missing.length) {
-      throw new Error(`IMPORT_REQUIRED_FIELDS_MISSING:${missing.map((field) => field.key).join(",")}`);
+      throw new Error(
+        `IMPORT_REQUIRED_FIELDS_MISSING:${missing.map((field) => field.key).join(",")}`,
+      );
     }
 
     const unreviewedPopulated = candidate.fields.filter(
@@ -124,7 +131,9 @@ export class LegacyImportService {
     }
 
     if (blocksAutomaticSave(candidate.duplicates) && !allowDuplicateOverride) {
-      throw new Error(`IMPORT_DUPLICATE_REVIEW_REQUIRED:${candidate.duplicates[0]?.customerId ?? "unknown"}`);
+      throw new Error(
+        `IMPORT_DUPLICATE_REVIEW_REQUIRED:${candidate.duplicates[0]?.customerId ?? "unknown"}`,
+      );
     }
 
     return { ...candidate, status: "approved", reviewedAt: new Date().toISOString() };
@@ -150,8 +159,11 @@ export class LegacyImportService {
         verticalId: candidate.verticalId,
         displayName,
         phone,
-        preferredChannel: preferredChannel as ApprovedImportProjection["customer"]["preferredChannel"],
-        language: language as ApprovedImportProjection["customer"]["language"],
+        preferredChannel: preferredChannel as Exclude<
+          ApprovedImportProjection["customer"]["preferredChannel"],
+          undefined
+        >,
+        language: language as Exclude<ApprovedImportProjection["customer"]["language"], undefined>,
         notesAdmin: notes,
         tags: ["舊資料匯入"],
         subjects:
@@ -160,7 +172,11 @@ export class LegacyImportService {
                 {
                   id: id("sub"),
                   kind: candidate.schema.subjectKind,
-                  displayName: subject.pet_name ?? subject.plate ?? subject.address ?? candidate.schema.subjectLabel,
+                  displayName:
+                    subject["pet_name"] ??
+                    subject["plate"] ??
+                    subject["address"] ??
+                    candidate.schema.subjectLabel,
                   fields: subject,
                 },
               ]

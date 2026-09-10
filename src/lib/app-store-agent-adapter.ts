@@ -53,9 +53,7 @@ function unsupported(name: string): never {
   throw new Error(`AGENT_STORE_ADAPTER_UNSUPPORTED:${name}`);
 }
 
-export function requiredPermissionsForAgentPlan(
-  operations: { kind: string }[],
-): Permission[] {
+export function requiredPermissionsForAgentPlan(operations: { kind: string }[]): Permission[] {
   const required = new Set<Permission>(["agent.approve"]);
 
   for (const operation of operations) {
@@ -89,6 +87,7 @@ export function createAgentStoreRepository(port: AgentStorePort): ClinicReposito
     listInvites: (clinicId) => scope(port.invites, clinicId),
     listAuditEvents: (clinicId) => scope(port.auditEvents, clinicId),
 
+    addPatient: () => unsupported("addPatient"),
     updatePatient: () => unsupported("updatePatient"),
 
     updateAppointment: (_clinicId, id, patch) => {

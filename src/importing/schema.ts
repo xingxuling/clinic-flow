@@ -11,7 +11,9 @@ function followUpServiceNames(pack: ServiceVerticalPack): string[] {
   const prioritized = prioritizedIds
     .map((id) => pack.services.find((service) => service.id === id)?.name)
     .filter((value): value is string => Boolean(value));
-  const rest = pack.services.map((service) => service.name).filter((name) => !prioritized.includes(name));
+  const rest = pack.services
+    .map((service) => service.name)
+    .filter((name) => !prioritized.includes(name));
   return [...prioritized, ...rest];
 }
 
@@ -21,7 +23,7 @@ export function createVerticalImportSchema(pack: ServiceVerticalPack): VerticalI
     label: `${pack.labels.subject}${field.label}`,
     kind: field.kind === "number" ? "text" : field.kind,
     required: field.required,
-    options: field.options,
+    ...(field.options ? { options: field.options } : {}),
     target: "subject" as const,
   }));
 

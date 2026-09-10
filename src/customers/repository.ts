@@ -4,7 +4,11 @@ export interface ServiceCustomerRepository {
   list(tenantId: string, verticalId?: string): ServiceCustomer[];
   get(tenantId: string, customerId: string): ServiceCustomer | null;
   add(input: NewServiceCustomerInput): ServiceCustomer;
-  update(tenantId: string, customerId: string, patch: Partial<ServiceCustomer>): ServiceCustomer | null;
+  update(
+    tenantId: string,
+    customerId: string,
+    patch: Partial<ServiceCustomer>,
+  ): ServiceCustomer | null;
 }
 
 const STORAGE_KEY = "service-frontdesk.customers.v1";
@@ -40,15 +44,16 @@ export class BrowserServiceCustomerRepository implements ServiceCustomerReposito
           const value = row as Partial<ServiceCustomer>;
           return Boolean(
             typeof value.id === "string" &&
-              typeof value.tenantId === "string" &&
-              typeof value.displayName === "string" &&
-              typeof value.phone === "string",
+            typeof value.tenantId === "string" &&
+            typeof value.displayName === "string" &&
+            typeof value.phone === "string",
           );
         })
         .map((row) => ({
           ...row,
           // v1 early demo rows predated vertical isolation and originated from the dental-only prototype.
-          verticalId: typeof row.verticalId === "string" && row.verticalId ? row.verticalId : "dental",
+          verticalId:
+            typeof row.verticalId === "string" && row.verticalId ? row.verticalId : "dental",
         }));
     } catch {
       return [];
@@ -64,7 +69,9 @@ export class BrowserServiceCustomerRepository implements ServiceCustomerReposito
   list(tenantId: string, verticalId?: string): ServiceCustomer[] {
     return clone(
       this.readAll()
-        .filter((row) => row.tenantId === tenantId && (!verticalId || row.verticalId === verticalId))
+        .filter(
+          (row) => row.tenantId === tenantId && (!verticalId || row.verticalId === verticalId),
+        )
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
     );
   }
@@ -113,18 +120,22 @@ export class BrowserServiceCustomerRepository implements ServiceCustomerReposito
     return clone(customer);
   }
 
-  update(tenantId: string, customerId: string, patch: Partial<ServiceCustomer>): ServiceCustomer | null {
+  update(
+    tenantId: string,
+    customerId: string,
+    patch: Partial<ServiceCustomer>,
+  ): ServiceCustomer | null {
     const rows = this.readAll();
     const index = rows.findIndex((row) => row.tenantId === tenantId && row.id === customerId);
     if (index < 0) return null;
-    rows[index] = {
-      ...rows[index],
-      ...clone(patch),
-      id: rows[index]!.id,
-      tenantId: rows[index]!.tenantId,
-      verticalId: rows[index]!.verticalId,
-      updatedAt: new Date().toISOString(),
-    };
+    const current = rows[index]!;
+    const next = { ...current };
+    Object.assign(next, clone(patch));
+    next.id = current.id;
+    next.tenantId = current.tenantId;
+    next.verticalId = current.verticalId;
+    next.updatedAt = new Date().toISOString();
+    rows[index] = next;
     this.writeAll(rows);
     return clone(rows[index]!);
   }

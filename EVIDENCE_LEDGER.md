@@ -23,11 +23,11 @@ Date of this ledger: 2026-09-10. Repository: `xingxuling/clinic-flow`.
 |---|---|---|
 | Install | `bun install --frozen-lockfile` | PASS |
 | New scheduling/privacy/agent tests | `bunx vitest run src/scheduling/__tests__ src/privacy/__tests__ src/conversations/__tests__` | PASS: 38 tests |
-| Full Vitest | `bunx vitest run` | PASS: 22 files / 134 tests; corrected contradictory `ap_01` demo fixture |
-| Production build | `bun run build` | PASS after UI route integration |
-| TypeScript | `bunx tsc --noEmit` | BASELINE FAIL: existing importing/customer/security/vertical-scope errors; new scheduling/privacy errors cleared |
-| ESLint/Prettier | `bun run lint`; targeted ESLint/Prettier checks | BASELINE FAIL: existing repository line-ending/formatting debt; new scheduling/privacy/agent/UI files pass targeted checks |
-| Browser smoke | Playwright CLI: staff login → `/staff/bookings` → request → candidates → Hold → Confirm | PASS locally; visual acceptance still human gate |
+| Full Vitest | `bunx vitest run` | PASS: 22 files / 135 tests on latest-main-hardening; the earlier 134-test evidence is historical |
+| Production build | `bun run build` | PASS on latest-main-hardening |
+| TypeScript | `bunx tsc --noEmit` | PASS on latest-main-hardening via `bun run typecheck`; historical baseline errors were cleared |
+| ESLint/Prettier | `bun run lint`; targeted ESLint/Prettier checks | Full lint remains FAIL from repository-wide formatting/line-ending debt; changed-scope checks PASS with 0 errors / 0 warnings |
+| Browser smoke | Historical Playwright flow on the canonical implementation; latest local SSR route smoke | Historical flow PASS with visual human gate; latest `GET /staff/bookings` returned HTTP 200 with scheduling marker |
 | GitHub Actions | not invoked by design | NOT_RUN |
 
 ## Evidence boundaries
@@ -63,3 +63,32 @@ self-declaring a nine-gate PASS:
 
 Gate result: `CANDIDATE`; human review and production deployment evidence remain
 required.
+
+## Latest main hardening verification (2026-09-10)
+
+The remote `main` advanced during the initial implementation and already
+contained the canonical scheduling/privacy implementation at
+`1e40062474d3fa56adcad387a055a2f8138dd918`. The duplicate candidate branch was
+kept unmerged; this branch reused the existing `src/scheduling/`, `src/privacy/`
+and `src/conversations/` owners and added only hardening and verification
+changes.
+
+| Check | Result | Evidence boundary |
+|---|---|---|
+| Frozen install | PASS | `bun install --frozen-lockfile` completed without dependency changes |
+| Full tests | PASS | `bun run test`: 22 files / 135 tests |
+| Strict typecheck | PASS | `bun run typecheck` |
+| Changed-file lint | PASS | ESLint on all changed source/test files: 0 errors / 0 warnings |
+| Production build | PASS | `bun run build` completed for client, SSR and Nitro output |
+| Local route smoke | PASS | dev server `GET /staff/bookings`: HTTP 200 and `智能排程` marker present |
+| Full lint | FAIL | `bun run lint`: 428 problems (417 errors, 11 warnings), predominantly existing `src/work-items/` and line-ending/Prettier debt |
+| Migration static audit | PASS | vertical RLS predicates, `FORCE ROW LEVEL SECURITY` and GiST exclusion constraints are present |
+| PostgreSQL migration execution | NOT_RUN | no live database connection or `psql` execution was used |
+| WhatsApp/BSP/provider delivery | NOT_DEPLOYED | existing WhatsApp policy gate is retained; live credentials and delivery are unverified |
+| Visual/device acceptance | NOT_RUN | SSR smoke is not a substitute for interactive browser, mobile or human visual review |
+| GitHub Actions | NOT_USED | local verification only, by request |
+
+The added hardening includes repository `test`/`typecheck` scripts, strict
+TypeScript fixes in existing modules, vertical scoping in the scheduling
+migration RLS policies, and a regression test that keeps a failed booking
+replay failed instead of turning it into a duplicate success.

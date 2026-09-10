@@ -335,6 +335,7 @@ export class SmartSchedulingRuntime {
             booking.holdId === currentHold.holdId,
         );
       if (existing) {
+        const failed = existing.state === "FAILED";
         const job =
           this.repository.getJob(input.tenantId, input.verticalId, existing.jobId) ?? undefined;
         const conversation = job
@@ -345,9 +346,9 @@ export class SmartSchedulingRuntime {
             ) ?? undefined)
           : undefined;
         return {
-          ok: true,
+          ok: !failed,
           duplicate: true,
-          code: "OK",
+          code: failed ? "CONFIRM_FAILED" : "OK",
           booking: existing,
           ...(job ? { job } : {}),
           ...(conversation ? { conversation } : {}),
