@@ -13,6 +13,7 @@ The staff application uses capability-oriented URLs. Vertical-specific wording b
 | `/staff/today` | Today | Daily operating dashboard |
 | `/staff/inbox` | Conversations | WhatsApp / phone / web inbox |
 | `/staff/bookings` | Booking / scheduling | Appointment, vehicle intake, on-site slot, etc. |
+| `/staff/workers` | Workers | Worker capability, service area, availability and current jobs |
 | `/staff/agent` | Agent work | Service Work Items + legacy bounded Agent tasks |
 | `/staff/follow-ups` | Follow-up | Booking reminders, recall and customer reactivation |
 | `/staff/customers` | Customers | Customer + Subject + smart migration |

@@ -11,13 +11,14 @@ import { dentalVerticalPack } from "@/verticals/dental";
 const canonical = Object.values(STAFF_ROUTES);
 
 describe("staff route information architecture", () => {
-  it("defines ten unique capability-oriented canonical staff routes", () => {
-    expect(canonical).toHaveLength(10);
+  it("defines eleven unique capability-oriented canonical staff routes", () => {
+    expect(canonical).toHaveLength(11);
     expect(new Set(canonical).size).toBe(canonical.length);
     expect(canonical).toEqual([
       "/staff/today",
       "/staff/inbox",
       "/staff/bookings",
+      "/staff/workers",
       "/staff/agent",
       "/staff/follow-ups",
       "/staff/customers",
@@ -35,6 +36,7 @@ describe("staff route information architecture", () => {
       "今日",
       "對話",
       "排程",
+      "師傅",
       "Agent",
       "跟進",
       "客戶",

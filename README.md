@@ -216,6 +216,18 @@ Stable Adapter Contract
 
 平台化当前优先抽象语义和工作流，不为了改名而一次性破坏这套牙科 Demo。未来其他 Vertical 可以复用 M3 组件，并由行业包提供界面文案和字段。
 
+### Smart Scheduling & Privacy Broker
+
+现有平台 Core 已加入家居服务排程候选实现，仍复用同一个租户／行业边界：
+
+- `/staff/bookings`：ServiceRequest、候选匹配、Hold → Confirm，以及近期排程记录；
+- `/staff/workers`：师傅能力、服务区、档期、例外和显式 block；
+- `docs/SMART_SCHEDULING_ARCHITECTURE.md`：匹配、buffer、状态机和 PostgreSQL lowering；
+- `docs/PRIVACY_BROKER_ARCHITECTURE.md`：Job Identity、最小视图、分阶段披露和 opaque channel endpoint；
+- `docs/AGENT_COMMUNICATION_MODEL.md`：Customer Agent／Worker Agent 的 Job-scoped 对话与人工接管。
+
+当前浏览器 Repository 是可运行的本地候选实现；真实 PostgreSQL 执行、WhatsApp/BSP 投递、真实师傅设备和人工视觉验收仍需单独证据，不能由本地 UI 或单元测试替代。
+
 ---
 
 ## 8. 安全与权限

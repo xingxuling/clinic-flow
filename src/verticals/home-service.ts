@@ -20,16 +20,60 @@ export const homeServiceVerticalPack: ServiceVerticalPack = {
     venue: "客户地址",
   },
   subjectFields: [
-    { key: "address", label: "服务地址", required: true, kind: "textarea", administrativeOnly: true },
-    { key: "property_type", label: "单位类型", required: false, kind: "select", options: ["住宅", "办公室", "商铺", "其他"], administrativeOnly: true },
-    { key: "access_notes", label: "进入／门禁备注", required: false, kind: "textarea", administrativeOnly: true },
-    { key: "contact_on_site", label: "现场联系人", required: false, kind: "text", administrativeOnly: true },
+    {
+      key: "address",
+      label: "服务地址",
+      required: true,
+      kind: "textarea",
+      administrativeOnly: true,
+    },
+    {
+      key: "property_type",
+      label: "单位类型",
+      required: false,
+      kind: "select",
+      options: ["住宅", "办公室", "商铺", "其他"],
+      administrativeOnly: true,
+    },
+    {
+      key: "access_notes",
+      label: "进入／门禁备注",
+      required: false,
+      kind: "textarea",
+      administrativeOnly: true,
+    },
+    {
+      key: "contact_on_site",
+      label: "现场联系人",
+      required: false,
+      kind: "text",
+      administrativeOnly: true,
+    },
   ],
   services: [
     { id: "home_cleaning", name: "家居清洁", durationMin: 180, category: "cleaning" },
-    { id: "deep_cleaning", name: "深层清洁", durationMin: 300, category: "cleaning", requiresQuote: true },
-    { id: "plumbing_visit", name: "水喉检查／维修", durationMin: 120, category: "plumbing", requiresQuote: true },
-    { id: "electrical_visit", name: "电力检查／维修", durationMin: 120, category: "electrical", requiresQuote: true, requiresHumanConfirmation: true },
+    {
+      id: "deep_cleaning",
+      name: "深层清洁",
+      durationMin: 300,
+      category: "cleaning",
+      requiresQuote: true,
+    },
+    {
+      id: "plumbing_visit",
+      name: "水喉检查／维修",
+      durationMin: 120,
+      category: "plumbing",
+      requiresQuote: true,
+    },
+    {
+      id: "electrical_visit",
+      name: "电力检查／维修",
+      durationMin: 120,
+      category: "electrical",
+      requiresQuote: true,
+      requiresHumanConfirmation: true,
+    },
     { id: "aircon_service", name: "冷气清洗／检查", durationMin: 120, category: "aircon" },
   ],
   faqTemplates: [
@@ -37,7 +81,8 @@ export const homeServiceVerticalPack: ServiceVerticalPack = {
       id: "home_service_area",
       category: "other_admin",
       question: "边区有上门？",
-      answer: "服务地区以商户已核准覆盖范围为准；你可以提供地区或地址，由系统先检查是否在服务范围内。",
+      answer:
+        "服务地区以商户已核准覆盖范围为准；你可以提供地区或地址，由系统先检查是否在服务范围内。",
       keywords: ["边区", "服务范围", "上门地区", "新界", "九龙", "港岛"],
       channels: ["whatsapp", "web", "phone"],
       enabled: true,
@@ -47,7 +92,8 @@ export const homeServiceVerticalPack: ServiceVerticalPack = {
       id: "home_quote",
       category: "payment",
       question: "点样报价？",
-      answer: "简单项目可按商户价目表提供范围；需要现场判断的维修会先收集资料，再由师傅或客服确认报价。",
+      answer:
+        "简单项目可按商户价目表提供范围；需要现场判断的维修会先收集资料，再由师傅或客服确认报价。",
       keywords: ["报价", "几钱", "价钱", "收费", "价格"],
       channels: ["whatsapp", "web", "phone"],
       enabled: true,
@@ -57,7 +103,8 @@ export const homeServiceVerticalPack: ServiceVerticalPack = {
       id: "home_reschedule",
       category: "booking_policy",
       question: "可唔可以改上门时间？",
-      answer: "可以提出改期，系统会先查看服务人员可用时段；太接近上门时间的改动会转交调度人员确认。",
+      answer:
+        "可以提出改期，系统会先查看服务人员可用时段；太接近上门时间的改动会转交调度人员确认。",
       keywords: ["改期", "改时间", "改上门", "换时间"],
       channels: ["whatsapp", "web"],
       enabled: true,
@@ -84,8 +131,19 @@ export const homeServiceVerticalPack: ServiceVerticalPack = {
   ],
   integrationTargets: [],
   defaultHumanApprovalLeadHours: 12,
+  scheduling: {
+    holdDurationMin: 5,
+    defaultBuffers: {
+      travelBufferMin: 30,
+      preparationBufferMin: 15,
+      cleanupBufferMin: 15,
+    },
+  },
   metadata: {
     candidate: true,
-    notes: ["用于验证 field-service（上门服务）模型。", "危险电力／燃气／严重漏水关键词只做高优先级人工升级，不提供维修步骤。"],
+    notes: [
+      "用于验证 field-service（上门服务）模型。",
+      "危险电力／燃气／严重漏水关键词只做高优先级人工升级，不提供维修步骤。",
+    ],
   },
 };

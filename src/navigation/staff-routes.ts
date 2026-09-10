@@ -2,6 +2,7 @@ export const STAFF_ROUTES = {
   today: "/staff/today",
   inbox: "/staff/inbox",
   bookings: "/staff/bookings",
+  workers: "/staff/workers",
   agent: "/staff/agent",
   followUps: "/staff/follow-ups",
   customers: "/staff/customers",

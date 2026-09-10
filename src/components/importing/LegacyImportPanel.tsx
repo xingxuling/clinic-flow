@@ -1,5 +1,13 @@
 import { useMemo, useRef, useState } from "react";
-import { AlertTriangle, Camera, Check, ContactRound, FileUp, RefreshCw, ShieldCheck } from "lucide-react";
+import {
+  AlertTriangle,
+  Camera,
+  Check,
+  ContactRound,
+  FileUp,
+  RefreshCw,
+  ShieldCheck,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { MdButton, MdCard, MdChip, MdTextField } from "@/components/m3";
@@ -8,7 +16,11 @@ import type { ServiceCustomer } from "@/customers/types";
 import { contactSink } from "@/importing/contact-sink";
 import { enrichImportedFollowUp } from "@/importing/follow-up-projection";
 import { legacyImportService } from "@/importing/import-service";
-import type { LegacyImportCandidate, LegacyImportSource, LegacyImportSourceKind } from "@/importing/types";
+import type {
+  LegacyImportCandidate,
+  LegacyImportSource,
+  LegacyImportSourceKind,
+} from "@/importing/types";
 import type { ServiceVerticalPack } from "@/verticals/types";
 
 function sourceId() {
@@ -48,7 +60,7 @@ export function LegacyImportPanel({
 
   const allCustomers = useMemo(
     () => [...existingCustomers, ...serviceCustomerRepository.list(tenantId)],
-    [existingCustomers, tenantId, candidate?.savedCustomerId],
+    [existingCustomers, tenantId],
   );
 
   const startImport = async (file: File, kind: LegacyImportSourceKind) => {
@@ -69,7 +81,9 @@ export function LegacyImportPanel({
       setDuplicateOverride(false);
       toast.success("已擷取資料", { description: "請逐項核對後再保存。" });
     } catch (error) {
-      toast.error("無法擷取資料", { description: error instanceof Error ? error.message : String(error) });
+      toast.error("無法擷取資料", {
+        description: error instanceof Error ? error.message : String(error),
+      });
     } finally {
       setBusy(false);
     }
@@ -104,7 +118,7 @@ export function LegacyImportPanel({
       const projection = legacyImportService.projectApproved(approved);
       const topDuplicate = refreshed.duplicates[0];
       const mergeTarget =
-        duplicateOverride && topDuplicate?.score >= 0.9
+        duplicateOverride && topDuplicate && topDuplicate.score >= 0.9
           ? serviceCustomerRepository.get(tenantId, topDuplicate.customerId)
           : null;
 
@@ -117,9 +131,11 @@ export function LegacyImportPanel({
           language: projection.customer.language ?? mergeTarget.language,
           notesAdmin: projection.customer.notesAdmin ?? mergeTarget.notesAdmin,
           tags: Array.from(new Set([...mergeTarget.tags, ...(projection.customer.tags ?? [])])),
-          subjects: projection.customer.subjects?.length ? projection.customer.subjects : mergeTarget.subjects,
+          subjects: projection.customer.subjects?.length
+            ? projection.customer.subjects
+            : mergeTarget.subjects,
           source: "legacy_import",
-          sourceRef: projection.customer.sourceRef,
+          ...(projection.customer.sourceRef ? { sourceRef: projection.customer.sourceRef } : {}),
         });
         if (!merged) throw new Error("IMPORT_MERGE_TARGET_NOT_FOUND");
         customer = merged;
@@ -134,7 +150,8 @@ export function LegacyImportPanel({
       });
       if (enrichedFollowUp) {
         customer =
-          serviceCustomerRepository.update(tenantId, customer.id, { followUp: enrichedFollowUp }) ?? customer;
+          serviceCustomerRepository.update(tenantId, customer.id, { followUp: enrichedFollowUp }) ??
+          customer;
       }
 
       const saved = legacyImportService.markSaved(approved, customer.id);
@@ -155,7 +172,9 @@ export function LegacyImportPanel({
         });
       }
     } catch (error) {
-      toast.error("尚未保存", { description: error instanceof Error ? error.message : String(error) });
+      toast.error("尚未保存", {
+        description: error instanceof Error ? error.message : String(error),
+      });
     } finally {
       setBusy(false);
     }
@@ -178,7 +197,11 @@ export function LegacyImportPanel({
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <MdButton icon={<Camera className="size-4" />} onClick={() => cameraRef.current?.click()} disabled={busy}>
+          <MdButton
+            icon={<Camera className="size-4" />}
+            onClick={() => cameraRef.current?.click()}
+            disabled={busy}
+          >
             用手機拍攝
           </MdButton>
           <MdButton
@@ -190,7 +213,11 @@ export function LegacyImportPanel({
             上傳截圖 / 文件
           </MdButton>
           {candidate && (
-            <MdButton variant="text" icon={<RefreshCw className="size-4" />} onClick={() => setCandidate(null)}>
+            <MdButton
+              variant="text"
+              icon={<RefreshCw className="size-4" />}
+              onClick={() => setCandidate(null)}
+            >
               重新開始
             </MdButton>
           )}
@@ -232,7 +259,9 @@ export function LegacyImportPanel({
             <ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" />
             <div className="md-body-s text-on-surface-variant">
               <p>目前 Demo 使用模擬 Extraction Provider，目的是驗證完整操作流程。</p>
-              <p className="mt-1">真實 OCR/VLM 接入後仍沿用相同欄位、置信度、來源區域、人審與去重契約。</p>
+              <p className="mt-1">
+                真實 OCR/VLM 接入後仍沿用相同欄位、置信度、來源區域、人審與去重契約。
+              </p>
             </div>
           </div>
         </div>
@@ -241,7 +270,9 @@ export function LegacyImportPanel({
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <MdChip tone="neutral">{candidate.source.filename}</MdChip>
             <MdChip tone="secondary">{candidate.extraction.providerId}</MdChip>
-            {candidate.extraction.warnings.includes("DEMO_PROVIDER_ONLY") && <MdChip tone="tertiary">Demo 擷取</MdChip>}
+            {candidate.extraction.warnings.includes("DEMO_PROVIDER_ONLY") && (
+              <MdChip tone="tertiary">Demo 擷取</MdChip>
+            )}
           </div>
 
           {candidate.duplicates.length > 0 && (
@@ -252,7 +283,8 @@ export function LegacyImportPanel({
                   <p className="md-label-l">發現可能重複客戶</p>
                   {candidate.duplicates.slice(0, 3).map((duplicate) => (
                     <p key={duplicate.customerId} className="mt-1 md-body-s">
-                      {duplicate.displayName} · {duplicate.phone} · {Math.round(duplicate.score * 100)}%
+                      {duplicate.displayName} · {duplicate.phone} ·{" "}
+                      {Math.round(duplicate.score * 100)}%
                     </p>
                   ))}
                   <label className="mt-3 flex cursor-pointer items-center gap-2 md-body-s">
@@ -275,9 +307,12 @@ export function LegacyImportPanel({
                 <div key={field.key} className="rounded-xl border border-outline-variant p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <span className="md-label-l text-on-surface">
-                      {field.label}{schemaField?.required ? " *" : ""}
+                      {field.label}
+                      {schemaField?.required ? " *" : ""}
                     </span>
-                    <MdChip tone={confidenceTone(field.confidence)}>{confidenceLabel(field.confidence)}</MdChip>
+                    <MdChip tone={confidenceTone(field.confidence)}>
+                      {confidenceLabel(field.confidence)}
+                    </MdChip>
                   </div>
 
                   {schemaField?.kind === "select" ? (
@@ -289,7 +324,9 @@ export function LegacyImportPanel({
                     >
                       <option value="">未識別 / 不填</option>
                       {schemaField.options?.map((option) => (
-                        <option key={option} value={option}>{option}</option>
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
                       ))}
                     </select>
                   ) : (
@@ -304,7 +341,11 @@ export function LegacyImportPanel({
 
                   <div className="mt-2 flex items-center justify-between gap-2">
                     <span className="md-body-s text-on-surface-variant">
-                      {field.corrected ? "已由人手修正，請重新確認" : field.accepted ? "已人工確認" : "待核對"}
+                      {field.corrected
+                        ? "已由人手修正，請重新確認"
+                        : field.accepted
+                          ? "已人工確認"
+                          : "待核對"}
                     </span>
                     <MdButton
                       size="sm"
@@ -322,12 +363,22 @@ export function LegacyImportPanel({
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-outline-variant pt-4">
-            <MdButton variant="tonal" onClick={acceptDetected}>確認所有已識別欄位</MdButton>
+            <MdButton variant="tonal" onClick={acceptDetected}>
+              確認所有已識別欄位
+            </MdButton>
             <label className="flex items-center gap-2 md-body-s text-on-surface-variant">
-              <input type="checkbox" checked={exportContact} onChange={(event) => setExportContact(event.target.checked)} />
+              <input
+                type="checkbox"
+                checked={exportContact}
+                onChange={(event) => setExportContact(event.target.checked)}
+              />
               <ContactRound className="size-4" /> 保存後同時匯出通訊錄 vCard
             </label>
-            <MdButton className="ml-auto" onClick={() => void save()} disabled={busy || candidate.status === "saved"}>
+            <MdButton
+              className="ml-auto"
+              onClick={() => void save()}
+              disabled={busy || candidate.status === "saved"}
+            >
               {candidate.status === "saved" ? "已保存" : "確認並保存"}
             </MdButton>
           </div>

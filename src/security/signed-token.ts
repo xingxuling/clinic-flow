@@ -83,27 +83,27 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isCommonPayload(value: Record<string, unknown>): boolean {
   return (
-    value.v === 1 &&
-    typeof value.clinicId === "string" &&
-    value.clinicId.length > 0 &&
-    typeof value.iat === "number" &&
-    Number.isInteger(value.iat) &&
-    typeof value.exp === "number" &&
-    Number.isInteger(value.exp) &&
-    value.exp > value.iat &&
-    typeof value.jti === "string" &&
-    value.jti.length >= 8
+    value["v"] === 1 &&
+    typeof value["clinicId"] === "string" &&
+    value["clinicId"].length > 0 &&
+    typeof value["iat"] === "number" &&
+    Number.isInteger(value["iat"]) &&
+    typeof value["exp"] === "number" &&
+    Number.isInteger(value["exp"]) &&
+    value["exp"] > value["iat"] &&
+    typeof value["jti"] === "string" &&
+    value["jti"].length >= 8
   );
 }
 
 function parsePayload(value: unknown): AccessTokenPayload | null {
   if (!isRecord(value) || !isCommonPayload(value)) return null;
 
-  if (value.kind === "patient_portal" && typeof value.patientId === "string") {
+  if (value["kind"] === "patient_portal" && typeof value["patientId"] === "string") {
     return value as unknown as PatientPortalTokenPayload;
   }
 
-  if (value.kind === "staff_invite" && typeof value.inviteId === "string") {
+  if (value["kind"] === "staff_invite" && typeof value["inviteId"] === "string") {
     return value as unknown as StaffInviteTokenPayload;
   }
 
@@ -130,10 +130,7 @@ export interface IssueTokenOptions {
   jti?: string;
 }
 
-function issueBase(
-  kind: AccessTokenKind,
-  options: IssueTokenOptions,
-): AccessTokenBase {
+function issueBase(kind: AccessTokenKind, options: IssueTokenOptions): AccessTokenBase {
   const nowSeconds = Math.floor((options.nowMs ?? Date.now()) / 1000);
   const ttlSeconds = options.ttlSeconds ?? 10 * 60;
   if (!Number.isFinite(ttlSeconds) || ttlSeconds <= 0 || ttlSeconds > 7 * 24 * 60 * 60) {
@@ -189,9 +186,9 @@ export async function verifyAccessToken(
   const header = decodeJson(headerSegment);
   if (
     !isRecord(header) ||
-    header.alg !== "HS256" ||
-    header.typ !== "CFAT" ||
-    header.v !== 1
+    header["alg"] !== "HS256" ||
+    header["typ"] !== "CFAT" ||
+    header["v"] !== 1
   ) {
     return { ok: false, reason: "TOKEN_FORMAT_INVALID" };
   }
@@ -199,10 +196,12 @@ export async function verifyAccessToken(
   const signature = base64UrlToBytes(signatureSegment);
   if (!signature) return { ok: false, reason: "TOKEN_FORMAT_INVALID" };
 
+  const signatureBuffer = new ArrayBuffer(signature.byteLength);
+  new Uint8Array(signatureBuffer).set(signature);
   const verified = await crypto.subtle.verify(
     "HMAC",
     key,
-    signature,
+    signatureBuffer,
     new TextEncoder().encode(`${headerSegment}.${bodySegment}`),
   );
   if (!verified) return { ok: false, reason: "TOKEN_SIGNATURE_INVALID" };

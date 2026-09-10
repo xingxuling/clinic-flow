@@ -1,0 +1,95 @@
+# Smart Scheduling & Privacy Broker semantic overlay
+# Candidate lowering: TypeScript matcher + PostgreSQL transaction/RLS.
+# This artifact records ownership and invariants; it does not grant live
+# database/provider authority by itself.
+reality SmartSchedulingPrivacyBroker {
+  facet policy.cross_tenant_access_allowed : Truth = false
+  facet policy.cross_vertical_access_allowed : Truth = false
+  facet policy.private_contact_exchange_allowed : Truth = false
+  facet policy.exact_address_before_execution_allowed : Truth = false
+  facet policy.customer_consent_required_for_exact_address : Truth = true
+  facet request.tenant_match : Truth = false
+  facet request.vertical_match : Truth = false
+  facet request.capability_match : Truth = false
+  facet request.area_match : Truth = false
+  facet request.availability_match : Truth = false
+  facet request.hold_active : Truth = false
+  facet request.customer_confirmed : Truth = false
+  facet request.worker_notified : Truth = false
+  facet privacy.audit_recorded : Truth = false
+  facet privacy.human_override : Truth = false
+
+  subject scheduling_core {
+    facet matches : Number = 0
+    facet holds : Number = 0
+    warrant service.frontdesk.schedule on service_admin
+  }
+
+  subject privacy_broker {
+    facet disclosures : Number = 0
+    warrant service.frontdesk.privacy_review on service_admin
+  }
+
+  knowledge authority {
+    claim request_scope_safe : Truth =
+      request.tenant_match and request.vertical_match
+      confidence 1.0
+      evidence "policy:tenant-vertical-scope"
+      source "smart-scheduling-privacy-broker"
+      scope "tenant"
+      status observed
+
+    claim schedule_candidate_safe : Truth =
+      knowledge_value(authority.request_scope_safe) and
+      request.capability_match and
+      request.area_match and
+      request.availability_match
+      from authority.request_scope_safe
+      confidence 1.0
+      evidence "policy:hard-filter-before-ranking"
+      source "rcl:inference"
+      scope "scheduling"
+
+    claim private_disclosure_safe : Truth =
+      not policy.private_contact_exchange_allowed and
+      (not request.customer_confirmed or not request.worker_notified or
+        policy.customer_consent_required_for_exact_address)
+      confidence 1.0
+      evidence "policy:progressive-disclosure"
+      source "rcl:inference"
+      scope "job"
+
+    preserve policy.cross_tenant_access_allowed == false
+    preserve policy.cross_vertical_access_allowed == false
+    preserve policy.private_contact_exchange_allowed == false
+    preserve policy.exact_address_before_execution_allowed == false
+  }
+
+  emergence schedule_hold_action {
+    cause scheduling_core
+    when supported(authority.schedule_candidate_safe, 1.0) and
+      knowledge_value(authority.schedule_candidate_safe)
+    needs service.frontdesk.schedule on service_admin
+    alter request.hold_active <- true
+    alter scheduling_core.holds <- scheduling_core.holds + 1
+    preserve request.tenant_match
+    preserve request.vertical_match
+    witness "service-frontdesk:schedule-hold"
+  }
+
+  emergence privacy_denied_action {
+    cause privacy_broker
+    when supported(authority.private_disclosure_safe, 1.0) and
+      knowledge_value(authority.private_disclosure_safe)
+    needs service.frontdesk.privacy_review on service_admin
+    alter privacy.audit_recorded <- true
+    preserve policy.private_contact_exchange_allowed == false
+    witness "service-frontdesk:privacy-deny-or-progressive-disclose"
+  }
+
+  learn authority
+  foresee schedule_hold_action
+  foresee privacy_denied_action
+  realize schedule_hold_action
+  realize privacy_denied_action
+}

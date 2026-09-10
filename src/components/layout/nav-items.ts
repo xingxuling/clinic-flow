@@ -28,8 +28,15 @@ export interface NavItem {
 
 const STAFF_NAV_BASE: NavItem[] = [
   { to: STAFF_ROUTES.today, label: "今日", icon: LayoutDashboard, inBottomBar: true },
-  { to: STAFF_ROUTES.inbox, label: "對話", icon: MessageSquare, badgeKey: "inbox", inBottomBar: true },
+  {
+    to: STAFF_ROUTES.inbox,
+    label: "對話",
+    icon: MessageSquare,
+    badgeKey: "inbox",
+    inBottomBar: true,
+  },
   { to: STAFF_ROUTES.bookings, label: "排程", icon: CalendarDays, inBottomBar: true },
+  { to: STAFF_ROUTES.workers, label: "師傅", icon: UserCog },
   { to: STAFF_ROUTES.agent, label: "Agent", icon: Bot, badgeKey: "agent", inBottomBar: true },
   { to: STAFF_ROUTES.followUps, label: "跟進", icon: ClipboardList },
   { to: STAFF_ROUTES.customers, label: "客戶", icon: Users },

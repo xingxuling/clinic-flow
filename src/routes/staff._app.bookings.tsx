@@ -1,19 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { Route as LegacyAppointmentsRoute } from "./staff._app.appointments";
-
-const BookingsPage = LegacyAppointmentsRoute.options.component!;
+import { SchedulingPage } from "@/scheduling/SchedulingPage";
 
 /**
- * Service Frontdesk canonical booking route.
- * `/staff/appointments` remains a compatibility alias during migration.
+ * Service Frontdesk canonical scheduling route.
+ * `/staff/appointments` remains the legacy dental compatibility surface.
  */
 export const Route = createFileRoute("/staff/_app/bookings")({
   head: () => ({
     meta: [
-      { title: "排程｜Service Frontdesk" },
-      { name: "description", content: "通用服務業排程：預約、入廠、上門時段、確認、改期與取消。" },
+      { title: "智能排程｜Service Frontdesk" },
+      {
+        name: "description",
+        content: "通用服务业 Customer Request、Worker 匹配、Hold 与确认锁定。",
+      },
     ],
   }),
-  component: BookingsPage,
+  component: SchedulingPage,
 });

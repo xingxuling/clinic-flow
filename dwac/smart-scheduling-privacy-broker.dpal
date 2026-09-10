@@ -1,0 +1,46 @@
+artifact smart_scheduling_privacy_broker kind=taowind.software/web-application {
+  goal "在既有 Service Frontdesk Core 内提供通用现场服务排程、Job 隐私中介和双 Agent 对话"
+  success "请求按 tenant/vertical、能力、服务区、时区档期和 buffer 做硬过滤，再进行可解释排序"
+  success "Hold/Confirm/Lock 具备幂等与生产数据库并发约束；通知失败不伪造成功"
+  success "Customer/Worker 只用 Job alias 与 opaque endpoint；精确地址按阶段、用途、同意披露"
+  constraint "不复制 Core、不把 TypeScript localStorage 当生产持久化、不绕过 WhatsApp policy"
+  constraint "Agent 只能生成 intent/proposal；实际锁定、通知、私人披露仍由受控服务层执行"
+  invariant "所有新实体按 clinic/tenant 与 vertical 双 scope 隔离"
+  invariant "私人电话默认不可交换，audit 不保存敏感原文"
+  owner "service-frontdesk-core"
+
+  unit smart_scheduling output=taowind/workflow {
+    title "Customer Request 到 Scheduled"
+    goal "覆盖 availability、service area、capability、duration、buffer、match、hold、confirm"
+    depends "core_domain,vertical_contract"
+    accept "hard_filters_before_ranking,explainable_candidates,idempotent_hold_confirm"
+  }
+
+  unit privacy_broker output=taowind/security {
+    title "Job-scoped progressive disclosure"
+    goal "隔离真实联系人与地址，按 participant/stage/purpose/consent 发放最小资料"
+    depends "core_domain"
+    accept "alias_only,no_private_phone_exchange,audited_decision,retention_policy"
+  }
+
+  unit dual_agent_conversation output=taowind/workflow {
+    title "Customer Agent 与 Worker Agent"
+    goal "把消息编译成结构化 intent/proposal，支持人工接管与恢复"
+    depends "smart_scheduling,privacy_broker"
+    accept "job_scoped,no_cross_job_leak,human_takeover,channel_policy_preserved"
+  }
+
+  unit postgres_lowering output=taowind/schema {
+    title "Durable concurrency and RLS lowering"
+    goal "用 range exclusion、worker transaction lock、RLS 和 secret reference 约束生产路径"
+    depends "smart_scheduling,privacy_broker"
+    accept "tenant_vertical_rls,cross_table_lock,no_plaintext_secret_payload"
+  }
+
+  unit evidence output=taowind/test {
+    title "候选实现证据"
+    goal "保留纯逻辑、状态机、隐私安全测试以及未部署边界"
+    depends "smart_scheduling,privacy_broker,dual_agent_conversation,postgres_lowering"
+    accept "pass_fail_separated,production_gaps_explicit"
+  }
+}
