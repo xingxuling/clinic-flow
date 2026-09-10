@@ -1,8 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { Route as LegacyAppointmentsRoute } from "./staff._app.appointments";
-
-const BookingsPage = LegacyAppointmentsRoute.options.component!;
+import { SmartSchedulingPage } from "@/components/scheduling/SmartSchedulingPage";
 
 /**
  * Service Frontdesk canonical booking route.
@@ -15,5 +13,5 @@ export const Route = createFileRoute("/staff/_app/bookings")({
       { name: "description", content: "通用服務業排程：預約、入廠、上門時段、確認、改期與取消。" },
     ],
   }),
-  component: BookingsPage,
+  component: SmartSchedulingPage,
 });

@@ -26,7 +26,10 @@ import { Route as PatientAppProfileRouteImport } from './routes/patient._app.pro
 import { Route as StaffAppAgentRouteImport } from './routes/staff._app.agent'
 import { Route as StaffAppAppointmentsRouteImport } from './routes/staff._app.appointments'
 import { Route as StaffAppAuditRouteImport } from './routes/staff._app.audit'
+import { Route as StaffAppBookingsRouteImport } from './routes/staff._app.bookings'
+import { Route as StaffAppCustomersRouteImport } from './routes/staff._app.customers'
 import { Route as StaffAppDocumentsRouteImport } from './routes/staff._app.documents'
+import { Route as StaffAppFollowUpsRouteImport } from './routes/staff._app.follow-ups'
 import { Route as StaffAppInboxRouteImport } from './routes/staff._app.inbox'
 import { Route as StaffAppPatientsRouteImport } from './routes/staff._app.patients'
 import { Route as StaffAppRemindersRouteImport } from './routes/staff._app.reminders'
@@ -119,9 +122,24 @@ const StaffAppAuditRoute = StaffAppAuditRouteImport.update({
   path: '/audit',
   getParentRoute: () => StaffAppRoute,
 } as any)
+const StaffAppBookingsRoute = StaffAppBookingsRouteImport.update({
+  id: '/bookings',
+  path: '/bookings',
+  getParentRoute: () => StaffAppRoute,
+} as any)
+const StaffAppCustomersRoute = StaffAppCustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => StaffAppRoute,
+} as any)
 const StaffAppDocumentsRoute = StaffAppDocumentsRouteImport.update({
   id: '/documents',
   path: '/documents',
+  getParentRoute: () => StaffAppRoute,
+} as any)
+const StaffAppFollowUpsRoute = StaffAppFollowUpsRouteImport.update({
+  id: '/follow-ups',
+  path: '/follow-ups',
   getParentRoute: () => StaffAppRoute,
 } as any)
 const StaffAppInboxRoute = StaffAppInboxRouteImport.update({
@@ -173,7 +191,10 @@ export interface FileRoutesByFullPath {
   '/staff/agent': typeof StaffAppAgentRoute
   '/staff/appointments': typeof StaffAppAppointmentsRoute
   '/staff/audit': typeof StaffAppAuditRoute
+  '/staff/bookings': typeof StaffAppBookingsRoute
+  '/staff/customers': typeof StaffAppCustomersRoute
   '/staff/documents': typeof StaffAppDocumentsRoute
+  '/staff/follow-ups': typeof StaffAppFollowUpsRoute
   '/staff/inbox': typeof StaffAppInboxRoute
   '/staff/patients': typeof StaffAppPatientsRoute
   '/staff/reminders': typeof StaffAppRemindersRoute
@@ -197,7 +218,10 @@ export interface FileRoutesByTo {
   '/staff/agent': typeof StaffAppAgentRoute
   '/staff/appointments': typeof StaffAppAppointmentsRoute
   '/staff/audit': typeof StaffAppAuditRoute
+  '/staff/bookings': typeof StaffAppBookingsRoute
+  '/staff/customers': typeof StaffAppCustomersRoute
   '/staff/documents': typeof StaffAppDocumentsRoute
+  '/staff/follow-ups': typeof StaffAppFollowUpsRoute
   '/staff/inbox': typeof StaffAppInboxRoute
   '/staff/patients': typeof StaffAppPatientsRoute
   '/staff/reminders': typeof StaffAppRemindersRoute
@@ -224,7 +248,10 @@ export interface FileRoutesById {
   '/staff/_app/agent': typeof StaffAppAgentRoute
   '/staff/_app/appointments': typeof StaffAppAppointmentsRoute
   '/staff/_app/audit': typeof StaffAppAuditRoute
+  '/staff/_app/bookings': typeof StaffAppBookingsRoute
+  '/staff/_app/customers': typeof StaffAppCustomersRoute
   '/staff/_app/documents': typeof StaffAppDocumentsRoute
+  '/staff/_app/follow-ups': typeof StaffAppFollowUpsRoute
   '/staff/_app/inbox': typeof StaffAppInboxRoute
   '/staff/_app/patients': typeof StaffAppPatientsRoute
   '/staff/_app/reminders': typeof StaffAppRemindersRoute
@@ -252,7 +279,10 @@ export interface FileRouteTypes {
     | '/staff/agent'
     | '/staff/appointments'
     | '/staff/audit'
+    | '/staff/bookings'
+    | '/staff/customers'
     | '/staff/documents'
+    | '/staff/follow-ups'
     | '/staff/inbox'
     | '/staff/patients'
     | '/staff/reminders'
@@ -276,7 +306,10 @@ export interface FileRouteTypes {
     | '/staff/agent'
     | '/staff/appointments'
     | '/staff/audit'
+    | '/staff/bookings'
+    | '/staff/customers'
     | '/staff/documents'
+    | '/staff/follow-ups'
     | '/staff/inbox'
     | '/staff/patients'
     | '/staff/reminders'
@@ -302,7 +335,10 @@ export interface FileRouteTypes {
     | '/staff/_app/agent'
     | '/staff/_app/appointments'
     | '/staff/_app/audit'
+    | '/staff/_app/bookings'
+    | '/staff/_app/customers'
     | '/staff/_app/documents'
+    | '/staff/_app/follow-ups'
     | '/staff/_app/inbox'
     | '/staff/_app/patients'
     | '/staff/_app/reminders'
@@ -444,11 +480,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StaffAppAuditRouteImport
       parentRoute: typeof StaffAppRoute
     }
+    '/staff/_app/bookings': {
+      id: '/staff/_app/bookings'
+      path: '/bookings'
+      fullPath: '/staff/bookings'
+      preLoaderRoute: typeof StaffAppBookingsRouteImport
+      parentRoute: typeof StaffAppRoute
+    }
+    '/staff/_app/customers': {
+      id: '/staff/_app/customers'
+      path: '/customers'
+      fullPath: '/staff/customers'
+      preLoaderRoute: typeof StaffAppCustomersRouteImport
+      parentRoute: typeof StaffAppRoute
+    }
     '/staff/_app/documents': {
       id: '/staff/_app/documents'
       path: '/documents'
       fullPath: '/staff/documents'
       preLoaderRoute: typeof StaffAppDocumentsRouteImport
+      parentRoute: typeof StaffAppRoute
+    }
+    '/staff/_app/follow-ups': {
+      id: '/staff/_app/follow-ups'
+      path: '/follow-ups'
+      fullPath: '/staff/follow-ups'
+      preLoaderRoute: typeof StaffAppFollowUpsRouteImport
       parentRoute: typeof StaffAppRoute
     }
     '/staff/_app/inbox': {
@@ -520,7 +577,10 @@ interface StaffAppRouteChildren {
   StaffAppAgentRoute: typeof StaffAppAgentRoute
   StaffAppAppointmentsRoute: typeof StaffAppAppointmentsRoute
   StaffAppAuditRoute: typeof StaffAppAuditRoute
+  StaffAppBookingsRoute: typeof StaffAppBookingsRoute
+  StaffAppCustomersRoute: typeof StaffAppCustomersRoute
   StaffAppDocumentsRoute: typeof StaffAppDocumentsRoute
+  StaffAppFollowUpsRoute: typeof StaffAppFollowUpsRoute
   StaffAppInboxRoute: typeof StaffAppInboxRoute
   StaffAppPatientsRoute: typeof StaffAppPatientsRoute
   StaffAppRemindersRoute: typeof StaffAppRemindersRoute
@@ -533,7 +593,10 @@ const StaffAppRouteChildren: StaffAppRouteChildren = {
   StaffAppAgentRoute: StaffAppAgentRoute,
   StaffAppAppointmentsRoute: StaffAppAppointmentsRoute,
   StaffAppAuditRoute: StaffAppAuditRoute,
+  StaffAppBookingsRoute: StaffAppBookingsRoute,
+  StaffAppCustomersRoute: StaffAppCustomersRoute,
   StaffAppDocumentsRoute: StaffAppDocumentsRoute,
+  StaffAppFollowUpsRoute: StaffAppFollowUpsRoute,
   StaffAppInboxRoute: StaffAppInboxRoute,
   StaffAppPatientsRoute: StaffAppPatientsRoute,
   StaffAppRemindersRoute: StaffAppRemindersRoute,
