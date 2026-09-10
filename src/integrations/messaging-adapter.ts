@@ -54,10 +54,7 @@ export interface ChannelSendReceipt {
   sentAt: string;
 }
 
-export type MessagingProviderKind =
-  | "demo"
-  | "whatsapp_business_platform"
-  | "other_production";
+export type MessagingProviderKind = "demo" | "whatsapp_business_platform" | "other_production";
 
 export interface MessagingAdapter {
   readonly providerId: string;
@@ -124,7 +121,9 @@ export class MockWhatsAppAdapter implements MessagingAdapter {
     this.sent.push({
       ...message,
       replyOptions: message.replyOptions.map((option) => ({ ...option })),
-      ...(message.whatsappTemplate ? { whatsappTemplate: cloneTemplate(message.whatsappTemplate) } : {}),
+      ...(message.whatsappTemplate
+        ? { whatsappTemplate: cloneTemplate(message.whatsappTemplate) }
+        : {}),
     });
     const sentAt = new Date().toISOString();
     return {
@@ -140,7 +139,70 @@ export class MockWhatsAppAdapter implements MessagingAdapter {
     return this.sent.map((message) => ({
       ...message,
       replyOptions: message.replyOptions.map((option) => ({ ...option })),
-      ...(message.whatsappTemplate ? { whatsappTemplate: cloneTemplate(message.whatsappTemplate) } : {}),
+      ...(message.whatsappTemplate
+        ? { whatsappTemplate: cloneTemplate(message.whatsappTemplate) }
+        : {}),
+    }));
+  }
+}
+
+/**
+ * 本地网页对话适配器。
+ *
+ * 它只把回复写入本地内存，目的是先跑通 Customer → Agent → Conversation
+ * 的闭环；不代表真实网页推送、WhatsApp 或任何生产消息投递能力。
+ */
+export class LocalWebChatAdapter implements MessagingAdapter {
+  readonly providerId = "service-frontdesk.web.local";
+  readonly displayName = "本地网页对话";
+  readonly channel: ChannelKind = "web";
+  readonly providerKind: MessagingProviderKind = "demo";
+  readonly productionEligible = false;
+
+  private readonly instanceId =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID().slice(0, 8)
+      : `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  private readonly sent: OutgoingChannelMessage[] = [];
+
+  async send(message: OutgoingChannelMessage): Promise<ChannelSendReceipt> {
+    if (message.channel !== "web") {
+      return {
+        ok: false,
+        providerMessageId: null,
+        providerId: this.providerId,
+        errorCode: "CHANNEL_MISMATCH",
+        sentAt: new Date().toISOString(),
+      };
+    }
+    if (!message.text.trim()) {
+      return {
+        ok: false,
+        providerMessageId: null,
+        providerId: this.providerId,
+        errorCode: "EMPTY_MESSAGE",
+        sentAt: new Date().toISOString(),
+      };
+    }
+
+    this.sent.push({
+      ...message,
+      replyOptions: message.replyOptions.map((option) => ({ ...option })),
+    });
+    const sentAt = new Date().toISOString();
+    return {
+      ok: true,
+      providerMessageId: `web_demo_${this.instanceId}_${this.sent.length.toString().padStart(4, "0")}`,
+      providerId: this.providerId,
+      errorCode: null,
+      sentAt,
+    };
+  }
+
+  snapshot(): OutgoingChannelMessage[] {
+    return this.sent.map((message) => ({
+      ...message,
+      replyOptions: message.replyOptions.map((option) => ({ ...option })),
     }));
   }
 }

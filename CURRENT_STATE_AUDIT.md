@@ -165,3 +165,16 @@ TypeScript 修复、排程迁移的 `vertical_id` RLS 隔离，以及 FAILED boo
 `src/routes/index.tsx` 直接更新首页：加入 Smart Scheduling 主叙事、Request → Match → Hold/Confirm 示意、Worker 候选与 Privacy Broker 边界、Vertical Pack 展示，以及 Staff / Dental Demo 入口。
 
 已用真实本地浏览器检查桌面与 `390x844` 窄屏：新页面标题、主要 CTA、排程示意和滚动均可见；这是本地 candidate visual evidence，仍不等同真机、远端部署或人工产品验收。
+
+## 对话优先复核（2026-09-10）
+
+根据当前优先级，先把本地网页对话跑通，WhatsApp/BSP 不作为前置条件。本轮复用既有
+`ServiceConversationIngestRuntime`、`ServiceConversationRepository` 和 `ServiceVerticalPack`，只新增本地网页 Adapter、客户侧 Conversation 读取 Hook，以及员工端／病人端 UI 接线。
+
+- `/staff/inbox` 已加入「本地網頁對話」入口：Customer 讯息进入同一套 ingest/runtime，Agent 自动回复写入同一条 Conversation，员工可以继续人工回复。
+- `/patient/messages` 已接入相同的本地网页 Conversation；病人发出预约询问后可看到 Agent 回复，员工端回复后病人端同步看到「人手跟進」。
+- 真实本地浏览器双页复核通过：员工端 `周凱琳` 与病人端 `陳曉晴` 均完成 `customer → agent → staff`；本地存储中的两条新增记录均为 `channel=web`。
+- 发现并修复本地 Adapter 在不同实例重复使用 `web_demo_0001` 的幂等键问题，并加入跨客户回归测试，避免 Agent 回复串到另一位客户。
+- `bun run test`：22 个测试文件、137 个测试通过；`bun run typecheck`、改动范围 ESLint、`bun run build` 通过。
+- 已复核 390×844 病人端窄屏：导航、消息气泡、Agent／人工状态和输入栏均可达；这是本地 candidate visual evidence。
+- WhatsApp、BSP、Meta 账号、真实网页推送、生产数据库和远端 CI 本轮均未调用／未部署；不能把本地 Demo 说成生产消息投递。

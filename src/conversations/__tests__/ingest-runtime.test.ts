@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServiceConversationIngestRuntime } from "@/conversations/ingest-runtime";
 import { BrowserServiceConversationRepository } from "@/conversations/repository";
 import type { ServiceTenant } from "@/core/tenant";
-import { MockWhatsAppAdapter } from "@/integrations/messaging-adapter";
+import { LocalWebChatAdapter, MockWhatsAppAdapter } from "@/integrations/messaging-adapter";
 import { messagingAutomationControlRepository } from "@/messaging/automation-control";
 import { getVerticalPack } from "@/verticals/registry";
 
@@ -49,6 +49,85 @@ beforeEach(() => installBrowserStorage());
 afterEach(() => vi.unstubAllGlobals());
 
 describe("ServiceConversationIngestRuntime", () => {
+  it("本地网页通道可以完成 Customer → Agent → Conversation 闭环，不依赖 WhatsApp", async () => {
+    const repository = new BrowserServiceConversationRepository();
+    const runtime = new ServiceConversationIngestRuntime(repository);
+    const adapter = new LocalWebChatAdapter();
+    const vertical = getVerticalPack("dental")!;
+
+    const receipt = await runtime.ingest({
+      tenant: { ...tenant, verticalId: vertical.id },
+      vertical,
+      customerName: "陈小姐",
+      messagingAdapter: adapter,
+      message: {
+        providerMessageId: "web_local_001",
+        tenantId: tenant.id,
+        customerId: "customer_web_01",
+        channel: "web",
+        text: "我想预约下星期，有冇位？",
+        receivedAt: new Date().toISOString(),
+      },
+    });
+
+    expect(receipt.persisted).toBe(true);
+    expect(receipt.frontdesk?.autoReplyReceipt?.ok).toBe(true);
+    expect(receipt.conversation?.channel).toBe("web");
+    expect(receipt.conversation?.messages.map((message) => message.from)).toEqual([
+      "customer",
+      "agent",
+    ]);
+    expect(adapter.snapshot()).toHaveLength(1);
+    expect(adapter.snapshot()[0]?.channel).toBe("web");
+  });
+
+  it("独立本地网页会话的 Agent provider message id 不会串到另一位客户", async () => {
+    const repository = new BrowserServiceConversationRepository();
+    const runtime = new ServiceConversationIngestRuntime(repository);
+    const vertical = getVerticalPack("dental")!;
+    const baseMessage = {
+      tenantId: tenant.id,
+      channel: "web" as const,
+      text: "我想预约下星期，有冇位？",
+      receivedAt: new Date().toISOString(),
+    };
+
+    const first = await runtime.ingest({
+      tenant: { ...tenant, verticalId: vertical.id },
+      vertical,
+      customerName: "陈小姐",
+      messagingAdapter: new LocalWebChatAdapter(),
+      message: {
+        ...baseMessage,
+        providerMessageId: "web_local_unique_001",
+        customerId: "customer_web_a",
+      },
+    });
+    const second = await runtime.ingest({
+      tenant: { ...tenant, verticalId: vertical.id },
+      vertical,
+      customerName: "李小姐",
+      messagingAdapter: new LocalWebChatAdapter(),
+      message: {
+        ...baseMessage,
+        providerMessageId: "web_local_unique_002",
+        customerId: "customer_web_b",
+      },
+    });
+
+    expect(first.conversation?.messages.map((message) => message.from)).toEqual([
+      "customer",
+      "agent",
+    ]);
+    expect(second.conversation?.messages.map((message) => message.from)).toEqual([
+      "customer",
+      "agent",
+    ]);
+    expect(first.conversation?.messages[1]?.providerMessageId).not.toBe(
+      second.conversation?.messages[1]?.providerMessageId,
+    );
+  });
+
   it("FAQ 自动回复成功时只把真实发送成功的 Agent 消息写入 Conversation", async () => {
     const repository = new BrowserServiceConversationRepository();
     const runtime = new ServiceConversationIngestRuntime(repository);
@@ -72,7 +151,10 @@ describe("ServiceConversationIngestRuntime", () => {
 
     expect(receipt.persisted).toBe(true);
     expect(receipt.frontdesk?.autoReplyReceipt?.ok).toBe(true);
-    expect(receipt.conversation?.messages.map((message) => message.from)).toEqual(["customer", "agent"]);
+    expect(receipt.conversation?.messages.map((message) => message.from)).toEqual([
+      "customer",
+      "agent",
+    ]);
     expect(receipt.conversation?.state).toBe("agent_handling");
     expect(receipt.conversation?.unread).toBe(false);
     expect(adapter.snapshot()).toHaveLength(1);

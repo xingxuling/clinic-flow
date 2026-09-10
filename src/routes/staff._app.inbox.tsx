@@ -3,7 +3,6 @@ import {
   AlertTriangle,
   Bot,
   ClipboardList,
-  FlaskConical,
   Globe,
   Hand,
   MessageCircle,
@@ -11,7 +10,7 @@ import {
   Send,
   Sparkles,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { PageContainer } from "@/components/layout/StaffShell";
@@ -19,9 +18,10 @@ import { EmptyState, MdButton, MdCard, MdChip, MdFilterChip } from "@/components
 import { serviceConversationIngestRuntime } from "@/conversations/ingest-runtime";
 import { useServiceConversations } from "@/conversations/use-service-conversations";
 import { clinicToServiceTenant } from "@/core/tenant";
+import { serviceCustomerRepository } from "@/customers/repository";
 import { useServiceCustomers } from "@/customers/use-service-customers";
 import { summarizeServiceConversationForFrontdesk } from "@/frontdesk/conversation-summary";
-import { MockWhatsAppAdapter } from "@/integrations/messaging-adapter";
+import { LocalWebChatAdapter } from "@/integrations/messaging-adapter";
 import { CHANNEL, CONVERSATION_STATE, fmtTime } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/state/app-store";
@@ -36,7 +36,10 @@ export const Route = createFileRoute("/staff/_app/inbox")({
   head: () => ({
     meta: [
       { title: "對話｜Service Frontdesk" },
-      { name: "description", content: "WhatsApp、電話與網頁訊息統一收件匣，支援 AI 摘要與人工接管。" },
+      {
+        name: "description",
+        content: "本地網頁對話優先；WhatsApp、電話後續接入，支援 AI 摘要與人工接管。",
+      },
     ],
   }),
   component: InboxPage,
@@ -93,18 +96,22 @@ function InboxPage() {
   const [filter, setFilter] = useState<"all" | "unread" | "urgent" | "agent">("all");
   const [draft, setDraft] = useState("");
   const [demoBusy, setDemoBusy] = useState(false);
+  const [localMessage, setLocalMessage] = useState("我想预约下星期，有冇位？");
 
   const customerName = (id: string) =>
     customers.find((customer) => customer.id === id)?.displayName ?? patientName(id);
 
   const filtered = workspace.conversations.filter((conversation) => {
     if (filter === "unread") return conversation.unread;
-    if (filter === "urgent") return Boolean(conversation.safetySignal || conversation.legacyUrgentFlagId);
+    if (filter === "urgent")
+      return Boolean(conversation.safetySignal || conversation.legacyUrgentFlagId);
     if (filter === "agent") return conversation.state === "agent_handling";
     return true;
   });
 
-  const requested = c ? workspace.conversations.find((conversation) => conversation.id === c) : undefined;
+  const requested = c
+    ? workspace.conversations.find((conversation) => conversation.id === c)
+    : undefined;
   const selected = requested ?? filtered[0] ?? workspace.conversations[0];
   const selectedId = selected?.id;
   const legacyFlag = selected?.legacyUrgentFlagId
@@ -118,26 +125,44 @@ function InboxPage() {
       })
     : null;
 
-  const simulateInbound = async () => {
-    const customer = customers[0];
-    if (!customer) {
-      toast.error("先建立一位客戶", { description: "可先到「客戶」用拍照匯入建立示範客戶。" });
+  const startLocalConversation = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const text = localMessage.trim();
+    if (!text) {
+      toast.error("請輸入訊息", { description: "本地網頁對話需要至少一則文字訊息。" });
       return;
     }
+
+    let customer = customers[0] ?? serviceCustomerRepository.list(clinic.id, vertical.id)[0];
+    if (!customer) {
+      customer = serviceCustomerRepository.add({
+        tenantId: clinic.id,
+        verticalId: vertical.id,
+        displayName: vertical.id === "pet-care" ? "示範寵物主人" : "示範客戶",
+        phone: "+852 9000 0000",
+        preferredChannel: "web",
+        language: "zh-HK",
+        tags: ["本地網頁對話 Demo"],
+        notesAdmin: "本地 Demo 客戶，非真實資料。",
+        source: "manual",
+        sourceRef: "local-web-chat-demo",
+      });
+    }
+
     setDemoBusy(true);
     try {
-      const adapter = new MockWhatsAppAdapter();
+      const adapter = new LocalWebChatAdapter();
       const receipt = await serviceConversationIngestRuntime.ingest({
         tenant: clinicToServiceTenant(clinic, vertical.id),
         vertical,
         customerName: customer.displayName,
         messagingAdapter: adapter,
         message: {
-          providerMessageId: `demo_in_${Date.now().toString(36)}`,
+          providerMessageId: `web_demo_in_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
           tenantId: clinic.id,
           customerId: customer.id,
-          channel: "whatsapp",
-          text: demoMessage(vertical.id),
+          channel: "web",
+          text,
           receivedAt: new Date().toISOString(),
         },
       });
@@ -145,16 +170,19 @@ function InboxPage() {
         toast.error("示範訊息未寫入", { description: receipt.errors[0] ?? "未知錯誤" });
         return;
       }
-      toast.success("示範 WhatsApp 已進入對話", {
+      setLocalMessage("");
+      toast.success("本地網頁訊息已進入對話", {
         description: receipt.frontdesk?.autoReplyReceipt?.ok
-          ? "AI 已完成模擬回覆，來回訊息均已保存。"
+          ? "Agent 已完成本地回覆，來回訊息均已保存。"
           : receipt.state === "waiting_human"
             ? "此訊息需要人工接管。"
             : "訊息已保存。",
       });
       navigate({ to: ".", search: { c: receipt.conversation.id } });
     } catch (error) {
-      toast.error("示範入站失敗", { description: error instanceof Error ? error.message : String(error) });
+      toast.error("示範入站失敗", {
+        description: error instanceof Error ? error.message : String(error),
+      });
     } finally {
       setDemoBusy(false);
     }
@@ -163,25 +191,63 @@ function InboxPage() {
   return (
     <PageContainer
       title="對話"
-      subtitle={`${vertical.displayName} · WhatsApp／電話／網頁`}
-      actions={
-        vertical.id !== "dental" ? (
-          <MdButton
-            size="sm"
-            variant="outlined"
-            icon={<FlaskConical className="size-4" />}
-            onClick={() => void simulateInbound()}
-            disabled={demoBusy}
-          >
-            模擬 WhatsApp 來訊
-          </MdButton>
-        ) : undefined
-      }
+      subtitle={`${vertical.displayName} · 網頁對話優先 · WhatsApp／電話待接入`}
+      actions={<MdChip tone="primary">先用本地網頁跑通</MdChip>}
     >
-      {vertical.id !== "dental" && workspace.conversations.length === 0 && (
+      <MdCard className="mb-4 border border-primary/25 bg-primary-container/25 p-4">
+        <div className="flex items-start gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary-container text-on-primary-container">
+            <Globe className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="md-title-m text-on-surface">本地網頁對話</p>
+              <MdChip tone="primary">WEB · LOCAL DEMO</MdChip>
+            </div>
+            <p className="mt-1 md-body-s text-on-surface-variant">
+              先用同一個 Conversation + Agent runtime 跑通 Customer → Agent → 對話紀錄，不需要
+              WhatsApp 帳號或 BSP。
+            </p>
+            <form
+              className="mt-3 flex flex-col gap-2 sm:flex-row"
+              onSubmit={(event) => void startLocalConversation(event)}
+            >
+              <input
+                value={localMessage}
+                onChange={(event) => setLocalMessage(event.target.value)}
+                aria-label="本地網頁對話訊息"
+                placeholder="輸入客戶訊息，例如：我想預約下星期，有冇位？"
+                className="h-11 min-w-0 flex-1 rounded-full border border-outline bg-surface-container-lowest px-4 md-body-m text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              />
+              <MdButton type="submit" icon={<Send className="size-4" />} disabled={demoBusy}>
+                發送並跑通
+              </MdButton>
+            </form>
+            <div className="mt-2 flex flex-wrap items-center gap-2 md-body-s text-on-surface-variant">
+              <span>快速試用：</span>
+              <button
+                type="button"
+                className="state-layer rounded-full bg-surface/70 px-3 py-1 text-primary"
+                onClick={() => setLocalMessage(demoMessage(vertical.id))}
+              >
+                預約查詢
+              </button>
+              <button
+                type="button"
+                className="state-layer rounded-full bg-surface/70 px-3 py-1 text-primary"
+                onClick={() => setLocalMessage("幾點開門？")}
+              >
+                FAQ 查詢
+              </button>
+            </div>
+          </div>
+        </div>
+      </MdCard>
+
+      {workspace.conversations.length === 0 && (
         <MdCard className="mb-4 border border-outline-variant bg-surface-container p-3">
           <p className="md-body-s text-on-surface-variant">
-            目前尚未有對話。右上角可用 Demo 訊息快速試一次自動回覆與人工接管流程。
+            目前尚未有對話。上方本地網頁對話可以先試一次自動回覆與人工接管流程。
           </p>
         </MdCard>
       )}
@@ -226,20 +292,28 @@ function InboxPage() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center justify-between gap-2">
-                    <span className="md-title-m truncate text-on-surface">{customerName(conversation.customerId)}</span>
-                    <span className="md-body-s text-on-surface-variant">{fmtTime(conversation.lastAt)}</span>
+                    <span className="md-title-m truncate text-on-surface">
+                      {customerName(conversation.customerId)}
+                    </span>
+                    <span className="md-body-s text-on-surface-variant">
+                      {fmtTime(conversation.lastAt)}
+                    </span>
                   </span>
                   <span className="mt-0.5 block truncate md-body-m text-on-surface-variant">
                     {conversation.messages[conversation.messages.length - 1]?.text}
                   </span>
-                  <span className="mt-1 block truncate md-body-s text-primary">{summary.title}</span>
+                  <span className="mt-1 block truncate md-body-s text-primary">
+                    {summary.title}
+                  </span>
                   <span className="mt-2 flex flex-wrap items-center gap-1">
                     <MdChip tone={state.tone}>{state.label}</MdChip>
                     {(conversation.safetySignal || conversation.legacyUrgentFlagId) && (
                       <MdChip tone="error">{safetyFlagLabel(vertical)}</MdChip>
                     )}
                     {conversation.unread && <MdChip tone="primary">未讀</MdChip>}
-                    {conversation.source === "legacy_conversation_compat" && <MdChip tone="neutral">既有牙科對話</MdChip>}
+                    {conversation.source === "legacy_conversation_compat" && (
+                      <MdChip tone="neutral">既有牙科對話</MdChip>
+                    )}
                   </span>
                 </span>
               </button>
@@ -255,7 +329,8 @@ function InboxPage() {
                   {customerName(selected.customerId)} · {selected.subject}
                 </p>
                 <p className="md-body-s text-on-surface-variant">
-                  {CHANNEL[selected.channel]} · {CONVERSATION_STATE[selected.state].label} · {vertical.labels.customer}
+                  {CHANNEL[selected.channel]} · {CONVERSATION_STATE[selected.state].label} ·{" "}
+                  {vertical.labels.customer}
                 </p>
               </div>
               {selected.state !== "human" && (
@@ -282,24 +357,35 @@ function InboxPage() {
                       <MdChip tone={frontdeskSummary.decision.requiresHuman ? "error" : "primary"}>
                         {frontdeskSummary.decision.requiresHuman ? "需要人手" : "可由流程處理"}
                       </MdChip>
-                      {frontdeskSummary.decision.autoSendAllowed && <MdChip tone="tertiary">可自動回覆</MdChip>}
+                      {frontdeskSummary.decision.autoSendAllowed && (
+                        <MdChip tone="tertiary">可自動回覆</MdChip>
+                      )}
                     </div>
                     <p className="mt-2 md-title-m text-on-surface">{frontdeskSummary.title}</p>
-                    <p className="mt-1 md-body-m text-on-surface-variant">{frontdeskSummary.detail}</p>
+                    <p className="mt-1 md-body-m text-on-surface-variant">
+                      {frontdeskSummary.detail}
+                    </p>
                     <div className="mt-2 flex items-start gap-2 rounded-xl bg-surface-container p-3">
                       <ClipboardList className="mt-0.5 size-4 shrink-0 text-primary" />
-                      <p className="md-body-s text-on-surface-variant">下一步：{frontdeskSummary.nextAction}</p>
+                      <p className="md-body-s text-on-surface-variant">
+                        下一步：{frontdeskSummary.nextAction}
+                      </p>
                     </div>
-                    {frontdeskSummary.decision.suggestedReply && selected.state !== "agent_handling" && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <MdButton size="sm" variant="tonal" onClick={() => setDraft(frontdeskSummary.decision.suggestedReply ?? "")}>
-                          使用建議回覆
-                        </MdButton>
-                        <span className="self-center md-body-s text-on-surface-variant">
-                          發送前仍可修改。
-                        </span>
-                      </div>
-                    )}
+                    {frontdeskSummary.decision.suggestedReply &&
+                      selected.state !== "agent_handling" && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <MdButton
+                            size="sm"
+                            variant="tonal"
+                            onClick={() => setDraft(frontdeskSummary.decision.suggestedReply ?? "")}
+                          >
+                            使用建議回覆
+                          </MdButton>
+                          <span className="self-center md-body-s text-on-surface-variant">
+                            發送前仍可修改。
+                          </span>
+                        </div>
+                      )}
                   </div>
                 </div>
               </div>
@@ -312,14 +398,25 @@ function InboxPage() {
                   <div className="flex-1">
                     <p className="md-label-l text-on-surface">{safetyFlagLabel(vertical)}</p>
                     <p className="mt-1 md-body-s text-on-surface-variant">
-                      {vertical.labels.customer}原話：「{selected.safetySignal?.quote ?? legacyFlag?.quote ?? ""}」
+                      {vertical.labels.customer}原話：「
+                      {selected.safetySignal?.quote ?? legacyFlag?.quote ?? ""}」
                     </p>
                     <p className="md-body-s text-on-surface-variant">
-                      觸發：{selected.safetySignal?.matchedKeywords.join("、") || legacyFlag?.matchedKeywords.join("、") || "規則命中"}
+                      觸發：
+                      {selected.safetySignal?.matchedKeywords.join("、") ||
+                        legacyFlag?.matchedKeywords.join("、") ||
+                        "規則命中"}
                     </p>
-                    <p className="mt-1 md-body-s text-on-surface-variant">{safetyBoundaryText(vertical)}</p>
+                    <p className="mt-1 md-body-s text-on-surface-variant">
+                      {safetyBoundaryText(vertical)}
+                    </p>
                     {selected.source === "legacy_conversation_compat" && legacyFlag && (
-                      <MdButton size="sm" variant="danger" className="mt-2" onClick={() => escalateUrgentFlag(legacyFlag.id)}>
+                      <MdButton
+                        size="sm"
+                        variant="danger"
+                        className="mt-2"
+                        onClick={() => escalateUrgentFlag(legacyFlag.id)}
+                      >
                         立即轉人工
                       </MdButton>
                     )}
@@ -330,26 +427,42 @@ function InboxPage() {
 
             <div className="flex-1 space-y-3 overflow-y-auto p-4">
               {selected.messages.map((message) => (
-                <div key={message.id} className={cn("flex", message.from === "customer" ? "justify-start" : "justify-end")}>
+                <div
+                  key={message.id}
+                  className={cn(
+                    "flex",
+                    message.from === "customer" ? "justify-start" : "justify-end",
+                  )}
+                >
                   <div
                     className={cn(
                       "max-w-[85%] rounded-2xl px-4 py-2",
                       message.from === "customer" && "bg-surface-container-highest text-on-surface",
                       message.from === "staff" && "bg-primary-container text-on-primary-container",
-                      message.from === "agent" && "bg-tertiary-container text-on-tertiary-container",
+                      message.from === "agent" &&
+                        "bg-tertiary-container text-on-tertiary-container",
                     )}
                   >
                     <p className="md-label-m flex items-center gap-1 opacity-80">
                       {message.from === "agent" && <Bot className="size-3" />}
-                      {message.authorName} · {fmtTime(message.at)}{message.draft && " · 草稿待批"}
+                      {message.authorName} · {fmtTime(message.at)}
+                      {message.draft && " · 草稿待批"}
                     </p>
                     <p className="mt-1 md-body-m whitespace-pre-wrap">{message.text}</p>
                     {message.draft && selected.source === "legacy_conversation_compat" && (
                       <div className="mt-2 flex gap-2">
-                        <MdButton size="sm" variant="filled" onClick={() => workspace.approveLegacyAgentDraft(selected.id, message.id)}>
+                        <MdButton
+                          size="sm"
+                          variant="filled"
+                          onClick={() => workspace.approveLegacyAgentDraft(selected.id, message.id)}
+                        >
                           批准發送
                         </MdButton>
-                        <MdButton size="sm" variant="text" onClick={() => workspace.takeOver(selected.id, currentStaff.id)}>
+                        <MdButton
+                          size="sm"
+                          variant="text"
+                          onClick={() => workspace.takeOver(selected.id, currentStaff.id)}
+                        >
                           改為人手處理
                         </MdButton>
                       </div>
@@ -379,7 +492,9 @@ function InboxPage() {
                 placeholder={`回覆${vertical.labels.customer}…`}
                 className="h-12 flex-1 rounded-full border border-outline bg-surface-container-lowest px-4 md-body-m text-on-surface outline-none focus:border-primary"
               />
-              <MdButton type="submit" icon={<Send className="size-4" />}>發送</MdButton>
+              <MdButton type="submit" icon={<Send className="size-4" />}>
+                發送
+              </MdButton>
             </form>
           </MdCard>
         ) : (

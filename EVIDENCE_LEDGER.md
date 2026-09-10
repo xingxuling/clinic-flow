@@ -106,3 +106,38 @@ workflow directly and keeps both staff and Dental Demo customer entry points.
 | Narrow viewport check | PASS candidate | Playwright viewport `390x844`; content wraps, remains scrollable, and both primary entry links remain reachable |
 | Stale landing markers | PASS | old two-card-only layout was replaced in `src/routes/index.tsx` |
 | Human visual acceptance | OPEN | local screenshot review is not production/browser-device acceptance |
+
+## Conversation-first local web verification (2026-09-10)
+
+User priority for this phase: run the dialogue loop first; WhatsApp/BSP is not a
+prerequisite. The implementation reuses the existing
+`ServiceConversationIngestRuntime`, `ServiceConversationRepository` and
+`ServiceVerticalPack` owners. `LocalWebChatAdapter` is explicitly demo-only and
+does not claim real web push, WhatsApp delivery or production readiness.
+
+| Check | Result | Evidence boundary |
+|---|---|---|
+| Staff local web entry | PASS | Playwright on `http://127.0.0.1:4175/staff/inbox`: submitted a booking inquiry from the new `本地網頁對話` panel |
+| Agent reply persistence | PASS | the staff conversation contained `customer → agent`; channel displayed as `網頁` and the local repository persisted both messages |
+| Staff reply persistence | PASS | staff reply appended to the same conversation and state changed to `人手跟進` / `human` |
+| Patient local web entry | PASS | Playwright on `/patient/messages`: demo patient `陳曉晴` submitted the same booking inquiry and saw the Agent reply |
+| Cross-side conversation reuse | PASS | a second browser tab staff Inbox observed `陳曉晴`'s web conversation; the staff reply then appeared in the patient tab |
+| Clean local storage summary | PASS | two locally created rows were `channel=web`; each ended with `customer → agent → staff`; no provider delivery was invoked |
+| Narrow conversation UI | PASS candidate | Playwright viewport `390x844` and reviewed screenshot: navigation, bubbles, state chip and composer stayed reachable |
+| Browser console | PASS | final Playwright console query returned 0 application errors and 0 warnings |
+| Unique local reply IDs | PASS | fixed independent `LocalWebChatAdapter` instances reusing `web_demo_0001`; added regression test for cross-customer idempotency isolation |
+| Unit tests | PASS | `bun run test`: 22 files / 137 tests |
+| TypeScript | PASS | `bun run typecheck` |
+| Changed-scope ESLint | PASS | ESLint on the five changed source/test files: 0 errors / 0 warnings |
+| Production build | PASS | `bun run build` completed for client, SSR and Nitro output |
+| WhatsApp/BSP | NOT_USED / NOT_DEPLOYED | intentionally outside this phase; no account, BSP, Meta credential or live send was used |
+| Production database/provider | NOT_RUN | browser localStorage and demo adapter are not production persistence or delivery evidence |
+
+Local visual artifacts are under
+`output/playwright/conversation-smoke/`: `staff-conversation.png`,
+`patient-conversation.png` and `patient-conversation-mobile.png`. They are
+candidate evidence only and are not a substitute for deployed-device or human
+product acceptance.
+
+The full repository lint baseline remains the previously recorded 428-problem
+formatting/line-ending debt; this phase did not reformat unrelated modules.
