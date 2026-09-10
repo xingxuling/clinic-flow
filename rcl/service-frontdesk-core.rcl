@@ -5,6 +5,8 @@ reality ServiceFrontdeskCore {
   facet policy.professional_judgement_allowed : Truth = false
   facet policy.cross_tenant_access_allowed : Truth = false
   facet policy.vertical_may_expand_authority : Truth = false
+  facet policy.private_contact_disclosure_allowed : Truth = false
+  facet policy.exact_address_requires_consent : Truth = true
 
   facet request.tenant_match : Truth = true
   facet request.vertical_loaded : Truth = true
@@ -18,6 +20,16 @@ reality ServiceFrontdeskCore {
   facet request.risk_high : Truth = false
   facet request.executed : Truth = false
   facet request.handoff : Truth = false
+  facet request.service_request_valid : Truth = false
+  facet request.worker_capability_match : Truth = false
+  facet request.slot_available : Truth = false
+  facet request.hold_active : Truth = false
+  facet request.customer_confirmed : Truth = false
+  facet request.booking_confirmed : Truth = false
+  facet request.privacy_near_service : Truth = false
+  facet request.privacy_consent : Truth = false
+  facet request.privacy_purpose_active_service : Truth = false
+  facet request.private_data_available : Truth = false
 
   subject frontdesk_agent {
     facet actions : Number = 0
@@ -42,6 +54,13 @@ reality ServiceFrontdeskCore {
       evidence "policy:vertical-is-configuration-not-authority"
       source "service-frontdesk-core"
       scope "vertical"
+      status observed
+
+    claim privacy_contact_safe : Truth = not policy.private_contact_disclosure_allowed
+      confidence 1.0
+      evidence "policy:private-contact-default-deny"
+      source "service-frontdesk-core"
+      scope "job"
       status observed
 
     derive may_auto_faq : Truth =
@@ -82,9 +101,39 @@ reality ServiceFrontdeskCore {
       source "rcl:inference"
       scope "frontdesk"
 
+    derive may_auto_confirm_booking : Truth =
+      request.service_request_valid and
+      request.worker_capability_match and
+      request.slot_available and
+      request.hold_active and
+      request.customer_confirmed and
+      knowledge_value(authority.tenant_safe) and
+      knowledge_value(authority.vertical_safe)
+      from authority.tenant_safe, authority.vertical_safe
+      confidence 1.0
+      evidence "policy:hold-confirmed-no-double-booking"
+      source "rcl:inference"
+      scope "scheduling"
+
+    derive may_disclose_exact_address : Truth =
+      request.privacy_near_service and
+      request.privacy_consent and
+      request.privacy_purpose_active_service and
+      request.private_data_available and
+      policy.exact_address_requires_consent and
+      knowledge_value(authority.tenant_safe) and
+      knowledge_value(authority.vertical_safe)
+      from authority.tenant_safe, authority.vertical_safe
+      confidence 1.0
+      evidence "policy:progressive-address-disclosure"
+      source "rcl:inference"
+      scope "job-privacy"
+
     preserve policy.professional_judgement_allowed == false
     preserve policy.cross_tenant_access_allowed == false
     preserve policy.vertical_may_expand_authority == false
+    preserve policy.private_contact_disclosure_allowed == false
+    preserve policy.exact_address_requires_consent == true
   }
 
   emergence auto_frontdesk_action {
@@ -112,9 +161,26 @@ reality ServiceFrontdeskCore {
     witness "service-frontdesk:human-handoff"
   }
 
+  emergence auto_scheduling_action {
+    cause frontdesk_agent
+    when supported(authority.may_auto_confirm_booking, 1.0) and knowledge_value(authority.may_auto_confirm_booking)
+    needs service.frontdesk.execute on service_admin
+    alter request.executed <- true
+    preserve request.service_request_valid
+    preserve request.worker_capability_match
+    preserve request.slot_available
+    preserve request.hold_active
+    preserve request.customer_confirmed
+    preserve policy.cross_tenant_access_allowed == false
+    preserve policy.private_contact_disclosure_allowed == false
+    witness "service-frontdesk:hold-confirmed-scheduling"
+  }
+
   learn authority
   foresee auto_frontdesk_action
   foresee handoff_frontdesk_action
+  foresee auto_scheduling_action
   realize auto_frontdesk_action
   realize handoff_frontdesk_action
+  realize auto_scheduling_action
 }
