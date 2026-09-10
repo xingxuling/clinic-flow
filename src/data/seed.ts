@@ -292,7 +292,7 @@ export const seedAppointments: Appointment[] = [
     serviceId: "svc_scaling",
     startAt: at(0, "09:30"),
     endAt: at(0, "10:15"),
-    status: "arrived",
+    status: "confirmed",
     room: "1 號診室",
     note: "半年定期潔治",
     createdBy: { type: "staff", id: "staff_reception", name: "李樂怡" },
