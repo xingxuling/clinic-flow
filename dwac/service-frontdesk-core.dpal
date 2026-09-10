@@ -6,6 +6,11 @@ artifact service_frontdesk_core kind=taowind.software/web-application {
   constraint "行业包不得提升 Agent 到医疗诊断、治疗建议或其他受限专业判断"
   invariant "所有租户数据继续按 tenant/clinic scope 隔离"
   invariant "core 不硬编码牙科服务、牙科召回或牙科紧急词"
+  invariant "匹配只使用完成服务所需的最小字段，排序可解释且不替代人工判断"
+  invariant "Hold/Confirm 必须幂等、带过期时间并阻止同一资源重叠预订"
+  invariant "Job 使用公开身份标识；私有联系方式默认不进入客户、员工或 Agent 上下文"
+  invariant "精确地址只能由 Privacy Broker 按服务目的、阶段和同意逐步披露"
+  invariant "WhatsApp 只能作为渠道，所有发送动作必须经过既有 Policy Gate"
   owner "service-frontdesk-core"
 
   unit core_domain output=taowind/schema {
@@ -49,6 +54,27 @@ artifact service_frontdesk_core kind=taowind.software/web-application {
     accept "vertical_driven,fail_closed"
   }
 
+  unit smart_scheduling_core output=taowind/workflow {
+    title "通用智能排班与预约核心"
+    goal "以服务请求、人员能力、服务区域、时长和缓冲时间完成硬约束匹配、五分钟 Hold、幂等 Confirm、回滚和通知编排"
+    depends "core_domain,vertical_contract"
+    accept "hard_constraints,explainable_ranking,no_double_booking,idempotent_confirm,rollback_safe,candidate_only"
+  }
+
+  unit privacy_broker output=taowind/security_contract {
+    title "Privacy Broker"
+    goal "分离 Job 公开身份与私有身份，按目的/阶段/同意最小化披露精确地址和联系方式，并记录审计事件"
+    depends "core_domain,smart_scheduling_core"
+    accept "purpose_bound,consent_bound,progressive_disclosure,audit_default_deny,candidate_only"
+  }
+
+  unit dual_agent_communication output=taowind/workflow {
+    title "客户 Agent 与服务人员 Agent 通信模型"
+    goal "以结构化 ConversationIntent 驱动可解释流程；支持人工接管、暂停、STOP/退订和隐私边界，不允许模型直接执行"
+    depends "core_frontdesk,privacy_broker,vertical_contract"
+    accept "structured_intents,human_takeover,whatsapp_policy_gate,prompt_injection_resistant,identity_separated,candidate_only"
+  }
+
   unit ui_branding output=taowind/ui {
     title "行业驱动 UI 文案"
     goal "页面标题、客户/病人称谓、服务对象称谓由行业包驱动；Material Design 3 保持"
@@ -58,8 +84,8 @@ artifact service_frontdesk_core kind=taowind.software/web-application {
 
   unit tests output=taowind/test {
     title "行业抽象定向测试"
-    goal "只验证牙科行为保持，以及宠物/家居包可在不改 core 的情况下加载"
-    depends "dental_pack,pet_pack,home_service_pack,core_frontdesk"
-    accept "targeted_only"
+    goal "验证牙科行为保持、行业包隔离、排班边界、隐私披露、Agent 接管、WhatsApp Policy Gate、租户隔离和提示注入防护"
+    depends "dental_pack,pet_pack,home_service_pack,core_frontdesk,smart_scheduling_core,privacy_broker,dual_agent_communication"
+    accept "targeted_only,negative_cases,idempotency_cases,tenant_boundary_cases,prompt_injection_cases"
   }
 }

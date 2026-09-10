@@ -80,6 +80,14 @@ Vertical Pack
 7. 前台对话摘要；
 8. 未命中授权流程时 fail-closed（失败关闭）转人工。
 
+本阶段同时加入通用 `Smart Scheduling & Privacy Broker Core`：
+
+9. 服務請求、服務人員能力／地區／可用時間與移動／準備／清理緩衝；
+10. 硬約束過濾、可配置候選排序、原因解釋與租戶時區；
+11. 五分鐘政策控制 Hold、正式 Booking 狀態機、Confirm 冪等與不重複排程；
+12. Job-scoped Customer #… / Worker #… 身份、漸進式隱私披露與 Privacy Audit；
+13. Customer Agent / Worker Agent 結構化意圖、人工接管與 WhatsApp STOP 控制。
+
 上门服务型行业复用同一核心，并由行业包增加：地址、现场联系人、师傅／服务队、上门时段、报价确认等字段。
 
 ---
@@ -161,6 +169,13 @@ src/frontdesk/conversation-summary.ts
 src/frontdesk/appointment-reminder.ts
 src/frontdesk/appointment-actions.ts
 src/frontdesk/appointment-interaction-service.ts
+src/scheduling/types.ts             通用 ServiceRequest / Worker / Hold / Job IR
+src/scheduling/matching.ts           硬約束過濾與可配置候選排序
+src/scheduling/state-machine.ts      Booking 狀態機
+src/scheduling/runtime.ts            Hold / Confirm / 通知意圖 / 回滾候選運行時
+src/privacy/broker.ts                漸進式資料披露與 Privacy Audit
+src/conversations/job-intent.ts      雙 Agent ConversationIntent 與人手接管
+src/scheduling/notification-dispatch.ts  WhatsApp Policy Gate 通道邊界
 ```
 
 新通用 API：
@@ -210,6 +225,8 @@ Stable Adapter Contract
 - 今日工作台；
 - 对话中心；
 - 预约中心；
+- `/staff/bookings`：通用智能排程（請求收集、Worker Schedule、候選解釋、Hold、Confirm、Job Conversation）；
+- `/staff/appointments`：既有牙科预约兼容頁；
 - 提醒 / 召回；
 - Agent 任务；
 - 审计 / 权限 / 设置。
@@ -232,6 +249,9 @@ Stable Adapter Contract
 - 审计日志；
 - 租户不匹配 fail-closed；
 - Vertical Pack 不得扩大 Agent 专业判断权限。
+- Privacy Broker 預設不披露私人電話；完整地址只可在近服務階段、目的綁定及客户 subject 綁定同意後由 Private Data Vault 提供。
+- Job Agent 必須帶實際 Customer / Worker subject ID；公開 Job ID 不構成身份驗證。
+- WhatsApp 主動通知必須經既有 Policy Gate、opt-in / STOP / human-only、24 小時窗口與模板規則。
 
 通用 RCL 权限语义源：
 
@@ -288,7 +308,12 @@ PostgreSQL 迁移：
 ```text
 db/migrations/0001_clinic_flow_core.sql
 db/migrations/0002_harden_fk_and_patient_writes.sql
+db/migrations/0003_smart_scheduling_privacy_broker.sql
 ```
+
+`0003` 保持既有 Clinic Flow 兼容表，新增 generic worker、request、統一
+schedule reservation、booking、Job、Privacy Context、Privacy Audit 與通知意圖表。
+其中 PostgreSQL exclusion constraint 是服務人員占用區間的資料庫級不重複排程閘門；本地尚未連接真實資料庫執行此 migration。
 
 ---
 
@@ -310,7 +335,16 @@ db/migrations/0002_harden_fk_and_patient_writes.sql
 bun run dev
 bun run build
 bunx vitest run
+bunx tsc --noEmit
 ```
+
+本階段定向測試：
+
+```bash
+bunx vitest run src/scheduling/__tests__ src/privacy/__tests__ src/conversations/__tests__
+```
+
+不使用 GitHub Actions 冒充本地或生产证据；完整状态、已知基线失败与浏览器烟雾证据见 [`EVIDENCE_LEDGER.md`](EVIDENCE_LEDGER.md)。
 
 但日常开发**不要求每次提交都跑完整测试**：
 
@@ -326,6 +360,17 @@ src/verticals/__tests__/vertical-packs.test.ts
 ```
 
 它验证牙科、宠物、家居、美容、汽车行业包能共享同一个前台 Core，并验证跨租户消息不会进入自动发送流程。
+
+本阶段架构与证据文档：
+
+```text
+docs/SMART_SCHEDULING_ARCHITECTURE.md
+docs/SCHEDULING_STATE_MACHINE.md
+docs/PRIVACY_BROKER_ARCHITECTURE.md
+docs/AGENT_COMMUNICATION_MODEL.md
+docs/PRIVACY_THREAT_MODEL.md
+EVIDENCE_LEDGER.md
+```
 
 ---
 
@@ -347,6 +392,13 @@ Home Service Vertical
 Beauty Vertical
 Auto Repair Vertical
 ```
+
+本阶段实现状态：
+
+- `SmartSchedulingPage` 已接入 `/staff/bookings`，本地浏览器已验证登录、请求、候选、Hold、Confirm 与 Job Agent 视图；
+- 核心单元测试已覆盖 38 个调度／隐私／Agent／WhatsApp 边界用例；
+- PostgreSQL migration、真实后端 transaction、真实 Private Data Vault、Meta/WhatsApp 生产发送与视觉验收仍未验证；
+- RCL / DWAC 已补充语义与工件单元，但新能力仍标记 `CANDIDATE_ONLY`，没有宣称 canonical promotion。
 
 下一阶段优先事项是：
 
