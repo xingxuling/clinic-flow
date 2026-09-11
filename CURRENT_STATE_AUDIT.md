@@ -1,5 +1,9 @@
 # CURRENT_STATE_AUDIT
 
+## 2026-09-11 增量：师傅行程
+
+基于 `main@872ce71` 在 `codex/worker-journey` 开发。排程预约可建立客户/师傅入口，服务端同步文字、行程状态及自愿位置共享，UI 增加地图与订单联系页。跨浏览器通信和模拟坐标更新已实测；不是生产认证、数据库或手机后台定位交付。正式模式拒绝该开发入口。地图瓦片视觉验收尚待完成，详见 `docs/worker-journey-requirements.md` 与 Evidence Ledger。既有预约仍为浏览器候选仓库，行程结束不改写预约状态。
+
 审计日期：2026-09-10
 审计来源：`xingxuling/clinic-flow` `main@14baebb1aded6a6a81a11f8f21c58b7bf7c1b3d0`
 远端：`https://github.com/xingxuling/clinic-flow.git`

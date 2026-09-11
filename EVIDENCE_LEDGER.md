@@ -1,5 +1,17 @@
 # Evidence Ledger
 
+## 2026-09-11 Worker journey — development candidate
+
+- Reused existing ScheduledBooking scope and conversation message fields. Added dev-only server transport, order role links, journey status, expiring/revocable location lease, two-second polling and human-to-human chat. No WhatsApp dependency or new package.
+- Runtime regression: 23 test files / 146 tests passed, including 9 journey cases for role/tenant scope, stale coordinates, lease revocation, termination and idempotency.
+- Real UI: staff login → match → hold → confirm → provision links. Isolated customer/worker browser contexts exchanged messages through server; chat works with sharing off, refresh retains messages, completed journey disables composer.
+- Synthetic browser geolocation 22.300/114.170 → 22.301/114.171 updated customer map URL; revocation removed iframe. This is NOT physical GPS evidence.
+- Narrow viewport 390×844 had scrollWidth=390. Reviewed `output/playwright/journey-customer-mobile.png`; external map tiles were blank at capture. Embed HTML returned HTTP 200 separately, but full map rendering remains NOT_VERIFIED. Coordinates/external map fallback added. Completion screenshot: `journey-completed-mobile.png`.
+- Typecheck, changed-scope ESLint and production build are checked locally; no hosted CI or deployment is claimed. Production requests intentionally reject development provisioning.
+- NOT_DEPLOYED: authenticated worker/customer identity, durable/multi-instance storage, authoritative booking-cancellation integration, production abuse controls. NOT_RUN: physical phones/background/lockscreen, device permission-denial UI. Development links expire after four hours and server restart invalidates records.
+- RCL_GAP: revocable order-scoped subscription lifecycle lowering remains unverified. Task=worker journey; workaround=bounded TS development provider; donor=Geolocation watch/clearWatch, existing Privacy Broker; gap type=Runtime/Profile/Lowering evidence; generality=revocable scoped streams; candidate absorption=deferred, no Core promotion. Existing RCL authority remains canonical; worker location is not customer-address consent. Affected K400 concepts: authorization × streaming/lifecycle/time/order; numeric cells require authoritative matrix review. None of the nine K400 gates is promoted by these TS/browser tests.
+- License review: no copied third-party source/new dependency; OSM provider name retained with external link. Integration decision: development candidate only, not production readiness.
+
 Date of this ledger: 2026-09-10. Repository: `xingxuling/clinic-flow`.
 
 ## Source and implementation evidence

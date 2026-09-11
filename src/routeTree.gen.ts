@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as JourneyRouteImport } from './routes/journey'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppSplatRouteImport } from './routes/app.$'
 import { Route as PatientIndexRouteImport } from './routes/patient.index'
@@ -40,6 +41,11 @@ import { Route as StaffAppTodayRouteImport } from './routes/staff._app.today'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JourneyRoute = JourneyRouteImport.update({
+  id: '/journey',
+  path: '/journey',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -175,6 +181,7 @@ const StaffAppTodayRoute = StaffAppTodayRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/journey': typeof JourneyRoute
   '/app/$': typeof AppSplatRoute
   '/patient': typeof PatientAppRouteWithChildren
   '/patient/login': typeof PatientLoginRoute
@@ -204,6 +211,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/journey': typeof JourneyRoute
   '/app/$': typeof AppSplatRoute
   '/patient': typeof PatientIndexRoute
   '/patient/login': typeof PatientLoginRoute
@@ -232,6 +240,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/journey': typeof JourneyRoute
   '/app/$': typeof AppSplatRoute
   '/patient/_app': typeof PatientAppRouteWithChildren
   '/patient/login': typeof PatientLoginRoute
@@ -263,6 +272,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/journey'
     | '/app/$'
     | '/patient'
     | '/patient/login'
@@ -292,6 +302,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/journey'
     | '/app/$'
     | '/patient'
     | '/patient/login'
@@ -319,6 +330,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/journey'
     | '/app/$'
     | '/patient/_app'
     | '/patient/login'
@@ -349,6 +361,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  JourneyRoute: typeof JourneyRoute
   AppSplatRoute: typeof AppSplatRoute
   PatientAppRoute: typeof PatientAppRouteWithChildren
   PatientLoginRoute: typeof PatientLoginRoute
@@ -366,6 +379,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/journey': {
+      id: '/journey'
+      path: '/journey'
+      fullPath: '/journey'
+      preLoaderRoute: typeof JourneyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/': {
@@ -611,6 +631,7 @@ const StaffAppRouteWithChildren = StaffAppRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  JourneyRoute: JourneyRoute,
   AppSplatRoute: AppSplatRoute,
   PatientAppRoute: PatientAppRouteWithChildren,
   PatientLoginRoute: PatientLoginRoute,

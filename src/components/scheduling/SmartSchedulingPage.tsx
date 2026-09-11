@@ -37,6 +37,7 @@ import type { MatchingResult, ScheduleHold, ServiceRequest, Worker } from "@/sch
 import { useApp } from "@/state/app-store";
 import { cn } from "@/lib/utils";
 import { useTenantVertical } from "@/verticals/use-tenant-vertical";
+import { JourneyLaunch } from "@/components/scheduling/JourneyLaunch";
 
 const REASON_LABELS: Record<string, string> = {
   available: "档期可用",
@@ -294,6 +295,23 @@ export function SmartSchedulingPage() {
     >
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
         <div className="space-y-4">
+          {bookings
+            .filter((booking) =>
+              ["SCHEDULED", "CUSTOMER_CONFIRMED", "WORKER_NOTIFIED", "IN_PROGRESS"].includes(
+                booking.state,
+              ),
+            )
+            .map((booking) => (
+              <JourneyLaunch
+                key={booking.bookingId}
+                booking={booking}
+                workerName={
+                  workers.find((worker) => worker.workerId === booking.workerId)?.displayName ??
+                  "師傅"
+                }
+                service={serviceLabel(booking.serviceType)}
+              />
+            ))}
           <MdCard variant="outlined" className="p-5">
             <SectionHeader
               title="1 · 收集服务请求"
